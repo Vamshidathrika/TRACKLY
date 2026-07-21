@@ -46,19 +46,29 @@ enum SprintStatus {
   CLOSED
 }
 
+enum NotificationType {
+  MENTION
+  ASSIGNMENT
+  STATUS_CHANGE
+  COMMENT
+}
+
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  name           String
-  passwordHash   String?
-  avatarUrl      String?
-  createdAt      DateTime       @default(now())
-  memberships    Membership[]
-  ledProjects    Project[]      @relation("ProjectLead")
-  reportedIssues Issue[]        @relation("ReportedIssues")
-  assignedIssues Issue[]        @relation("AssignedIssues")
-  comments       Comment[]
-  historyEntries IssueHistory[]
+  id                     String         @id @default(cuid())
+  email                  String         @unique
+  name                   String
+  passwordHash           String?
+  avatarUrl              String?
+  createdAt              DateTime       @default(now())
+  memberships            Membership[]
+  ledProjects            Project[]      @relation("ProjectLead")
+  reportedIssues         Issue[]        @relation("ReportedIssues")
+  assignedIssues         Issue[]        @relation("AssignedIssues")
+  comments               Comment[]
+  historyEntries         IssueHistory[]
+  notifications          Notification[] @relation("UserNotifications")
+  triggeredNotifications Notification[] @relation("ActorNotifications")
+  watchedIssues          Watcher[]
 }
 
 model Site {
@@ -154,6 +164,7 @@ model Issue {
   subtasks    Issue[]       @relation("IssueHierarchy")
   comments    Comment[]
   history     IssueHistory[]
+  watchers    Watcher[]
 
   @@unique([projectId, number])
   @@unique([projectId, key])
@@ -180,4 +191,29 @@ model IssueHistory {
   createdAt DateTime @default(now())
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  actorId   String
+  type      NotificationType
+  title     String
+  message   String
+  link      String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User             @relation("ActorNotifications", fields: [actorId], references: [id], onDelete: Cascade)
+}
+
+model Watcher {
+  id        String   @id @default(cuid())
+  issueId   String
+  userId    String
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, userId])
 }
