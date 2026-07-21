@@ -40,7 +40,15 @@ export type IssueDetailData = {
   }[];
 };
 
-export function IssueDetail({ issue }: { issue: IssueDetailData }) {
+export function IssueDetail({
+  issue,
+  currentUserId,
+  isAdmin = false,
+}: {
+  issue: IssueDetailData;
+  currentUserId?: string;
+  isAdmin?: boolean;
+}) {
   const [status, setStatus] = useState<IssueStatus>(issue.status);
   const [priority, setPriority] = useState<IssuePriority>(issue.priority);
   const [description, setDescription] = useState(issue.description ?? "");
@@ -49,7 +57,10 @@ export function IssueDetail({ issue }: { issue: IssueDetailData }) {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
 
+  const canEditStatus = isAdmin || (currentUserId && issue.assignee?.id === currentUserId);
+
   const handleStatusChange = async (newStatus: IssueStatus) => {
+    if (!canEditStatus) return;
     setStatus(newStatus);
     await updateIssueFieldAction(issue.id, "status", newStatus);
   };
@@ -227,9 +238,13 @@ export function IssueDetail({ issue }: { issue: IssueDetailData }) {
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-text-subtle uppercase">Status</label>
             <select
+              disabled={!canEditStatus}
               value={status}
               onChange={(e) => handleStatusChange(e.target.value as IssueStatus)}
-              className="h-8 rounded-ds border border-border bg-surface px-2 text-xs font-semibold outline-none focus:border-brand"
+              title={canEditStatus ? "Change status" : "Status changes restricted to Assignee or Admin"}
+              className={`h-8 rounded-ds border border-border bg-surface px-2 text-xs font-semibold outline-none focus:border-brand ${
+                !canEditStatus ? "cursor-not-allowed opacity-60" : ""
+              }`}
             >
               <option value="TO_DO">TO DO</option>
               <option value="IN_PROGRESS">IN PROGRESS</option>

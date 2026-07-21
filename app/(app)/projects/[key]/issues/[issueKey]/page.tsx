@@ -15,11 +15,13 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
   const issue = await getIssueByKey(siteId, issueKey);
   if (!issue) redirect(`/projects/${key}`);
 
+  const isAdmin = membership?.role === "ADMIN";
+
   return (
     <div className="flex flex-1">
       <Sidebar projectName={issue.project.name} projectKey={issue.project.key} />
       <main className="flex-1 px-8 py-6 overflow-y-auto">
-        <IssueDetail issue={issue} />
+        <IssueDetail issue={issue} currentUserId={user.id} isAdmin={isAdmin} />
       </main>
     </div>
   );
