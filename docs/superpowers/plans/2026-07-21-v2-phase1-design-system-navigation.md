@@ -28,7 +28,7 @@
 - Create: `lib/theme.ts`, `lib/theme.test.ts`, `components/theme/ThemeScript.tsx`
 
 **Interfaces:**
-- Produces: Tailwind classes `bg-surface`, `bg-surface-sunken`, `bg-surface-raised`, `bg-surface-overlay`, `text-default`, `text-subtle`, `text-subtlest`, `border-default`, `bg-brand`, `bg-brand-hovered`, `bg-neutral`, `bg-neutral-hovered`, `bg-selected`, `text-selected`, `text-danger-token`, `text-success-token`, `text-warning-token` (+ color-* equivalents for border/text usage); legacy classes (`bg-brand` old meaning, `text-text`, `border-border`, `rounded-ds`…) still resolve via aliases.
+- Produces: Tailwind classes `bg-surface`, `bg-surface-sunken`, `bg-surface-raised`, `bg-surface-overlay`, `text-default`, `text-subtle`, `text-subtlest`, `border-default`, `bg-brand`, `bg-brand-hovered`, `bg-neutral`, `bg-neutral-hovered`, `bg-selected`, `text-selected` (danger/success/warning stay on legacy-named classes `text-danger`/`text-success`/`text-warning`, now dual-theme); legacy classes (`bg-brand` old meaning, `text-text`, `border-border`, `rounded-ds`…) still resolve via aliases.
 - Produces: `THEME_COOKIE = "trackly-theme"`, `type ThemePref = "light" | "dark" | "system"`, `parseThemeCookie(v: string | undefined): ThemePref`, `resolveTheme(pref: ThemePref, systemDark: boolean): "light" | "dark"` in `lib/theme.ts`; `<ThemeScript />` inline no-flash script.
 
 - [ ] **Step 1: Failing tests `lib/theme.test.ts`**
@@ -800,7 +800,7 @@ Run → PASS.
 
 **Interfaces:**
 - Consumes: token classes from Task 1.
-- Mapping rules (apply mechanically): `#F4F5F7`/`bg-[#F4F5F7]` → `bg-neutral` (when used as hover/fill) or `bg-surface-sunken` (page background); `#EBECF0` hover fills → `bg-neutral-hovered`; `#DEEBFF` → `bg-selected` (+ text → `text-selected`); raw `#172B4D` text → `text-default`; `#0052CC` → `text-brand`/`bg-brand` (token now resolves to `#0C66E4`); `#FFEBE6` → `bg-danger/10` equivalent — use `bg-[color-mix(in_srgb,var(--ds-danger)_15%,transparent)]`? NO — keep simple: Tag colors switch to `bg-neutral text-default` (gray), `bg-selected text-selected` (blue), success/danger tags use `text-success-token`/`text-danger-token` on `bg-neutral`. Shadows `rgba(9,30,66,…)` stay as-is (acceptable both themes).
+- Mapping rules (apply mechanically): `#F4F5F7`/`bg-[#F4F5F7]` → `bg-neutral` (when used as hover/fill) or `bg-surface-sunken` (page background); `#EBECF0` hover fills → `bg-neutral-hovered`; `#DEEBFF` → `bg-selected` (+ text → `text-selected`); raw `#172B4D` text → `text-default`; `#0052CC` → `text-brand`/`bg-brand` (token now resolves to `#0C66E4`); `#FFEBE6` → `bg-danger/10` equivalent — use `bg-[color-mix(in_srgb,var(--ds-danger)_15%,transparent)]`? NO — keep simple: Tag colors switch to `bg-neutral text-default` (gray), `bg-selected text-selected` (blue), success/danger tags use `text-success`/`text-danger` (legacy-named classes now resolving to `--ds-*` values) on `bg-neutral`. Shadows `rgba(9,30,66,…)` stay as-is (acceptable both themes).
 - Legacy alias tokens keep old class names compiling; this task moves usages to the new names so dark values apply everywhere.
 
 - [ ] **Step 1:** Run the grep above; list files. For each file apply mapping rules; do not change any logic, props, or structure — class strings only.
