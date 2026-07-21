@@ -96,7 +96,7 @@ export function Sidebar({ projectName, projectKey }: { projectName: string; proj
       </nav>
 
       <div className="mt-auto border-t border-border">
-        <Link href="/settings/members" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-[#F4F5F7]">
+        <Link href={`/projects/${projectKey}/settings`} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-[#F4F5F7]">
           <Settings size={16} /> Project settings
         </Link>
       </div>
