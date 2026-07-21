@@ -9,6 +9,10 @@ vi.mock("./NotificationBell", () => ({
   NotificationBell: () => <button aria-label="Notifications">Notifications</button>,
 }));
 
+vi.mock("@/components/search/QuickSearch", () => ({
+  QuickSearch: () => <input placeholder="Search" />,
+}));
+
 import { TopNav } from "./TopNav";
 
 const user = { name: "Vamshi D", email: "v@u.com", avatarUrl: null };
