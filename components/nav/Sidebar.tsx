@@ -22,8 +22,8 @@ export function Sidebar({ projectName, projectKey }: { projectName: string; proj
     { label: "Issues List", href: `/projects/${projectKey}`, icon: FolderKanban, enabled: true },
     { label: "Backlog", href: `/projects/${projectKey}/backlog`, icon: List, enabled: true },
     { label: "Board", href: `/projects/${projectKey}/board`, icon: Columns3, enabled: true },
+    { label: "Reports", href: `/projects/${projectKey}/reports`, icon: BarChart3, enabled: true },
     { label: "Timeline", icon: Calendar, enabled: false },
-    { label: "Reports", icon: BarChart3, enabled: false },
   ];
 
   if (collapsed) {
