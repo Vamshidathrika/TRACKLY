@@ -11,7 +11,7 @@ export default async function AutomationSettingsPage() {
   const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
   const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
 
-  const project = await prisma.project.findFirst({ where: { siteId } });
+  const project = (siteId ? await prisma.project.findFirst({ where: { siteId } }) : null) ?? (await prisma.project.findFirst());
 
   const rules = project ? await getAutomationRules(project.id) : [];
 
