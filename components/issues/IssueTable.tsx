@@ -55,7 +55,7 @@ export function IssueTable({ issues, projectKey }: { issues: IssueListItem[]; pr
       </thead>
       <tbody>
         {issues.map((issue) => (
-          <tr key={issue.id} className="border-b border-border hover:bg-[#F4F5F7] transition-colors">
+          <tr key={issue.id} className="border-b border-border-default hover:bg-neutral transition-colors">
             <td className="py-2 pl-2">
               <TypeIcon type={issue.type} />
             </td>

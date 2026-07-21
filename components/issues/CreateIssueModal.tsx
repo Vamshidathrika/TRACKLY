@@ -35,7 +35,7 @@ export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
           <div className="flex items-center justify-between pb-4">
             <Dialog.Title className="text-lg font-semibold text-text">Create Issue</Dialog.Title>
             <Dialog.Close asChild>
-              <button aria-label="Close" className="rounded-ds p-1 hover:bg-[#EBECF0]">
+              <button aria-label="Close" className="rounded-ds p-1 hover:bg-neutral-hovered">
                 <X size={16} className="text-text-subtle" />
               </button>
             </Dialog.Close>

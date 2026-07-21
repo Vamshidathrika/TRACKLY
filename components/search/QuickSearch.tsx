@@ -93,7 +93,7 @@ export function QuickSearch() {
                       key={p.id}
                       href={`/projects/${p.key}`}
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2.5 rounded-ds px-2 py-1.5 text-xs text-text hover:bg-[#F4F5F7]"
+                      className="flex items-center gap-2.5 rounded-ds px-2 py-1.5 text-xs text-default hover:bg-neutral"
                     >
                       <FolderKanban size={14} className="text-brand" />
                       <span className="font-semibold">{p.name}</span>
@@ -114,7 +114,7 @@ export function QuickSearch() {
                       key={i.id}
                       href={`/projects/${i.project.key}/issues/${i.key}`}
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2.5 rounded-ds px-2 py-1.5 text-xs text-text hover:bg-[#F4F5F7]"
+                      className="flex items-center gap-2.5 rounded-ds px-2 py-1.5 text-xs text-default hover:bg-neutral"
                     >
                       <TypeIcon type={i.type} size={14} />
                       <span className="font-mono font-semibold text-text-subtle">{i.key}</span>
@@ -125,7 +125,7 @@ export function QuickSearch() {
               )}
 
               {/* JQL Search Footer Link */}
-              <div className="border-t border-border bg-[#F4F5F7] p-2">
+              <div className="border-t border-border-default bg-surface-sunken p-2">
                 <Link
                   href={`/filters/search?jql=${encodeURIComponent(query)}`}
                   onClick={() => setIsOpen(false)}

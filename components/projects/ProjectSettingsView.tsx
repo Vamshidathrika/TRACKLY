@@ -73,7 +73,7 @@ export function ProjectSettingsView({
             className={`flex items-center gap-2 rounded-ds px-3 py-1.5 text-xs font-semibold transition-colors ${
               activeTab === id
                 ? "bg-brand text-white"
-                : "border border-border bg-surface text-text hover:bg-[#EBECF0]"
+                : "border border-border-default bg-surface text-default hover:bg-neutral-hovered"
             }`}
           >
             <Icon size={14} /> {label}
@@ -115,7 +115,7 @@ export function ProjectSettingsView({
               type="text"
               disabled
               value={project.lead.name}
-              className="h-9 rounded-ds border border-border bg-[#F4F5F7] px-3 text-sm text-text-subtle cursor-not-allowed"
+              className="h-9 rounded-ds border border-border-default bg-neutral px-3 text-sm text-subtle cursor-not-allowed"
             />
           </div>
 
@@ -136,7 +136,7 @@ export function ProjectSettingsView({
       {activeTab === "custom_fields" && (
         <div className="flex flex-col gap-6">
           {/* Add Custom Field Form */}
-          <form onSubmit={handleAddCustomField} className="flex flex-col gap-4 rounded-ds border border-brand/40 bg-[#DEEBFF]/30 p-5 shadow-xs">
+          <form onSubmit={handleAddCustomField} className="flex flex-col gap-4 rounded-ds border border-brand/40 bg-selected/30 p-5 shadow-xs">
             <h3 className="font-semibold text-sm text-text flex items-center gap-1.5">
               <Plus size={16} className="text-brand" /> Add Custom Field
             </h3>
@@ -188,7 +188,7 @@ export function ProjectSettingsView({
 
           {/* Custom Fields Table */}
           <div className="rounded-ds border border-border bg-surface overflow-hidden shadow-xs">
-            <div className="p-3 border-b border-border bg-[#F4F5F7]">
+            <div className="p-3 border-b border-border bg-surface-sunken">
               <span className="text-xs font-bold text-text-subtle">
                 Project Custom Fields ({customFields.length})
               </span>
@@ -210,7 +210,7 @@ export function ProjectSettingsView({
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {customFields.map((field) => (
-                    <tr key={field.id} className="hover:bg-[#F4F5F7]">
+                    <tr key={field.id} className="hover:bg-neutral">
                       <td className="p-3 font-semibold text-text">{field.name}</td>
                       <td className="p-3">
                         <Tag color="blue">{field.fieldType}</Tag>

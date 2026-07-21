@@ -107,7 +107,7 @@ export function IssueDetail({
         <Button
           appearance="subtle"
           onClick={handleToggleWatch}
-          className={`h-7 text-xs ${isWatching ? "bg-[#DEEBFF] text-brand" : ""}`}
+          className={`h-7 text-xs ${isWatching ? "bg-selected text-selected-text" : ""}`}
         >
           <Eye size={14} /> {isWatching ? "Watching" : "Watch"}
         </Button>
@@ -143,7 +143,7 @@ export function IssueDetail({
             ) : (
               <div
                 onClick={() => setIsEditingDesc(true)}
-                className="cursor-pointer min-h-16 rounded-ds border border-transparent p-2 hover:border-border hover:bg-[#F4F5F7] text-sm text-text"
+                className="cursor-pointer min-h-16 rounded-ds border border-transparent p-2 hover:border-border-default hover:bg-neutral text-sm text-default"
               >
                 {description ? (
                   <p className="whitespace-pre-wrap">{description}</p>
@@ -221,9 +221,9 @@ export function IssueDetail({
                       <span>updated</span>
                       <span className="font-semibold text-text">{h.field}</span>
                       <span>from</span>
-                      <span className="font-mono bg-[#EBECF0] px-1 rounded-ds">{h.oldValue ?? "none"}</span>
+                      <span className="font-mono bg-neutral px-1 rounded-ds text-default">{h.oldValue ?? "none"}</span>
                       <span>to</span>
-                      <span className="font-mono bg-[#DEEBFF] text-brand px-1 rounded-ds">{h.newValue ?? "none"}</span>
+                      <span className="font-mono bg-selected text-selected-text px-1 rounded-ds">{h.newValue ?? "none"}</span>
                     </div>
                   ))
                 )}

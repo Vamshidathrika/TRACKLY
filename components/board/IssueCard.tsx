@@ -80,7 +80,7 @@ export function IssueCard({
 
         <div className="flex items-center gap-2">
           {issue.storyPoints != null && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#EBECF0] px-1.5 font-mono text-[11px] font-bold text-text-subtle">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-subtle">
               {issue.storyPoints}
             </span>
           )}

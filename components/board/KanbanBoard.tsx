@@ -81,31 +81,31 @@ export function KanbanBoard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Space Bucket Icon */}
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-[#DEEBFF] text-brand">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-selected text-selected-text">
               <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 fill-current" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" />
               </svg>
             </div>
             <h2 className="text-xl font-bold text-text">{projectName}</h2>
-            <button className="rounded-md p-1 hover:bg-[#EBECF0]">
+            <button className="rounded-md p-1 hover:bg-neutral-hovered">
               <UserPlus size={16} className="text-text-subtle" />
             </button>
-            <button className="rounded-md p-1 hover:bg-[#EBECF0]">
+            <button className="rounded-md p-1 hover:bg-neutral-hovered">
               <MoreHorizontal size={16} className="text-text-subtle" />
             </button>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <button className="flex h-8 items-center gap-1.5 rounded bg-[#F4F5F7] px-3 text-xs font-semibold text-text hover:bg-[#EBECF0]">
+            <button className="flex h-8 items-center gap-1.5 rounded bg-neutral px-3 text-xs font-semibold text-text hover:bg-neutral-hovered">
               <Share2 size={13} /> Share
             </button>
-            <button className="flex h-8 items-center gap-1.5 rounded bg-[#F4F5F7] px-3 text-xs font-semibold text-text hover:bg-[#EBECF0]">
+            <button className="flex h-8 items-center gap-1.5 rounded bg-neutral px-3 text-xs font-semibold text-text hover:bg-neutral-hovered">
               <Zap size={13} /> Automation
             </button>
-            <button className="flex h-8 items-center justify-center rounded bg-[#F4F5F7] w-8 h-8 hover:bg-[#EBECF0]">
+            <button className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered">
               <MessageSquare size={14} className="text-text-subtle" />
             </button>
-            <button className="flex h-8 items-center justify-center rounded bg-[#F4F5F7] w-8 h-8 hover:bg-[#EBECF0]">
+            <button className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered">
               <Maximize2 size={14} className="text-text-subtle" />
             </button>
           </div>
@@ -157,7 +157,7 @@ export function KanbanBoard({
             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border ${
               onlyMine
                 ? "bg-brand text-white border-brand ring-2 ring-brand/20 scale-105"
-                : "bg-[#0052CC] text-white border-transparent hover:scale-105"
+                : "bg-brand text-white border-transparent hover:scale-105"
             }`}
             title="Filter by my issues"
           >
@@ -166,8 +166,8 @@ export function KanbanBoard({
 
           <button
             onClick={() => setOnlyMine((prev) => !prev)}
-            className={`flex h-8 items-center justify-center rounded bg-[#F4F5F7] w-8 h-8 hover:bg-[#EBECF0] transition-colors ${
-              onlyMine ? "bg-[#DEEBFF] text-brand" : ""
+            className={`flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered transition-colors ${
+              onlyMine ? "bg-selected text-selected-text" : ""
             }`}
             title="Filters"
           >
@@ -176,7 +176,7 @@ export function KanbanBoard({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 rounded bg-[#F4F5F7] px-2.5 py-1 text-xs font-semibold text-text-subtle">
+          <div className="flex items-center gap-1 rounded bg-neutral px-2.5 py-1 text-xs font-semibold text-text-subtle">
             <span>Group:</span>
             <select className="bg-transparent font-bold text-text outline-none cursor-pointer">
               <option>None</option>
@@ -184,13 +184,13 @@ export function KanbanBoard({
               <option>Priority</option>
             </select>
           </div>
-          <button className="flex h-8 items-center justify-center rounded bg-[#F4F5F7] w-8 h-8 hover:bg-[#EBECF0]">
+          <button className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered">
             <LineChart size={14} className="text-text-subtle" />
           </button>
-          <button className="flex h-8 items-center justify-center rounded bg-[#F4F5F7] w-8 h-8 hover:bg-[#EBECF0]">
+          <button className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered">
             <Sliders size={14} className="text-text-subtle" />
           </button>
-          <button className="flex h-8 items-center justify-center rounded bg-[#F4F5F7] w-8 h-8 hover:bg-[#EBECF0]">
+          <button className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered">
             <MoreHorizontal size={14} className="text-text-subtle" />
           </button>
         </div>
@@ -211,7 +211,7 @@ export function KanbanBoard({
             <div className="px-1 mt-1">
               <CreateIssueModal
                 trigger={
-                  <button className="flex w-full items-center gap-1.5 rounded-md py-1.5 px-2.5 text-xs font-semibold text-text-subtle hover:bg-[#EBECF0] hover:text-text transition-colors">
+                  <button className="flex w-full items-center gap-1.5 rounded-md py-1.5 px-2.5 text-xs font-semibold text-text-subtle hover:bg-neutral-hovered hover:text-text transition-colors">
                     <span className="text-sm font-bold">+</span> Create
                   </button>
                 }
@@ -222,7 +222,7 @@ export function KanbanBoard({
 
         {/* Add column button */}
         <div className="flex items-start pt-1">
-          <button className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border bg-[#F4F5F7] text-text-subtle hover:bg-[#EBECF0] hover:text-text transition-all hover:border-brand">
+          <button className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border bg-neutral text-text-subtle hover:bg-neutral-hovered hover:text-text transition-all hover:border-brand">
             <Plus size={16} />
           </button>
         </div>
@@ -244,7 +244,7 @@ export function KanbanBoard({
           <Button
             appearance="primary"
             onClick={() => setShowPromo(false)}
-            className="bg-[#0052CC] hover:bg-[#0747A6] text-white text-xs font-bold px-3 py-1.5 rounded-sm"
+            className="bg-brand hover:bg-brand-hovered text-white text-xs font-bold px-3 py-1.5 rounded-sm"
           >
             Explore today
           </Button>

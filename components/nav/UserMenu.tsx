@@ -22,10 +22,10 @@ export function UserMenu({ user }: { user: UserMenuProps }) {
             </div>
           </div>
           <div className="my-1 border-t border-border" />
-          <DM.Item asChild className="cursor-pointer px-4 py-1.5 text-sm outline-none data-[highlighted]:bg-[#F4F5F7]">
+          <DM.Item asChild className="cursor-pointer px-4 py-1.5 text-sm outline-none data-[highlighted]:bg-neutral">
             <a href="/settings/members">Site settings</a>
           </DM.Item>
-          <DM.Item asChild className="cursor-pointer px-4 py-1.5 text-sm outline-none data-[highlighted]:bg-[#F4F5F7]">
+          <DM.Item asChild className="cursor-pointer px-4 py-1.5 text-sm outline-none data-[highlighted]:bg-neutral">
             <button className="w-full text-left" onClick={() => { window.location.href = "/api/auth/signout"; }}>
               Log out
             </button>

@@ -120,7 +120,7 @@ export function BacklogView({
                   {sprint.status === "ACTIVE" && (
                     <Button
                       appearance="subtle"
-                      className="h-7 text-xs border border-border bg-[#F4F5F7]"
+                      className="h-7 text-xs border border-border-default bg-neutral"
                       onClick={() => handleCompleteSprint(sprint.id)}
                     >
                       <CheckCircle2 size={12} className="text-success" /> Complete sprint
@@ -160,7 +160,7 @@ export function BacklogView({
                       <div className="flex items-center gap-3">
                         <PriorityIcon priority={issue.priority} size={14} />
                         {issue.storyPoints != null && (
-                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#DFE1E6] px-1.5 font-mono text-[11px] font-bold">
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                             {issue.storyPoints}
                           </span>
                         )}
@@ -218,7 +218,7 @@ export function BacklogView({
                   <div className="flex items-center gap-3">
                     <PriorityIcon priority={issue.priority} size={14} />
                     {issue.storyPoints != null && (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#DFE1E6] px-1.5 font-mono text-[11px] font-bold">
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                         {issue.storyPoints}
                       </span>
                     )}

@@ -20,7 +20,7 @@ export function LoginForm() {
           type="submit"
           appearance="primary"
           disabled={pending || demoPending}
-          className="w-full justify-center bg-[#0052CC] hover:bg-[#0747A6] text-white py-2.5 font-bold shadow-sm"
+          className="w-full justify-center bg-brand hover:bg-brand-hovered text-white py-2.5 font-bold shadow-sm"
         >
           {demoPending ? "Logging in to Demo..." : "⚡ One-Click Demo Login"}
         </Button>

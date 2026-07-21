@@ -50,7 +50,7 @@ export default async function ProjectsPage() {
           </thead>
           <tbody>
             {projects.map((p) => (
-              <tr key={p.id} className="border-b border-border hover:bg-[#F4F5F7]">
+              <tr key={p.id} className="border-b border-border-default hover:bg-neutral">
                 <td className="py-2 font-medium">
                   <Link href={`/projects/${p.key}`} className="text-brand hover:underline">
                     {p.name}

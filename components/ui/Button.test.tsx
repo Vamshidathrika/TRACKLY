@@ -8,5 +8,5 @@ it("renders primary appearance with brand background class", () => {
 });
 it("defaults to default appearance", () => {
   render(<Button>Cancel</Button>);
-  expect(screen.getByRole("button").className).toContain("bg-[#F4F5F7]");
+  expect(screen.getByRole("button").className).toContain("bg-neutral");
 });

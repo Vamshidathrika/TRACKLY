@@ -95,7 +95,7 @@ export function AICopilotDrawer() {
             </div>
 
             {/* Message History Feed */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#F4F5F7]">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-surface-sunken">
               {messages.map((m, idx) => (
                 <div
                   key={idx}
@@ -105,7 +105,7 @@ export function AICopilotDrawer() {
                 >
                   <div
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${
-                      m.sender === "user" ? "bg-brand" : "bg-[#7A869A]"
+                      m.sender === "user" ? "bg-brand" : "bg-neutral text-default"
                     }`}
                   >
                     {m.sender === "user" ? <User size={14} /> : <Bot size={14} />}
@@ -141,7 +141,7 @@ export function AICopilotDrawer() {
 
               {isLoading && (
                 <div className="flex gap-3 mr-auto items-center max-w-[85%]">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7A869A] text-white">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral text-default">
                     <Bot size={14} />
                   </div>
                   <div className="rounded-ds p-3 bg-surface border border-border text-xs text-text-subtle animate-pulse">
@@ -159,7 +159,7 @@ export function AICopilotDrawer() {
                   <button
                     key={idx}
                     onClick={() => handleSendCommand(sug)}
-                    className="text-left rounded-ds bg-[#F4F5F7] px-2.5 py-1.5 text-xs text-text hover:bg-[#DEEBFF] hover:text-brand transition-colors truncate"
+                    className="text-left rounded-ds bg-neutral px-2.5 py-1.5 text-xs text-default hover:bg-selected hover:text-brand transition-colors truncate"
                   >
                     {sug}
                   </button>

@@ -69,7 +69,7 @@ export function AutomationView({
       {showBuilder && (
         <form
           onSubmit={handleCreateRule}
-          className="flex flex-col gap-4 rounded-ds border border-brand/40 bg-[#DEEBFF]/30 p-5 shadow-xs"
+          className="flex flex-col gap-4 rounded-ds border border-brand/40 bg-selected/30 p-5 shadow-xs"
         >
           <h3 className="font-semibold text-sm text-text flex items-center gap-1.5">
             <Zap size={16} className="text-brand" /> New Automation Rule
@@ -173,7 +173,7 @@ export function AutomationView({
                 className={`flex h-7 items-center gap-1.5 rounded-ds px-3 text-xs font-semibold transition-colors ${
                   rule.enabled
                     ? "bg-success text-white"
-                    : "border border-border bg-[#F4F5F7] text-text-subtle hover:bg-[#DFE1E6]"
+                    : "border border-border-default bg-neutral text-subtle hover:bg-neutral-hovered"
                 }`}
               >
                 <CheckCircle2 size={12} /> {rule.enabled ? "Enabled" : "Enable"}

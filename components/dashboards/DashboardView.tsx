@@ -53,7 +53,7 @@ export function DashboardView({
 
         <div className="grid grid-cols-2 gap-3">
           {Object.entries(statusCounts).map(([status, count]) => (
-            <div key={status} className="flex flex-col rounded-ds border border-border bg-[#F4F5F7] p-3">
+            <div key={status} className="flex flex-col rounded-ds border border-border-default bg-surface-sunken p-3">
               <span className="text-[11px] font-bold text-text-subtle uppercase">
                 {status.replace("_", " ")}
               </span>
@@ -80,7 +80,7 @@ export function DashboardView({
                 </span>
                 <span className="text-text-subtle font-semibold">{count}</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-[#EBECF0] overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
                 <div
                   style={{ width: `${totalIssues > 0 ? (count / totalIssues) * 100 : 0}%` }}
                   className="h-full bg-brand transition-all"

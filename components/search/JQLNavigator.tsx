@@ -122,7 +122,7 @@ export function JQLNavigator({
                 <button
                   key={s}
                   onClick={() => applySuggestion(s)}
-                  className="rounded bg-[#EBECF0] px-2 py-0.5 font-mono text-xs font-semibold text-text hover:bg-brand hover:text-white transition-colors"
+                  className="rounded bg-neutral px-2 py-0.5 font-mono text-xs font-semibold text-default hover:bg-brand hover:text-white transition-colors"
                 >
                   {s}
                 </button>
@@ -134,7 +134,7 @@ export function JQLNavigator({
 
       {/* Save Filter Modal */}
       {showSaveModal && (
-        <form onSubmit={handleSaveFilter} className="flex items-center gap-3 rounded-ds border border-brand/40 bg-[#DEEBFF]/30 p-3">
+        <form onSubmit={handleSaveFilter} className="flex items-center gap-3 rounded-ds border border-brand/40 bg-selected/30 p-3">
           <span className="text-xs font-semibold text-text">Filter name:</span>
           <input
             type="text"
@@ -175,7 +175,7 @@ export function JQLNavigator({
 
       {/* Search Results Table */}
       <div className="rounded-ds border border-border bg-surface overflow-hidden shadow-xs">
-        <div className="flex items-center justify-between p-3 border-b border-border bg-[#F4F5F7]">
+        <div className="flex items-center justify-between p-3 border-b border-border bg-surface-sunken">
           <span className="text-xs font-bold text-text-subtle">
             Matching Issues ({issues.length})
           </span>
@@ -199,7 +199,7 @@ export function JQLNavigator({
             </thead>
             <tbody className="divide-y divide-border/60">
               {issues.map((issue) => (
-                <tr key={issue.id} className="hover:bg-[#F4F5F7] transition-colors">
+                <tr key={issue.id} className="hover:bg-neutral transition-colors">
                   <td className="p-3">
                     <TypeIcon type={issue.type} size={14} />
                   </td>

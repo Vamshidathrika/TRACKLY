@@ -1,8 +1,8 @@
 const colors = {
-  gray: "bg-[#DFE1E6] text-text",
-  blue: "bg-[#DEEBFF] text-brand",
-  green: "bg-[#E3FCEF] text-success",
-  red: "bg-[#FFEBE6] text-danger",
+  gray: "bg-neutral text-default",
+  blue: "bg-selected text-selected-text",
+  green: "bg-neutral text-success",
+  red: "bg-neutral text-danger",
 } as const;
 
 export function Tag({ children, color = "gray" }: { children: React.ReactNode; color?: keyof typeof colors }) {

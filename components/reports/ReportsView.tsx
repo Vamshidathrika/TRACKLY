@@ -49,7 +49,7 @@ export function ReportsView({
             className={`flex items-center gap-2 rounded-ds px-3 py-1.5 text-xs font-semibold transition-colors ${
               activeTab === id
                 ? "bg-brand text-white"
-                : "border border-border bg-surface text-text hover:bg-[#EBECF0]"
+                : "border border-border-default bg-surface text-default hover:bg-neutral-hovered"
             }`}
           >
             <Icon size={14} /> {label}
@@ -82,7 +82,7 @@ export function ReportsView({
                   {/* Ideal Line Bar */}
                   <div
                     style={{ height: `${(pt.ideal / (burndown.totalPoints || 1)) * 100}%` }}
-                    className="w-3 rounded-t bg-[#DFE1E6] transition-all"
+                    className="w-3 rounded-t bg-neutral transition-all"
                     title={`Ideal: ${pt.ideal}`}
                   />
                   {/* Actual Line Bar */}
@@ -98,7 +98,7 @@ export function ReportsView({
           </div>
           <div className="flex items-center justify-center gap-6 pt-2 text-xs text-text-subtle">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#DFE1E6]" /> Ideal Guideline
+              <span className="h-2.5 w-2.5 rounded-full bg-neutral" /> Ideal Guideline
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-brand" /> Actual Remaining
@@ -170,7 +170,7 @@ export function ReportsView({
                   <span className="text-text">{item.status.replace("_", " ")}</span>
                   <span className="text-text-subtle">{item.count} issues</span>
                 </div>
-                <div className="h-3 w-full rounded-full bg-[#EBECF0] overflow-hidden">
+                <div className="h-3 w-full rounded-full bg-neutral overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, item.count * 20)}%` }}
                     className={`h-full transition-all ${
@@ -180,7 +180,7 @@ export function ReportsView({
                         ? "bg-brand"
                         : item.status === "IN_REVIEW"
                         ? "bg-warning"
-                        : "bg-[#7A869A]"
+                        : "bg-neutral"
                     }`}
                   />
                 </div>

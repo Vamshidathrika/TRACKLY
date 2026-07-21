@@ -55,12 +55,12 @@ export function BoardColumn({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`flex w-72 flex-col rounded-ds border p-3 max-h-[calc(100vh-180px)] transition-colors ${
-        isDragOver ? "border-brand bg-[#DEEBFF]/40 ring-2 ring-brand/30" : "border-border bg-[#F4F5F7]"
+        isDragOver ? "border-brand bg-selected/40 ring-2 ring-brand/30" : "border-border-default bg-surface-sunken"
       }`}
     >
       <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-1.5">
-          <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-subtle uppercase tracking-wider">
             {columnTitles[status]}
           </h3>
           {status === "DONE" && (
@@ -69,7 +69,7 @@ export function BoardColumn({
             </svg>
           )}
         </div>
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#DFE1E6] px-1.5 font-mono text-xs font-bold text-text">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-xs font-bold text-default">
           {issues.length}
         </span>
       </div>

@@ -1,9 +1,9 @@
 import { ButtonHTMLAttributes } from "react";
 
 const styles = {
-  primary: "bg-brand hover:bg-brand-hover text-white",
-  default: "bg-[#F4F5F7] hover:bg-[#EBECF0] text-text",
-  subtle: "bg-transparent hover:bg-[#EBECF0] text-text",
+  primary: "bg-brand hover:bg-brand-hovered text-white",
+  default: "bg-neutral hover:bg-neutral-hovered text-default",
+  subtle: "bg-transparent hover:bg-neutral-hovered text-default",
   danger: "bg-danger hover:bg-[#BF2600] text-white",
 } as const;
 

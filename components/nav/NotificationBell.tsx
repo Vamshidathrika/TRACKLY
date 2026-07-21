@@ -45,7 +45,7 @@ export function NotificationBell() {
       <Popover.Trigger asChild>
         <button
           aria-label="Notifications"
-          className="relative rounded-full p-1.5 hover:bg-[#EBECF0] transition-colors"
+          className="relative rounded-full p-1.5 hover:bg-neutral-hovered transition-colors"
         >
           <Bell size={18} className="text-text-subtle" />
           {unreadCount > 0 && (
@@ -85,8 +85,8 @@ export function NotificationBell() {
                   key={n.id}
                   href={n.link}
                   onClick={() => setOpen(false)}
-                  className={`flex gap-3 p-3 transition-colors hover:bg-[#F4F5F7] ${
-                    !n.read ? "bg-[#DEEBFF]/30 font-medium" : ""
+                  className={`flex gap-3 p-3 transition-colors hover:bg-neutral ${
+                    !n.read ? "bg-selected/30 font-medium" : ""
                   }`}
                 >
                   <Avatar name={n.actor.name} src={n.actor.avatarUrl} size={28} />
