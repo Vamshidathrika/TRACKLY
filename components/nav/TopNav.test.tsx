@@ -5,6 +5,10 @@ vi.mock("@/components/issues/CreateIssueModal", () => ({
   CreateIssueModal: ({ trigger }: { trigger: React.ReactNode }) => trigger,
 }));
 
+vi.mock("./NotificationBell", () => ({
+  NotificationBell: () => <button aria-label="Notifications">Notifications</button>,
+}));
+
 import { TopNav } from "./TopNav";
 
 const user = { name: "Vamshi D", email: "v@u.com", avatarUrl: null };
