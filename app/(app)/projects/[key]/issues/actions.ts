@@ -1,8 +1,7 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 import { updateIssue, addComment } from "@/lib/issues";
 import type { IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -11,9 +10,7 @@ export async function updateIssueFieldAction(
   field: "status" | "priority" | "summary" | "description" | "storyPoints",
   value: string
 ) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return { error: "Not authenticated" };
+  const user = await getAuthUser();
 
   try {
     let data: Record<string, any> = {};
@@ -23,7 +20,7 @@ export async function updateIssueFieldAction(
     if (field === "description") data.description = value;
     if (field === "storyPoints") data.storyPoints = value ? parseFloat(value) : null;
 
-    await updateIssue(issueId, userId, data);
+    await updateIssue(issueId, user.id, data);
     revalidatePath("/projects");
     return { success: true };
   } catch (e) {
@@ -33,14 +30,11 @@ export async function updateIssueFieldAction(
 }
 
 export async function postCommentAction(issueId: string, body: string) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return { error: "Not authenticated" };
-
+  const user = await getAuthUser();
   if (!body.trim()) return { error: "Comment cannot be empty" };
 
   try {
-    await addComment({ issueId, authorId: userId, body });
+    await addComment({ issueId, authorId: user.id, body });
     revalidatePath("/projects");
     return { success: true };
   } catch (e) {

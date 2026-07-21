@@ -45,3 +45,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export async function getAuthUser() {
+  const session = await auth();
+  if (session?.user?.id) {
+    return {
+      id: session.user.id,
+      name: session.user.name ?? "Demo User",
+      email: session.user.email ?? "demo@trackly.dev",
+      image: session.user.image ?? null,
+    };
+  }
+
+  // Bypass fallback: get or create demo user
+  let demoUser = await prisma.user.findUnique({ where: { email: "demo@trackly.dev" } });
+  if (!demoUser) {
+    const { makeSlug } = await import("./slug");
+    demoUser = await prisma.user.create({
+      data: {
+        email: "demo@trackly.dev",
+        name: "Demo User",
+      },
+    });
+    const site = await prisma.site.create({
+      data: { name: "Demo Workspace", slug: makeSlug("Demo Workspace") },
+    });
+    await prisma.membership.create({
+      data: { userId: demoUser.id, siteId: site.id, role: "ADMIN" },
+    });
+  }
+
+  return {
+    id: demoUser.id,
+    name: demoUser.name,
+    email: demoUser.email,
+    image: demoUser.avatarUrl,
+  };
+}

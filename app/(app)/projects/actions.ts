@@ -1,7 +1,7 @@
 "use server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createProject } from "@/lib/projects";
 import type { ProjectType } from "@prisma/client";
@@ -16,13 +16,17 @@ export async function createProjectAction(
   _prev: { error?: string; success?: boolean },
   formData: FormData
 ) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return { error: "Not authenticated" };
+  const user = await getAuthUser();
 
-  const membership = await prisma.membership.findFirst({
-    where: { userId },
-  });
+  let membership = await prisma.membership.findFirst({ where: { userId: user.id } });
+  if (!membership) {
+    const site = await prisma.site.findFirst();
+    if (site) {
+      membership = await prisma.membership.create({
+        data: { userId: user.id, siteId: site.id, role: "ADMIN" },
+      });
+    }
+  }
   if (!membership) return { error: "Site membership required" };
 
   const parsed = projectSchema.safeParse(Object.fromEntries(formData));
@@ -34,7 +38,7 @@ export async function createProjectAction(
       name: parsed.data.name,
       key: parsed.data.key,
       type: (parsed.data.type as ProjectType) ?? "KANBAN",
-      leadId: userId,
+      leadId: user.id,
     });
     revalidatePath("/projects");
     return { success: true };

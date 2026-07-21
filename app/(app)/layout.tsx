@@ -1,14 +1,11 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 import { TopNav } from "@/components/nav/TopNav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const u = session.user as { name?: string; email?: string; image?: string };
+  const user = await getAuthUser();
   return (
     <div className="flex min-h-screen flex-col">
-      <TopNav user={{ name: u.name ?? "", email: u.email ?? "", avatarUrl: u.image ?? null }} />
+      <TopNav user={{ name: user.name, email: user.email, avatarUrl: user.image }} />
       <div className="flex flex-1">{children}</div>
     </div>
   );
