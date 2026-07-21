@@ -48,16 +48,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 export async function getAuthUser() {
   const session = await auth();
-  if (session?.user?.id) {
-    return {
-      id: session.user.id,
-      name: session.user.name ?? "Demo User",
-      email: session.user.email ?? "demo@trackly.dev",
-      image: session.user.image ?? null,
-    };
+
+  if (session?.user?.id || session?.user?.email) {
+    const dbUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          ...(session.user.id ? [{ id: session.user.id }] : []),
+          ...(session.user.email ? [{ email: session.user.email.toLowerCase() }] : []),
+        ],
+      },
+    });
+
+    if (dbUser) {
+      return {
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        image: dbUser.avatarUrl,
+      };
+    }
   }
 
-  // Bypass fallback: get or create demo user
+  // Demo fallback user
   let demoUser = await prisma.user.findUnique({ where: { email: "demo@trackly.dev" } });
   if (!demoUser) {
     const { makeSlug } = await import("./slug");

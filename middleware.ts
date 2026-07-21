@@ -1,9 +1,14 @@
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "./lib/auth.config";
 
-export function middleware() {
-  return NextResponse.next();
-}
+export default NextAuth(authConfig).auth;
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico).*)"],
+  matcher: [
+    "/your-work/:path*",
+    "/projects/:path*",
+    "/filters/:path*",
+    "/dashboards/:path*",
+    "/settings/:path*",
+  ],
 };
