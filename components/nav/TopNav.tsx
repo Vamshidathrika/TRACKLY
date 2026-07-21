@@ -25,7 +25,7 @@ export function TopNav({ user }: { user: NavUser }) {
         <Dropdown trigger="Your work" items={[{ label: "Go to your work", href: "/your-work" }]} />
         <Dropdown trigger="Projects" items={[{ label: "View all projects", href: "/projects" }]} />
         <Dropdown trigger="Filters" items={[{ label: "View all filters", href: "/filters/search" }]} />
-        <Dropdown trigger="Dashboards" items={[{ label: "Coming soon" }]} />
+        <Dropdown trigger="Dashboards" items={[{ label: "View default dashboard", href: "/dashboards" }]} />
         <Dropdown trigger="Teams" items={[{ label: "Coming soon" }]} />
         <CreateIssueModal trigger={<Button appearance="primary" className="ml-1">Create</Button>} />
       </nav>
