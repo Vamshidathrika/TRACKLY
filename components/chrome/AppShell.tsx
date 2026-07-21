@@ -5,26 +5,52 @@ import { GlobalSidebar } from "./GlobalSidebar";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { AICopilotDrawer } from "@/components/ai/AICopilotDrawer";
 
+import { useShortcuts } from "@/lib/shortcuts";
+import { CommandPalette } from "./CommandPalette";
+import { ShortcutsHelp } from "./ShortcutsHelp";
+import { setThemeAction } from "@/app/(app)/chrome-actions";
+import { useRouter } from "next/navigation";
+
 type Proj = { id: string; key: string; name: string };
 
 export function AppShell({ user, projects, starredProjectIds, children }: {
   user: ChromeUser; projects: Proj[]; starredProjectIds: string[]; children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  // CreateIssueModal is self-contained (owns its open state + project picker), so it
-  // can't be driven as a controlled global-create. We open it by clicking a hidden
-  // trigger the TopBar's Create button targets via this ref (see GlobalCreate below).
+  const [helpOpen, setHelpOpen] = useState(false);
   const createTriggerRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     setCollapsed(localStorage.getItem("trackly-sidebar-collapsed") === "1");
   }, []);
+
+  const toggleTheme = () => {
+    const current = document.documentElement.getAttribute("data-theme") || "light";
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    setThemeAction(next as any);
+  };
+
+  useShortcuts({
+    "mod+k": () => setPaletteOpen(true),
+    "c": () => createTriggerRef.current?.click(),
+    "/": () => setPaletteOpen(true),
+    "?": () => setHelpOpen(true),
+    "g d": () => router.push("/dashboards"),
+    "g p": () => router.push("/projects"),
+    "g y": () => router.push("/your-work"),
+    "\\": toggleTheme,
+  });
+
   function toggleSidebar() {
     setCollapsed((c) => {
       localStorage.setItem("trackly-sidebar-collapsed", c ? "0" : "1");
       return !c;
     });
   }
+
   return (
     <div className="flex h-screen flex-col">
       <TopBar
@@ -40,8 +66,22 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
       <GlobalCreate triggerRef={createTriggerRef} />
       {/* AI Copilot floats over all (app) routes (restored from pre-chrome layout) */}
       <AICopilotDrawer />
-      {/* palette mounts in Task 6 */}
-      {paletteOpen && null}
+      
+      {/* command palette and help modals */}
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        projects={projects}
+        onCreateIssue={() => createTriggerRef.current?.click()}
+        onSetTheme={(pref) => {
+          setThemeAction(pref);
+          const resolved = pref === "system"
+            ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+            : pref;
+          document.documentElement.setAttribute("data-theme", resolved);
+        }}
+      />
+      <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }
