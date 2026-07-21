@@ -1,4 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
+
+vi.mock("@/components/issues/CreateIssueModal", () => ({
+  CreateIssueModal: ({ trigger }: { trigger: React.ReactNode }) => trigger,
+}));
+
 import { TopNav } from "./TopNav";
 
 const user = { name: "Vamshi D", email: "v@u.com", avatarUrl: null };
