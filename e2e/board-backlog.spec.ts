@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("Phase 3 Flow: Projects -> Board -> Backlog Sprint Management", async ({ page }) => {
   // 1. Visit projects directly (auth bypassed)
   await page.goto("/projects/DEMO");
-  await expect(page.getByText("Demo Software Project")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Demo Software Project" })).toBeVisible();
 
   // 2. Navigate to Board via sidebar link
   await page.click("text=Board");
