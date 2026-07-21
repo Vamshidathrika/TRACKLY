@@ -18,9 +18,9 @@ test("signup -> your work -> invite -> logout -> login", async ({ page }) => {
   await expect(page.getByText(/Invite link:/)).toBeVisible();
 
   await page.goto("/login");
-  await page.getByPlaceholder("Enter your email").fill(email);
-  await page.getByPlaceholder("Enter password").fill("password123");
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByPlaceholder("e.g. demo@trackly.dev").fill(email);
+  await page.getByPlaceholder("Password").fill("password123");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/your-work/);
 });
 
@@ -32,8 +32,8 @@ test("unauthenticated user is redirected to login", async ({ page }) => {
 
 test("bad credentials show generic error", async ({ page }) => {
   await page.goto("/login");
-  await page.getByPlaceholder("Enter your email").fill("nobody@test.dev");
-  await page.getByPlaceholder("Enter password").fill("wrongpass");
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByPlaceholder("e.g. demo@trackly.dev").fill("nobody@test.dev");
+  await page.getByPlaceholder("Password").fill("wrongpass");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByText("Invalid email or password")).toBeVisible();
 });
