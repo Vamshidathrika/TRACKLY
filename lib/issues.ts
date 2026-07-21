@@ -113,11 +113,39 @@ export async function getIssuesByProject(projectId: string) {
 }
 
 export async function getIssueByKey(siteId: string, key: string) {
-  return prisma.issue.findFirst({
+  const match = await prisma.issue.findFirst({
     where: {
       key: key.toUpperCase(),
       project: { siteId },
     },
+    include: {
+      project: true,
+      reporter: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      assignee: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      parent: { select: { id: true, key: true, summary: true, type: true } },
+      subtasks: {
+        include: {
+          assignee: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      },
+      comments: {
+        include: {
+          author: { select: { id: true, name: true, avatarUrl: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      history: {
+        include: {
+          author: { select: { id: true, name: true, avatarUrl: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+  if (match) return match;
+
+  return prisma.issue.findFirst({
+    where: { key: key.toUpperCase() },
     include: {
       project: true,
       reporter: { select: { id: true, name: true, email: true, avatarUrl: true } },

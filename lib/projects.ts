@@ -45,8 +45,16 @@ export async function getProjects(siteId: string) {
 }
 
 export async function getProjectByKey(siteId: string, key: string) {
-  return prisma.project.findFirst({
+  const match = await prisma.project.findFirst({
     where: { siteId, key: key.toUpperCase() },
+    include: {
+      lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+    },
+  });
+  if (match) return match;
+
+  return prisma.project.findFirst({
+    where: { key: key.toUpperCase() },
     include: {
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },

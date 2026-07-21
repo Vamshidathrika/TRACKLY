@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getIssueByKey } from "@/lib/issues";
@@ -15,7 +15,7 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
   if (!membership) redirect("/your-work");
 
   const issue = await getIssueByKey(membership.siteId, issueKey);
-  if (!issue) notFound();
+  if (!issue) redirect(`/projects/${key}`);
 
   return (
     <div className="flex flex-1">

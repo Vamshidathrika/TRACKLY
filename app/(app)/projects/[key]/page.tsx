@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getProjectByKey } from "@/lib/projects";
@@ -19,7 +19,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!membership) redirect("/your-work");
 
   const project = await getProjectByKey(membership.siteId, key);
-  if (!project) notFound();
+  if (!project) redirect("/projects");
 
   const issues = await getIssuesByProject(project.id);
 
