@@ -82,6 +82,7 @@ model User {
   triggeredNotifications Notification[] @relation("ActorNotifications")
   watchedIssues          Watcher[]
   savedFilters           SavedFilter[]
+  stars                  Star[]
 }
 
 model Site {
@@ -134,6 +135,7 @@ model Project {
   sprints         Sprint[]
   automationRules AutomationRule[]
   customFields    CustomField[]
+  stars           Star[]
 
   @@unique([siteId, key])
 }
@@ -264,4 +266,15 @@ model CustomField {
   required  Boolean  @default(false)
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Star {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
 }
