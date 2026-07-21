@@ -40,6 +40,12 @@ enum IssuePriority {
   LOWEST
 }
 
+enum SprintStatus {
+  FUTURE
+  ACTIVE
+  CLOSED
+}
+
 model User {
   id             String         @id @default(cuid())
   email          String         @unique
@@ -102,13 +108,29 @@ model Project {
   site         Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
   lead         User        @relation("ProjectLead", fields: [leadId], references: [id])
   issues       Issue[]
+  sprints      Sprint[]
 
   @@unique([siteId, key])
+}
+
+model Sprint {
+  id        String       @id @default(cuid())
+  projectId String
+  name      String
+  goal      String?
+  startDate DateTime?
+  endDate   DateTime?
+  status    SprintStatus @default(FUTURE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues    Issue[]
 }
 
 model Issue {
   id          String        @id @default(cuid())
   projectId   String
+  sprintId    String?
   number      Int
   key         String
   summary     String
@@ -117,6 +139,7 @@ model Issue {
   status      IssueStatus   @default(TO_DO)
   priority    IssuePriority @default(MEDIUM)
   storyPoints Float?
+  rank        Float         @default(0)
   reporterId  String
   assigneeId  String?
   parentId    String?
@@ -124,6 +147,7 @@ model Issue {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint      Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   reporter    User          @relation("ReportedIssues", fields: [reporterId], references: [id])
   assignee    User?         @relation("AssignedIssues", fields: [assigneeId], references: [id])
   parent      Issue?        @relation("IssueHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
