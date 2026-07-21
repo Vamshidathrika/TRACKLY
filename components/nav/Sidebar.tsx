@@ -1,16 +1,31 @@
 "use client";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, List, Columns3, BarChart3, Settings } from "lucide-react";
 
-const planning = [
-  { label: "Timeline", icon: Calendar },
-  { label: "Backlog", icon: List },
-  { label: "Board", icon: Columns3 },
-  { label: "Reports", icon: BarChart3 },
-];
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  List,
+  Columns3,
+  BarChart3,
+  Settings,
+  FolderKanban,
+} from "lucide-react";
 
 export function Sidebar({ projectName, projectKey }: { projectName: string; projectKey: string }) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+
+  const planning = [
+    { label: "Issues List", href: `/projects/${projectKey}`, icon: FolderKanban, enabled: true },
+    { label: "Backlog", href: `/projects/${projectKey}/backlog`, icon: List, enabled: true },
+    { label: "Board", href: `/projects/${projectKey}/board`, icon: Columns3, enabled: true },
+    { label: "Timeline", icon: Calendar, enabled: false },
+    { label: "Reports", icon: BarChart3, enabled: false },
+  ];
+
   if (collapsed) {
     return (
       <aside className="relative w-5 border-r border-border bg-surface">
@@ -24,6 +39,7 @@ export function Sidebar({ projectName, projectKey }: { projectName: string; proj
       </aside>
     );
   }
+
   return (
     <aside className="relative flex w-60 flex-col border-r border-border bg-surface">
       <button
@@ -33,6 +49,7 @@ export function Sidebar({ projectName, projectKey }: { projectName: string; proj
       >
         <ChevronLeft size={12} />
       </button>
+
       <div className="flex items-center gap-2 px-4 py-5">
         <span className="flex h-8 w-8 items-center justify-center rounded-ds bg-brand text-xs font-bold text-white">
           {projectKey.slice(0, 2)}
@@ -42,23 +59,46 @@ export function Sidebar({ projectName, projectKey }: { projectName: string; proj
           <p className="text-xs text-text-subtle">Software project</p>
         </div>
       </div>
+
       <p className="px-4 pb-1 text-[11px] font-bold tracking-wide text-text-subtle uppercase">Planning</p>
+
       <nav className="flex flex-col">
-        {planning.map(({ label, icon: Icon }) => (
-          <button
-            key={label}
-            disabled
-            title="Coming in a later phase"
-            className="flex cursor-not-allowed items-center gap-3 px-4 py-2 text-sm text-text-subtle opacity-60"
-          >
-            <Icon size={16} /> {label}
-          </button>
-        ))}
+        {planning.map(({ label, href, icon: Icon, enabled }) => {
+          if (!enabled || !href) {
+            return (
+              <button
+                key={label}
+                disabled
+                title="Coming in a later phase"
+                className="flex cursor-not-allowed items-center gap-3 px-4 py-2 text-sm text-text-subtle opacity-60"
+              >
+                <Icon size={16} /> {label}
+              </button>
+            );
+          }
+
+          const isActive = pathname === href;
+
+          return (
+            <Link
+              key={label}
+              href={href}
+              className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-[#DEEBFF] text-brand border-r-2 border-brand"
+                  : "text-text hover:bg-[#F4F5F7]"
+              }`}
+            >
+              <Icon size={16} /> {label}
+            </Link>
+          );
+        })}
       </nav>
+
       <div className="mt-auto border-t border-border">
-        <a href="/settings/members" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-[#F4F5F7]">
+        <Link href="/settings/members" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-[#F4F5F7]">
           <Settings size={16} /> Project settings
-        </a>
+        </Link>
       </div>
     </aside>
   );
