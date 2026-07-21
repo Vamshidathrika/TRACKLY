@@ -2,7 +2,7 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import { Settings } from "lucide-react";
 import { setThemeAction } from "@/app/(app)/chrome-actions";
-import type { ThemePref } from "@/lib/theme";
+import { resolveTheme, type ThemePref } from "@/lib/theme";
 
 const options: { label: string; value: ThemePref }[] = [
   { label: "Light", value: "light" },
@@ -12,12 +12,7 @@ const options: { label: string; value: ThemePref }[] = [
 
 export function SettingsMenu() {
   async function choose(pref: ThemePref) {
-    const resolved =
-      pref === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : pref;
+    const resolved = resolveTheme(pref, window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.setAttribute("data-theme", resolved);
     await setThemeAction(pref);
   }

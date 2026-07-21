@@ -43,3 +43,16 @@ it("renders logo, search, create, and fires callbacks", async () => {
   await userEvent.click(screen.getByLabelText("Toggle sidebar"));
   expect(onToggleSidebar).toHaveBeenCalled();
 });
+
+it("renders remote widgets (NotificationBell + UserMenu) by default", () => {
+  render(
+    <TopBar
+      user={user}
+      onToggleSidebar={vi.fn()}
+      onOpenPalette={vi.fn()}
+      onOpenCreate={vi.fn()}
+    />
+  );
+  expect(screen.getByLabelText("Notifications")).toBeInTheDocument();
+  expect(screen.getByLabelText("Your profile")).toBeInTheDocument();
+});
