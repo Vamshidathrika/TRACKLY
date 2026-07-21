@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
+import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 
 export type NavUser = { name: string; email: string; avatarUrl: string | null };
@@ -34,8 +35,8 @@ export function TopNav({ user }: { user: NavUser }) {
             className="h-8 w-50 rounded-ds border-2 border-border bg-surface pr-2 pl-7 text-sm outline-none transition-all focus:w-70 focus:border-brand"
           />
         </div>
+        <NotificationBell />
         {[
-          { icon: Bell, label: "Notifications" },
           { icon: HelpCircle, label: "Help" },
           { icon: Settings, label: "Settings" },
         ].map(({ icon: Icon, label }) => (
