@@ -514,7 +514,7 @@ function Item({ href, label, icon: Icon, disabled, title }: {
   }
   return (
     <Link href={href}
-      className={`relative flex items-center gap-3 rounded-ds px-3 py-1.5 text-sm ${active ? "bg-selected text-selected before:absolute before:top-1 before:bottom-1 before:left-0 before:w-0.5 before:rounded before:bg-brand" : "text-default hover:bg-neutral-hovered"}`}>
+      className={`relative flex items-center gap-3 rounded-ds px-3 py-1.5 text-sm ${active ? "bg-selected text-selected-text before:absolute before:top-1 before:bottom-1 before:left-0 before:w-0.5 before:rounded before:bg-brand" : "text-default hover:bg-neutral-hovered"}`}>
       <Icon size={16} /> {label}
     </Link>
   );
@@ -800,7 +800,7 @@ Run → PASS.
 
 **Interfaces:**
 - Consumes: token classes from Task 1.
-- Mapping rules (apply mechanically): `#F4F5F7`/`bg-[#F4F5F7]` → `bg-neutral` (when used as hover/fill) or `bg-surface-sunken` (page background); `#EBECF0` hover fills → `bg-neutral-hovered`; `#DEEBFF` → `bg-selected` (+ text → `text-selected`); raw `#172B4D` text → `text-default`; `#0052CC` → `text-brand`/`bg-brand` (token now resolves to `#0C66E4`); `#FFEBE6` → `bg-danger/10` equivalent — use `bg-[color-mix(in_srgb,var(--ds-danger)_15%,transparent)]`? NO — keep simple: Tag colors switch to `bg-neutral text-default` (gray), `bg-selected text-selected` (blue), success/danger tags use `text-success`/`text-danger` (legacy-named classes now resolving to `--ds-*` values) on `bg-neutral`. Shadows `rgba(9,30,66,…)` stay as-is (acceptable both themes).
+- Mapping rules (apply mechanically): `#F4F5F7`/`bg-[#F4F5F7]` → `bg-neutral` (when used as hover/fill) or `bg-surface-sunken` (page background); `#EBECF0` hover fills → `bg-neutral-hovered`; `#DEEBFF` → `bg-selected` (+ text → `text-selected-text`; NEVER bare `text-selected` — it resolves to the fill color); raw `#172B4D` text → `text-default`; `#0052CC` → `text-brand`/`bg-brand` (token now resolves to `#0C66E4`); `#FFEBE6` → `bg-danger/10` equivalent — use `bg-[color-mix(in_srgb,var(--ds-danger)_15%,transparent)]`? NO — keep simple: Tag colors switch to `bg-neutral text-default` (gray), `bg-selected text-selected` (blue), success/danger tags use `text-success`/`text-danger` (legacy-named classes now resolving to `--ds-*` values) on `bg-neutral`. Shadows `rgba(9,30,66,…)` stay as-is (acceptable both themes).
 - Legacy alias tokens keep old class names compiling; this task moves usages to the new names so dark values apply everywhere.
 
 - [ ] **Step 1:** Run the grep above; list files. For each file apply mapping rules; do not change any logic, props, or structure — class strings only.
