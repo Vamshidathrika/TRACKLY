@@ -21,12 +21,26 @@ export type BoardIssue = {
 export function IssueCard({
   issue,
   onStatusChange,
+  canEditStatus = true,
 }: {
   issue: BoardIssue;
   onStatusChange: (issueId: string, newStatus: IssueStatus) => void;
+  canEditStatus?: boolean;
 }) {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!canEditStatus) return;
+    e.dataTransfer.setData("text/plain", issue.id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
   return (
-    <div className="flex flex-col gap-2 rounded-ds border border-border bg-surface p-3 shadow-xs hover:shadow-md transition-shadow">
+    <div
+      draggable={canEditStatus}
+      onDragStart={handleDragStart}
+      className={`flex flex-col gap-2 rounded-ds border border-border bg-surface p-3 shadow-xs transition-all ${
+        canEditStatus ? "cursor-grab active:cursor-grabbing hover:shadow-md hover:border-brand/60" : "opacity-90"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <Link
           href={`/projects/${issue.projectKey}/issues/${issue.key}`}
@@ -34,10 +48,15 @@ export function IssueCard({
         >
           {issue.key}
         </Link>
+
         <select
+          disabled={!canEditStatus}
           value={issue.status}
           onChange={(e) => onStatusChange(issue.id, e.target.value as IssueStatus)}
-          className="h-6 rounded-ds border border-border bg-background px-1 text-[11px] font-semibold text-text-subtle outline-none focus:border-brand"
+          title={canEditStatus ? "Change status" : "Status changes restricted to Assignee or Admin"}
+          className={`h-6 rounded-ds border border-border bg-background px-1 text-[11px] font-semibold text-text-subtle outline-none focus:border-brand ${
+            !canEditStatus ? "cursor-not-allowed opacity-60" : ""
+          }`}
         >
           <option value="TO_DO">TO DO</option>
           <option value="IN_PROGRESS">IN PROGRESS</option>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { IssueCard, type BoardIssue } from "./IssueCard";
 import type { IssueStatus } from "@prisma/client";
 
@@ -14,13 +15,49 @@ export function BoardColumn({
   status,
   issues,
   onStatusChange,
+  currentUserId,
+  isAdmin = true,
 }: {
   status: IssueStatus;
   issues: BoardIssue[];
   onStatusChange: (issueId: string, newStatus: IssueStatus) => void;
+  currentUserId?: string;
+  isAdmin?: boolean;
 }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const issueId = e.dataTransfer.getData("text/plain");
+    if (!issueId) return;
+
+    const targetIssue = issues.find((i) => i.id === issueId);
+    const canEdit = isAdmin || (targetIssue && targetIssue.assignee?.id === currentUserId);
+    if (canEdit || targetIssue === undefined) {
+      onStatusChange(issueId, status);
+    }
+  };
+
   return (
-    <div className="flex w-72 flex-col rounded-ds border border-border bg-[#F4F5F7] p-3 max-h-[calc(100vh-180px)]">
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`flex w-72 flex-col rounded-ds border p-3 max-h-[calc(100vh-180px)] transition-colors ${
+        isDragOver ? "border-brand bg-[#DEEBFF]/40 ring-2 ring-brand/30" : "border-border bg-[#F4F5F7]"
+      }`}
+    >
       <div className="mb-3 flex items-center justify-between px-1">
         <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">
           {columnTitles[status]}
@@ -33,12 +70,20 @@ export function BoardColumn({
       <div className="flex flex-col gap-2.5 overflow-y-auto pr-1">
         {issues.length === 0 ? (
           <div className="rounded-ds border border-dashed border-border p-4 text-center text-xs text-text-subtle italic">
-            No issues
+            Drop issues here
           </div>
         ) : (
-          issues.map((issue) => (
-            <IssueCard key={issue.id} issue={issue} onStatusChange={onStatusChange} />
-          ))
+          issues.map((issue) => {
+            const canEditStatus = isAdmin || issue.assignee?.id === currentUserId;
+            return (
+              <IssueCard
+                key={issue.id}
+                issue={issue}
+                onStatusChange={onStatusChange}
+                canEditStatus={canEditStatus}
+              />
+            );
+          })
         )}
       </div>
     </div>

@@ -69,6 +69,7 @@ export function KanbanBoard({
             status={colStatus}
             issues={filteredIssues.filter((i) => i.status === colStatus)}
             onStatusChange={handleStatusChange}
+            currentUserId={currentUserId}
           />
         ))}
       </div>
