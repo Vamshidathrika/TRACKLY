@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthUser } from "@/lib/auth";
-import { updateIssue, addComment, getIssueByKey } from "@/lib/issues";
+import { updateIssue, addComment } from "@/lib/issues";
 import { extractMentions, createNotification, toggleWatcher } from "@/lib/notifications";
+import { evaluateAutomationTriggers } from "@/lib/automation";
 import { prisma } from "@/lib/prisma";
 import type { IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -24,7 +25,7 @@ export async function updateIssueFieldAction(
 
     await updateIssue(issueId, user.id, data);
 
-    // Notify watchers if status changed
+    // Notify watchers and trigger automation rules if status changed
     if (field === "status") {
       const issue = await prisma.issue.findUnique({
         where: { id: issueId },
@@ -41,6 +42,12 @@ export async function updateIssueFieldAction(
             link: `/projects/${issue.project.key}/issues/${issue.key}`,
           });
         }
+
+        await evaluateAutomationTriggers("STATUS_CHANGED", {
+          issueId: issue.id,
+          projectId: issue.projectId,
+          authorId: user.id,
+        });
       }
     }
 
@@ -57,7 +64,7 @@ export async function postCommentAction(issueId: string, body: string) {
   if (!body.trim()) return { error: "Comment cannot be empty" };
 
   try {
-    const comment = await addComment({ issueId, authorId: user.id, body });
+    await addComment({ issueId, authorId: user.id, body });
     const issue = await prisma.issue.findUnique({
       where: { id: issueId },
       include: { project: true },
@@ -81,6 +88,12 @@ export async function postCommentAction(issueId: string, body: string) {
           });
         }
       }
+
+      await evaluateAutomationTriggers("COMMENT_ADDED", {
+        issueId: issue.id,
+        projectId: issue.projectId,
+        authorId: user.id,
+      });
     }
 
     revalidatePath("/projects");
