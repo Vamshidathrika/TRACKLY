@@ -4,6 +4,16 @@ export function parseJQLToPrisma(jql: string): Record<string, any> {
   const query = jql.trim();
   if (!query) return {};
 
+  // Parse OR conditions
+  if (/\s+OR\s+/i.test(query)) {
+    const parts = query.split(/\s+OR\s+/i);
+    const orConditions = parts.map((part) => parseJQLToPrisma(part)).filter((cond) => Object.keys(cond).length > 0);
+    if (orConditions.length > 0) {
+      return { OR: orConditions };
+    }
+    return {};
+  }
+
   const clauses = query.split(/\s+AND\s+/i);
   const where: Record<string, any> = {};
 

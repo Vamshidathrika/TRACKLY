@@ -15,6 +15,16 @@ describe("jql engine", () => {
     });
   });
 
+  it("parses multiple OR conditions", () => {
+    const where = parseJQLToPrisma("status = IN_PROGRESS OR status = TO_DO");
+    expect(where).toEqual({
+      OR: [
+        { status: "IN_PROGRESS" },
+        { status: "TO_DO" },
+      ],
+    });
+  });
+
   it("parses summary contains query", () => {
     const where = parseJQLToPrisma('summary ~ "layout"');
     expect(where).toEqual({
