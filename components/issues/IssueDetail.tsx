@@ -6,7 +6,8 @@ import { TypeIcon } from "@/components/ui/TypeIcon";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { updateIssueFieldAction, postCommentAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { Eye } from "lucide-react";
+import { updateIssueFieldAction, postCommentAction, toggleWatcherAction } from "@/app/(app)/projects/[key]/issues/actions";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
 export type IssueDetailData = {
@@ -72,16 +73,33 @@ export function IssueDetail({ issue }: { issue: IssueDetailData }) {
     setIsSubmittingComment(false);
   };
 
+  const [isWatching, setIsWatching] = useState(false);
+
+  const handleToggleWatch = async () => {
+    const res = await toggleWatcherAction(issue.id);
+    if (res.isWatching !== undefined) setIsWatching(res.isWatching);
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-6xl">
       {/* Top Header */}
-      <div className="flex items-center gap-2 text-sm text-text-subtle">
-        <TypeIcon type={issue.type} />
-        <Link href={`/projects/${issue.project.key}`} className="hover:underline">
-          {issue.project.name}
-        </Link>
-        <span>/</span>
-        <span className="font-mono font-semibold text-text">{issue.key}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-text-subtle">
+          <TypeIcon type={issue.type} />
+          <Link href={`/projects/${issue.project.key}`} className="hover:underline">
+            {issue.project.name}
+          </Link>
+          <span>/</span>
+          <span className="font-mono font-semibold text-text">{issue.key}</span>
+        </div>
+
+        <Button
+          appearance="subtle"
+          onClick={handleToggleWatch}
+          className={`h-7 text-xs ${isWatching ? "bg-[#DEEBFF] text-brand" : ""}`}
+        >
+          <Eye size={14} /> {isWatching ? "Watching" : "Watch"}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
