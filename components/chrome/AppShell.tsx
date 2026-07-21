@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { TopBar, type ChromeUser } from "./TopBar";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
+import { AICopilotDrawer } from "@/components/ai/AICopilotDrawer";
 
 type Proj = { id: string; key: string; name: string };
 
@@ -37,6 +38,8 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
         <main className="min-w-0 flex-1 overflow-auto">{children}</main>
       </div>
       <GlobalCreate triggerRef={createTriggerRef} />
+      {/* AI Copilot floats over all (app) routes (restored from pre-chrome layout) */}
+      <AICopilotDrawer />
       {/* palette mounts in Task 6 */}
       {paletteOpen && null}
     </div>

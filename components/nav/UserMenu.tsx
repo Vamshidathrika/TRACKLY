@@ -1,9 +1,9 @@
 "use client";
 import * as DM from "@radix-ui/react-dropdown-menu";
 import { Avatar } from "@/components/ui/Avatar";
-import type { NavUser } from "./TopNav";
+export type UserMenuProps = { name: string; email: string; avatarUrl: string | null };
 
-export function UserMenu({ user }: { user: NavUser }) {
+export function UserMenu({ user }: { user: UserMenuProps }) {
   return (
     <DM.Root>
       <DM.Trigger asChild>

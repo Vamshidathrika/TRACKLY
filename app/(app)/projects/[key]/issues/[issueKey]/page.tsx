@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
 import { getIssueByKey } from "@/lib/issues";
-import { Sidebar } from "@/components/nav/Sidebar";
 import { IssueDetail } from "@/components/issues/IssueDetail";
 
 export default async function IssuePage({ params }: { params: Promise<{ key: string; issueKey: string }> }) {
@@ -18,11 +17,8 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
   const isAdmin = membership?.role === "ADMIN";
 
   return (
-    <div className="flex flex-1">
-      <Sidebar projectName={issue.project.name} projectKey={issue.project.key} />
-      <main className="flex-1 px-8 py-6 overflow-y-auto">
-        <IssueDetail issue={issue} currentUserId={user.id} isAdmin={isAdmin} />
-      </main>
-    </div>
+    <main className="flex-1 px-8 py-6 overflow-y-auto">
+      <IssueDetail issue={issue} currentUserId={user.id} isAdmin={isAdmin} />
+    </main>
   );
 }
