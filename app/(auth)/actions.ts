@@ -37,3 +37,17 @@ export async function loginAction(_prev: { error?: string }, formData: FormData)
     throw e; // NEXT_REDIRECT must propagate
   }
 }
+
+export async function demoLoginAction() {
+  try {
+    await signIn("credentials", {
+      email: "demo@trackly.dev",
+      password: "password123",
+      redirectTo: "/your-work",
+    });
+    return {};
+  } catch (e) {
+    if (e instanceof AuthError) return { error: "Invalid email or password" };
+    throw e;
+  }
+}
