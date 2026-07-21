@@ -3,10 +3,10 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { authConfig } from "./auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  ...authConfig,
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
@@ -25,14 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.userId = user.id;
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) (session.user as { id?: string }).id = token.userId as string;
-      return session;
-    },
+    ...authConfig.callbacks,
     async signIn({ user, account }) {
       if (account?.provider !== "google" || !user.email) return true;
       const existing = await prisma.user.findUnique({ where: { email: user.email.toLowerCase() } });
@@ -49,9 +42,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
       }
       return true;
-    },
-    authorized({ auth, request }) {
-      return !!auth?.user || request.nextUrl.pathname === "/";
     },
   },
 });
