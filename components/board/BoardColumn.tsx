@@ -59,9 +59,16 @@ export function BoardColumn({
       }`}
     >
       <div className="mb-3 flex items-center justify-between px-1">
-        <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">
-          {columnTitles[status]}
-        </h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">
+            {columnTitles[status]}
+          </h3>
+          {status === "DONE" && (
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-success fill-none stroke-[3] stroke-current" xmlns="http://www.w3.org/2000/svg">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
+        </div>
         <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#DFE1E6] px-1.5 font-mono text-xs font-bold text-text">
           {issues.length}
         </span>

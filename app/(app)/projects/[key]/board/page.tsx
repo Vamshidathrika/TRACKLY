@@ -25,16 +25,13 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
     <div className="flex flex-1">
       <Sidebar projectName={project.name} projectKey={project.key} />
       <main className="flex-1 px-8 py-6 overflow-y-auto">
-        <Breadcrumbs items={[{ label: "Projects", href: "/projects" }, { label: project.name, href: `/projects/${project.key}` }, { label: "Board" }]} />
-        <div className="mt-2 mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-text">{project.name} board</h1>
-            <p className="text-xs text-text-subtle">Kanban flow • {project.key}</p>
-          </div>
-          <CreateIssueModal trigger={<Button appearance="primary">Create issue</Button>} />
-        </div>
 
-        <KanbanBoard issues={issues.map((i) => ({ ...i, projectKey: project.key }))} currentUserId={user.id} />
+        <KanbanBoard
+          issues={issues.map((i) => ({ ...i, projectKey: project.key }))}
+          currentUserId={user.id}
+          projectName={project.name}
+          projectKey={project.key}
+        />
       </main>
     </div>
   );
