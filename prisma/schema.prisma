@@ -69,6 +69,7 @@ model User {
   notifications          Notification[] @relation("UserNotifications")
   triggeredNotifications Notification[] @relation("ActorNotifications")
   watchedIssues          Watcher[]
+  savedFilters           SavedFilter[]
 }
 
 model Site {
@@ -216,4 +217,14 @@ model Watcher {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([issueId, userId])
+}
+
+model SavedFilter {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  jql       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
