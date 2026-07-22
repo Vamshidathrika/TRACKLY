@@ -138,7 +138,7 @@ export async function getIssuesByProject(projectId: string) {
 
 export async function getIssueByKey(siteId: string, key: string) {
   const upperKey = key.toUpperCase();
-  let issue = await prisma.issue.findFirst({
+  const issue = await prisma.issue.findFirst({
     where: {
       OR: [{ key: upperKey }, { key }],
     },
@@ -177,51 +177,6 @@ export async function getIssueByKey(siteId: string, key: string) {
       },
     },
   });
-
-  // Fallback for any mock or unseeded key (e.g. WSM-157 or new keys) so page never redirects
-  if (!issue) {
-    const project = await prisma.project.findFirst();
-    const user = await prisma.user.findFirst();
-    if (project && user) {
-      issue = {
-        id: `mock-${upperKey}`,
-        key: upperKey,
-        summary: "vbn jade posters and related work",
-        description: `Date: 30th June 2026\n\nTasks:\n1. Designed a poster for Coordinators Intro\n2. Created a Google Form with brand aesthetics\n3. Designed and added a header poster for the Google Form\n\nDate: 1st July 2026\n\nTasks:\n1. Design and create a WhatsApp cover image poster\n2. Design and create a cover poster for Google Form`,
-        type: "TASK",
-        status: "IN_PROGRESS",
-        priority: "HIGH",
-        storyPoints: 5,
-        projectId: project.id,
-        reporterId: user.id,
-        assigneeId: user.id,
-        sprintId: null,
-        parentId: null,
-        labels: ["posters", "design"],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        project: { id: project.id, name: project.name, key: project.key },
-        reporter: { id: user.id, name: user.name || "Vamshi Krishna Dathrika", avatarUrl: user.avatarUrl },
-        assignee: { id: user.id, name: user.name || "Vamshi Krishna Dathrika", avatarUrl: user.avatarUrl },
-        watchers: [{ userId: user.id }],
-        comments: [
-          {
-            id: "c-welcome",
-            body: "Inline status update actions and comment submission have been verified!",
-            createdAt: new Date(),
-            author: { id: user.id, name: user.name || "Vamshi Krishna Dathrika", avatarUrl: user.avatarUrl },
-          },
-        ],
-        history: [],
-        workLogs: [],
-        subtasks: [],
-        parent: null,
-        sprint: null,
-        attachments: [],
-        linksOut: [],
-      } as any;
-    }
-  }
 
   return issue;
 }
