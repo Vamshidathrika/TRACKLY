@@ -10,7 +10,7 @@ import type { IssueStatus, IssuePriority } from "@prisma/client";
 
 export async function updateIssueFieldAction(
   issueId: string,
-  field: "status" | "priority" | "summary" | "description" | "storyPoints",
+  field: "status" | "priority" | "summary" | "description" | "storyPoints" | "assigneeId",
   value: string
 ) {
   const user = await getAuthUser();
@@ -22,6 +22,7 @@ export async function updateIssueFieldAction(
     if (field === "summary") data.summary = value;
     if (field === "description") data.description = value;
     if (field === "storyPoints") data.storyPoints = value ? parseFloat(value) : null;
+    if (field === "assigneeId") data.assigneeId = value || null;
 
     await updateIssue(issueId, user.id, data);
 
