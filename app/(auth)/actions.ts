@@ -38,6 +38,11 @@ export async function loginAction(_prev: { error?: string }, formData: FormData)
   }
 }
 
+export async function googleLoginAction() {
+  // signIn throws NEXT_REDIRECT on success, so there is nothing to return.
+  await signIn("google", { redirectTo: "/your-work" });
+}
+
 export async function demoLoginAction() {
   try {
     await signIn("credentials", {
