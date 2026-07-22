@@ -5,16 +5,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 
-if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
-  process.env.AUTH_SECRET = "7CDCAO813zxTKpZs+OlFPN/yd0RXqDxTwIvp313aNjU=";
-}
-if (process.env.AUTH_TRUST_HOST === undefined) {
-  process.env.AUTH_TRUST_HOST = "true";
-}
-
+// The secret comes from authConfig, which throws if AUTH_SECRET is unset.
+// Never reintroduce a hardcoded fallback here.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "7CDCAO813zxTKpZs+OlFPN/yd0RXqDxTwIvp313aNjU=",
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
