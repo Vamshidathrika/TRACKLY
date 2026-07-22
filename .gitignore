@@ -26,6 +26,9 @@
 .DS_Store
 *.pem
 
+# user-uploaded attachments
+/public/uploads
+
 # debug
 npm-debug.log*
 yarn-debug.log*

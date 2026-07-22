@@ -1,7 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  createSubtaskAction,
+  toggleSubtaskAction,
+  deleteSubtaskAction,
+  linkIssueAction,
+  unlinkIssueAction,
+  uploadAttachmentAction,
+  deleteAttachmentAction,
+} from "@/app/(app)/projects/[key]/issues/actions";
 import {
   CheckCircle2,
   Circle,
@@ -48,41 +58,52 @@ export type SubtaskItem = {
   completed: boolean;
 };
 
-export function SubtasksChecklist({ initialItems = [] }: { initialItems?: SubtaskItem[] }) {
-  const [subtasks, setSubtasks] = useState<SubtaskItem[]>(
-    initialItems.length > 0
-      ? initialItems
-      : [
-          { id: "st-1", title: "Design poster layout for Coordinators Intro", completed: true },
-          { id: "st-2", title: "Create Google Form with brand aesthetics & theme", completed: true },
-          { id: "st-3", title: "Design WhatsApp cover image poster & Google Form banner", completed: false },
-          { id: "st-4", title: "Review typography & color hierarchy with design lead", completed: false },
-        ]
-  );
+export function SubtasksChecklist({
+  issueId,
+  projectKey,
+  items = [],
+}: {
+  issueId: string;
+  projectKey?: string;
+  items?: { id: string; key: string; summary: string; status: IssueStatus }[];
+}) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [newTitle, setNewTitle] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const subtasks = items.map((s) => ({
+    id: s.id,
+    key: s.key,
+    title: s.summary,
+    completed: s.status === "DONE",
+  }));
 
   const completedCount = subtasks.filter((s) => s.completed).length;
   const totalCount = subtasks.length || 1;
   const progressPercent = Math.round((completedCount / totalCount) * 100);
 
-  const toggleSubtask = (id: string) => {
-    setSubtasks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s))
-    );
+  const run = (fn: () => Promise<{ error?: string } | undefined>) => {
+    startTransition(async () => {
+      const res = await fn();
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setError(null);
+      router.refresh();
+    });
   };
+
+  const toggleSubtask = (id: string) => run(() => toggleSubtaskAction(id));
+  const removeSubtask = (id: string) => run(() => deleteSubtaskAction(id));
 
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
-    setSubtasks((prev) => [
-      ...prev,
-      { id: `st-${Date.now()}`, title: newTitle.trim(), completed: false },
-    ]);
+    const title = newTitle.trim();
+    if (!title) return;
     setNewTitle("");
-  };
-
-  const removeSubtask = (id: string) => {
-    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+    run(() => createSubtaskAction(issueId, title));
   };
 
   return (
@@ -102,8 +123,17 @@ export function SubtasksChecklist({ initialItems = [] }: { initialItems?: Subtas
         <div style={{ width: `${progressPercent}%` }} className="h-full bg-emerald-500 transition-all duration-300" />
       </div>
 
+      {error && (
+        <p role="alert" className="rounded border border-red-300 bg-red-50 px-2.5 py-2 text-[11px] font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+
       {/* Subtasks List */}
       <div className="flex flex-col gap-1.5 my-1">
+        {subtasks.length === 0 && (
+          <p className="text-xs text-text-subtle italic py-1">No subtasks yet.</p>
+        )}
         {subtasks.map((st) => (
           <div
             key={st.id}
@@ -111,7 +141,7 @@ export function SubtasksChecklist({ initialItems = [] }: { initialItems?: Subtas
           >
             <button
               onClick={() => toggleSubtask(st.id)}
-              className="flex items-center gap-2.5 text-left text-xs text-text font-medium flex-1 cursor-pointer"
+              className="flex items-center gap-2.5 text-left text-xs text-text font-medium flex-1 cursor-pointer min-w-0"
             >
               {st.completed ? (
                 <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
@@ -120,13 +150,23 @@ export function SubtasksChecklist({ initialItems = [] }: { initialItems?: Subtas
               )}
               <span className={st.completed ? "line-through text-text-subtle" : ""}>{st.title}</span>
             </button>
-            <button
-              onClick={() => removeSubtask(st.id)}
-              className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-1"
-              title="Delete subtask"
-            >
-              <Trash2 size={13} />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {projectKey && (
+                <Link
+                  href={`/projects/${projectKey}/issues/${st.key}`}
+                  className="font-mono text-[10px] font-bold text-text-subtle hover:text-brand"
+                >
+                  {st.key}
+                </Link>
+              )}
+              <button
+                onClick={() => removeSubtask(st.id)}
+                className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-1"
+                title="Delete subtask"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -157,28 +197,62 @@ export type AttachmentFile = {
   uploadedAt: string;
 };
 
-export function AttachmentsDropzone() {
-  const [files, setFiles] = useState<AttachmentFile[]>([
-    { id: "att-1", name: "vbn_jade_poster_banner.png", size: "2.4 MB", type: "image", uploadedAt: "30 Jun 2026" },
-    { id: "att-2", name: "google_form_theme_specs.pdf", size: "1.1 MB", type: "pdf", uploadedAt: "1 Jul 2026" },
-  ]);
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function AttachmentsDropzone({
+  issueId,
+  attachments = [],
+  currentUserId,
+}: {
+  issueId: string;
+  attachments?: any[];
+  currentUserId?: string;
+}) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [isDragOver, setIsDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const files = attachments;
+
+  const upload = async (fileList: FileList) => {
+    if (fileList.length === 0) return;
+    const formData = new FormData();
+    Array.from(fileList).forEach((f) => formData.append("files", f));
+
+    setIsUploading(true);
+    const res = await uploadAttachmentAction(issueId, formData);
+    setIsUploading(false);
+
+    if (res?.error) {
+      setError(res.error);
+      return;
+    }
+    setError(null);
+    router.refresh();
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles: AttachmentFile[] = Array.from(e.target.files).map((f, i) => ({
-        id: `att-${Date.now()}-${i}`,
-        name: f.name,
-        size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-        type: f.type.includes("image") ? "image" : f.type.includes("pdf") ? "pdf" : "doc",
-        uploadedAt: "Just now",
-      }));
-      setFiles((prev) => [...prev, ...newFiles]);
-    }
+    if (e.target.files) void upload(e.target.files);
+    // Reset so picking the same file twice in a row still fires onChange.
+    e.target.value = "";
   };
 
   const removeAttachment = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    startTransition(async () => {
+      const res = await deleteAttachmentAction(id);
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setError(null);
+      router.refresh();
+    });
   };
 
   return (
@@ -194,6 +268,12 @@ export function AttachmentsDropzone() {
         </label>
       </div>
 
+      {error && (
+        <p role="alert" className="rounded border border-red-300 bg-red-50 px-2.5 py-2 text-[11px] font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+
       {/* File List Grid */}
       {files.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -202,22 +282,36 @@ export function AttachmentsDropzone() {
               key={file.id}
               className="flex items-center justify-between p-2.5 rounded-md border border-border bg-neutral/30 hover:bg-neutral/60 transition-colors group"
             >
-              <div className="flex items-center gap-2.5 overflow-hidden">
+              <a
+                href={file.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2.5 overflow-hidden min-w-0"
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-brand/10 text-brand font-bold text-xs">
-                  {file.type === "image" ? <ImageIcon size={18} /> : <FileText size={18} />}
+                  {String(file.mimeType).startsWith("image/") ? <ImageIcon size={18} /> : <FileText size={18} />}
                 </div>
                 <div className="truncate">
-                  <p className="text-xs font-semibold text-text truncate">{file.name}</p>
-                  <span className="text-[10px] text-text-subtle">{file.size} • {file.uploadedAt}</span>
+                  <p className="text-xs font-semibold text-text truncate">{file.filename}</p>
+                  <span className="text-[10px] text-text-subtle">
+                    {formatBytes(file.sizeBytes)} •{" "}
+                    {new Date(file.createdAt).toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
-              </div>
-              <button
-                onClick={() => removeAttachment(file.id)}
-                className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 p-1 transition-opacity"
-                title="Remove attachment"
-              >
-                <Trash2 size={13} />
-              </button>
+              </a>
+              {(!currentUserId || file.uploaderId === currentUserId) && (
+                <button
+                  onClick={() => removeAttachment(file.id)}
+                  className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 p-1 transition-opacity shrink-0"
+                  title="Remove attachment"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -230,16 +324,7 @@ export function AttachmentsDropzone() {
         onDrop={(e) => {
           e.preventDefault();
           setIsDragOver(false);
-          if (e.dataTransfer.files.length > 0) {
-            const dropped: AttachmentFile[] = Array.from(e.dataTransfer.files).map((f, i) => ({
-              id: `att-${Date.now()}-${i}`,
-              name: f.name,
-              size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-              type: f.type.includes("image") ? "image" : "pdf",
-              uploadedAt: "Just now",
-            }));
-            setFiles((prev) => [...prev, ...dropped]);
-          }
+          if (e.dataTransfer.files.length > 0) void upload(e.dataTransfer.files);
         }}
         className={`flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed transition-all cursor-pointer ${
           isDragOver ? "border-brand bg-brand/5 scale-[1.01]" : "border-border bg-neutral/20 hover:bg-neutral/50"
@@ -247,7 +332,11 @@ export function AttachmentsDropzone() {
       >
         <UploadCloud size={16} className="text-text-subtle" />
         <span className="text-xs font-semibold text-text-subtle">
-          Drag & drop files here or <span className="text-brand font-bold">browse</span>
+          {isUploading ? (
+            "Uploading..."
+          ) : (
+            <>Drag &amp; drop files here or <span className="text-brand font-bold">browse</span></>
+          )}
         </span>
         <input type="file" multiple onChange={handleFileUpload} className="hidden" />
       </label>
@@ -265,31 +354,55 @@ export type LinkedItem = {
   type: IssueType;
 };
 
-export function LinkedWorkItems({ projectKey }: { projectKey: string }) {
-  const [links, setLinks] = useState<LinkedItem[]>([
-    { id: "l-1", relation: "Relates to", key: `${projectKey}-100`, summary: "Jira Product Discovery Poster Initiative", status: "IN_PROGRESS", type: "EPIC" },
-    { id: "l-2", relation: "Blocks", key: `${projectKey}-158`, summary: "Publish poster assets to social channels", status: "TO_DO", type: "TASK" },
-  ]);
+const RELATION_LABELS: Record<string, string> = {
+  RELATES_TO: "Relates to",
+  BLOCKS: "Blocks",
+  IS_BLOCKED_BY: "Is blocked by",
+  DUPLICATES: "Duplicates",
+};
+
+export function LinkedWorkItems({
+  issueId,
+  projectKey,
+  links = [],
+}: {
+  issueId: string;
+  projectKey: string;
+  links?: any[];
+}) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [showAddModal, setShowAddModal] = useState(false);
   const [linkKey, setLinkKey] = useState("");
-  const [relation, setRelation] = useState<LinkedItem["relation"]>("Relates to");
+  const [relation, setRelation] = useState("RELATES_TO");
+  const [error, setError] = useState<string | null>(null);
 
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkKey.trim()) return;
-    setLinks((prev) => [
-      ...prev,
-      {
-        id: `l-${Date.now()}`,
-        relation,
-        key: linkKey.toUpperCase(),
-        summary: "Linked project deliverable",
-        status: "TO_DO",
-        type: "STORY",
-      },
-    ]);
-    setLinkKey("");
-    setShowAddModal(false);
+    startTransition(async () => {
+      const res = await linkIssueAction(issueId, linkKey, relation as any);
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setError(null);
+      setLinkKey("");
+      setShowAddModal(false);
+      router.refresh();
+    });
+  };
+
+  const handleUnlink = (linkId: string) => {
+    startTransition(async () => {
+      const res = await unlinkIssueAction(linkId);
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setError(null);
+      router.refresh();
+    });
   };
 
   return (
@@ -307,28 +420,52 @@ export function LinkedWorkItems({ projectKey }: { projectKey: string }) {
         </button>
       </div>
 
+      {error && (
+        <p role="alert" className="rounded border border-red-300 bg-red-50 px-2.5 py-2 text-[11px] font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+
       {/* Linked Items List */}
       <div className="flex flex-col gap-2">
-        {links.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center justify-between p-2.5 rounded-md border border-border/70 bg-neutral/30 hover:bg-neutral/60 transition-colors"
-          >
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle px-1.5 py-0.5 rounded bg-neutral">
-                {item.relation}
-              </span>
-              <TypeIcon type={item.type} size={14} />
-              <Link href={`/projects/${projectKey}/issues/${item.key}`} className="font-mono text-xs font-bold text-brand hover:underline">
-                {item.key}
-              </Link>
-              <span className="text-xs font-medium text-text truncate max-w-xs">{item.summary}</span>
+        {links.length === 0 && (
+          <p className="text-xs text-text-subtle italic">No linked work items yet.</p>
+        )}
+        {links.map((link) => {
+          const item = link.targetIssue;
+          return (
+            <div
+              key={link.id}
+              className="flex items-center justify-between p-2.5 rounded-md border border-border/70 bg-neutral/30 hover:bg-neutral/60 transition-colors group"
+            >
+              <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle px-1.5 py-0.5 rounded bg-neutral shrink-0">
+                  {RELATION_LABELS[link.relation] || link.relation}
+                </span>
+                <TypeIcon type={item.type} size={14} />
+                <Link
+                  href={`/projects/${projectKey}/issues/${item.key}`}
+                  className="font-mono text-xs font-bold text-brand hover:underline shrink-0"
+                >
+                  {item.key}
+                </Link>
+                <span className="text-xs font-medium text-text truncate">{item.summary}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusTag color={item.status === "DONE" ? "green" : item.status === "IN_PROGRESS" ? "blue" : "gray"}>
+                  {item.status.replace("_", " ")}
+                </StatusTag>
+                <button
+                  onClick={() => handleUnlink(link.id)}
+                  title="Remove link"
+                  className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
-            <StatusTag color={item.status === "DONE" ? "green" : item.status === "IN_PROGRESS" ? "blue" : "gray"}>
-              {item.status.replace("_", " ")}
-            </StatusTag>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add Link Modal */}
@@ -343,13 +480,13 @@ export function LinkedWorkItems({ projectKey }: { projectKey: string }) {
               <label className="block text-[10px] font-bold text-text-subtle uppercase mb-1">Relationship</label>
               <select
                 value={relation}
-                onChange={(e) => setRelation(e.target.value as LinkedItem["relation"])}
+                onChange={(e) => setRelation(e.target.value)}
                 className="w-full h-8 rounded border border-border bg-surface px-2 outline-none"
               >
-                <option value="Relates to">Relates to</option>
-                <option value="Blocks">Blocks</option>
-                <option value="Is blocked by">Is blocked by</option>
-                <option value="Duplicates">Duplicates</option>
+                <option value="RELATES_TO">Relates to</option>
+                <option value="BLOCKS">Blocks</option>
+                <option value="IS_BLOCKED_BY">Is blocked by</option>
+                <option value="DUPLICATES">Duplicates</option>
               </select>
             </div>
             <div>

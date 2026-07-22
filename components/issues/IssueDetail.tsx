@@ -47,6 +47,7 @@ import {
   postCommentAction,
   logWorkAction,
   deleteWorkLogAction,
+  toggleWatcherAction,
 } from "@/app/(app)/projects/[key]/issues/actions";
 import type { IssueStatus, IssueType, IssuePriority } from "@prisma/client";
 
@@ -78,33 +79,51 @@ function getUserColor(str: string): string {
   return userColorPalette[idx];
 }
 
+// <input type="date"> needs a bare YYYY-MM-DD value, never an ISO timestamp.
+function toDateInput(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().split("T")[0];
+}
+
 export function IssueDetail({
   issue,
   currentUserId,
   isAdmin = false,
+  members = [],
+  sprints = [],
+  automationRules = [],
 }: {
   issue: any;
   currentUserId: string;
   isAdmin?: boolean;
+  members?: { id: string; name: string; avatarUrl?: string | null }[];
+  sprints?: { id: string; name: string; status: string }[];
+  automationRules?: any[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   // Primary Editable State
-  const [title, setTitle] = useState(issue.summary || "vbn jade posters and related work");
+  const [title, setTitle] = useState<string>(issue.summary || "");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [description, setDescription] = useState<string>(
-    issue.description ||
-      `Date: 30th June 2026\n\nTasks:\n1. Designed a poster for Coordinators Intro\n2. Created a Google Form with brand aesthetics\n3. Designed and added a header poster for the Google Form\n\nDate: 1st July 2026\n\nTasks:\n1. Design and create a WhatsApp cover image poster\n2. Design and create a cover poster for Google Form`
-  );
+  const [description, setDescription] = useState<string>(issue.description || "");
   const [isEditingDesc, setIsEditingDesc] = useState(false);
 
-  const [status, setStatus] = useState<IssueStatus>(issue.status || "IN_PROGRESS");
-  const [priority, setPriority] = useState<IssuePriority>(issue.priority || "HIGH");
-  const [assignee, setAssignee] = useState(issue.assignee || { id: "u-1", name: "Vamshi Krishna Dathrika" });
-  const [storyPoints, setStoryPoints] = useState<number | null>(issue.storyPoints || 5);
-  const [watchers, setWatchers] = useState(1);
-  const [isWatching, setIsWatching] = useState(true);
+  const [status, setStatus] = useState<IssueStatus>(issue.status || "TO_DO");
+  const [priority, setPriority] = useState<IssuePriority>(issue.priority || "MEDIUM");
+  const [assigneeId, setAssigneeId] = useState<string>(issue.assigneeId || "");
+  const [storyPoints, setStoryPoints] = useState<number | null>(issue.storyPoints ?? null);
+  const [sprintId, setSprintId] = useState<string>(issue.sprintId || "");
+  const [startDate, setStartDate] = useState<string>(toDateInput(issue.startDate));
+  const [dueDate, setDueDate] = useState<string>(toDateInput(issue.dueDate));
+  const [labels, setLabels] = useState<string[]>(issue.labels || []);
+  const [labelDraft, setLabelDraft] = useState("");
+
+  const watcherIds: string[] = (issue.watchers || []).map((w: any) => w.userId);
+  const [watchers, setWatchers] = useState(watcherIds.length);
+  const [isWatching, setIsWatching] = useState(watcherIds.includes(currentUserId));
 
   // Accordion Section States
   const [showDetails, setShowDetails] = useState(true);
@@ -160,9 +179,86 @@ export function IssueDetail({
   };
 
   const toggleWatch = () => {
-    setIsWatching((prev) => !prev);
-    setWatchers((prev) => (isWatching ? prev - 1 : prev + 1));
-    showToast(isWatching ? "Stopped watching ticket" : "Watching ticket updates");
+    // Optimistic, then reconciled with whatever the server reports.
+    const next = !isWatching;
+    setIsWatching(next);
+    setWatchers((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
+
+    startTransition(async () => {
+      const res = await toggleWatcherAction(issue.id);
+      if (res?.error) {
+        setIsWatching(!next);
+        setWatchers((prev) => (next ? Math.max(0, prev - 1) : prev + 1));
+        showToast(res.error);
+        return;
+      }
+      showToast(next ? "Watching ticket updates" : "Stopped watching ticket");
+      router.refresh();
+    });
+  };
+
+  // Every sidebar field goes through here so state, toast, persistence and
+  // revalidation stay in lockstep instead of drifting per-field.
+  const persistField = (
+    field: Parameters<typeof updateIssueFieldAction>[1],
+    value: string,
+    successMessage: string
+  ) => {
+    startTransition(async () => {
+      const res = await updateIssueFieldAction(issue.id, field, value);
+      if (res?.error) {
+        showToast(res.error);
+        return;
+      }
+      showToast(successMessage);
+      router.refresh();
+    });
+  };
+
+  const handleAssigneeChange = (newAssigneeId: string) => {
+    setAssigneeId(newAssigneeId);
+    const name = members.find((m) => m.id === newAssigneeId)?.name;
+    persistField("assigneeId", newAssigneeId, name ? `Assigned to ${name}` : "Set to Unassigned");
+  };
+
+  const handleStoryPointsChange = (value: string) => {
+    setStoryPoints(value ? Number(value) : null);
+    persistField("storyPoints", value, value ? `Story points set to ${value}` : "Story points cleared");
+  };
+
+  const handleSprintChange = (newSprintId: string) => {
+    setSprintId(newSprintId);
+    const name = sprints.find((s) => s.id === newSprintId)?.name;
+    persistField("sprintId", newSprintId, name ? `Moved to ${name}` : "Removed from sprint");
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    persistField("startDate", value, value ? "Start date updated" : "Start date cleared");
+  };
+
+  const handleDueDateChange = (value: string) => {
+    setDueDate(value);
+    persistField("dueDate", value, value ? "Due date updated" : "Due date cleared");
+  };
+
+  const handleAddLabel = (e: React.FormEvent) => {
+    e.preventDefault();
+    const label = labelDraft.trim();
+    if (!label || labels.includes(label)) {
+      setLabelDraft("");
+      return;
+    }
+    const next = [...labels, label];
+    setLabels(next);
+    setLabelDraft("");
+    persistField("labels", next.join(","), `Added label “${label}”`);
+  };
+
+  const handleRemoveLabel = (label: string) => {
+    const next = labels.filter((l) => l !== label);
+    setLabels(next);
+    persistField("labels", next.join(","), `Removed label “${label}”`);
   };
 
   const handleAddComment = (text: string) => {
@@ -194,13 +290,12 @@ export function IssueDetail({
     });
   };
 
-  const availableUsers = [
-    { id: "u-1", name: "Vamshi Krishna Dathrika" },
-    { id: "u-2", name: "Vikram Dev" },
-    { id: "u-3", name: "Nani Sharma" },
-    { id: "u-4", name: "Neha Kumar" },
-    { id: "u-5", name: "Swati Sen" },
-  ];
+  // Conventional branch name derived from the ticket, e.g. "feature/DEMO-1-set-up-repo".
+  const suggestedBranch = `feature/${issue.key}-${(title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40)}`;
 
   return (
     <div className="flex flex-col gap-5 max-w-7xl mx-auto pb-16">
@@ -366,13 +461,25 @@ export function IssueDetail({
           </div>
 
           {/* Subtasks Section */}
-          <SubtasksChecklist />
+          <SubtasksChecklist
+            issueId={issue.id}
+            projectKey={issue.project?.key}
+            items={issue.subtasks || []}
+          />
 
           {/* Attachments Section */}
-          <AttachmentsDropzone />
+          <AttachmentsDropzone
+            issueId={issue.id}
+            attachments={issue.attachments || []}
+            currentUserId={currentUserId}
+          />
 
           {/* Linked Work Items Section */}
-          <LinkedWorkItems projectKey={issue.project?.key || "DEMO"} />
+          <LinkedWorkItems
+            issueId={issue.id}
+            projectKey={issue.project?.key || "DEMO"}
+            links={issue.linksOut || []}
+          />
 
           {/* Activity Section (Comments, History, Work Log) */}
           <ActivitySection
@@ -451,18 +558,13 @@ export function IssueDetail({
                       <User size={13} /> Assignee
                     </span>
                     <select
-                      value={assignee.name}
-                      onChange={(e) => {
-                        const u = availableUsers.find((x) => x.name === e.target.value);
-                        if (u) {
-                          setAssignee(u);
-                          showToast(`Assigned to ${u.name}`);
-                        }
-                      }}
+                      value={assigneeId}
+                      onChange={(e) => handleAssigneeChange(e.target.value)}
                       className="h-7 rounded border border-border bg-surface px-2 text-xs font-semibold text-text outline-none"
                     >
-                      {availableUsers.map((u) => (
-                        <option key={u.id} value={u.name}>{u.name}</option>
+                      <option value="">Unassigned</option>
+                      {members.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
                       ))}
                     </select>
                   </div>
@@ -472,20 +574,31 @@ export function IssueDetail({
                     <span className="text-text-subtle font-medium flex items-center gap-1.5">
                       <User size={13} /> Reporter
                     </span>
-                    <div className="flex items-center gap-2">
-                      <Avatar name={issue.reporter?.name || "Vamshi Krishna Dathrika"} size={20} />
-                      <span className="font-bold text-text">{issue.reporter?.name || "Vamshi Krishna Dathrika"}</span>
-                    </div>
+                    {issue.reporter ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar name={issue.reporter.name} src={issue.reporter.avatarUrl} size={20} />
+                        <span className="font-bold text-text">{issue.reporter.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-text-subtle">—</span>
+                    )}
                   </div>
 
-                  {/* Parent Epic */}
+                  {/* Parent */}
                   <div className="flex items-center justify-between">
                     <span className="text-text-subtle font-medium flex items-center gap-1.5">
-                      <Layers size={13} /> Parent Epic
+                      <Layers size={13} /> Parent
                     </span>
-                    <span className="font-bold text-brand hover:underline cursor-pointer">
-                      {issue.epic?.name || "WSM-100 (Idea)"}
-                    </span>
+                    {issue.parent ? (
+                      <Link
+                        href={`/projects/${issue.project?.key}/issues/${issue.parent.key}`}
+                        className="font-bold text-brand hover:underline"
+                      >
+                        {issue.parent.key}
+                      </Link>
+                    ) : (
+                      <span className="text-text-subtle">None</span>
+                    )}
                   </div>
 
                   {/* Due Date */}
@@ -495,7 +608,8 @@ export function IssueDetail({
                     </span>
                     <input
                       type="date"
-                      defaultValue="2026-07-30"
+                      value={dueDate}
+                      onChange={(e) => handleDueDateChange(e.target.value)}
                       className="h-6 rounded border border-border bg-surface px-1.5 text-xs text-text outline-none"
                     />
                   </div>
@@ -507,28 +621,45 @@ export function IssueDetail({
                     </span>
                     <input
                       type="date"
-                      defaultValue="2026-06-30"
+                      value={startDate}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="h-6 rounded border border-border bg-surface px-1.5 text-xs text-text outline-none"
                     />
                   </div>
 
                   {/* Labels */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1.5">
                     <span className="text-text-subtle font-medium flex items-center gap-1.5">
                       <TagIcon size={13} /> Labels
                     </span>
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className="px-2 py-0.5 rounded bg-brand/10 text-brand text-[10px] font-bold">posters</span>
-                      <span className="px-2 py-0.5 rounded bg-neutral text-text-subtle text-[10px] font-bold">design</span>
+                      {labels.length === 0 && <span className="text-text-subtle">None</span>}
+                      {labels.map((l) => (
+                        <span
+                          key={l}
+                          className="group flex items-center gap-1 px-2 py-0.5 rounded bg-brand/10 text-brand text-[10px] font-bold"
+                        >
+                          {l}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLabel(l)}
+                            title={`Remove ${l}`}
+                            className="opacity-60 hover:opacity-100"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      ))}
                     </div>
-                  </div>
-
-                  {/* Team */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-subtle font-medium flex items-center gap-1.5">
-                      <Users size={13} /> Team
-                    </span>
-                    <span className="font-bold text-text">Design Core</span>
+                    <form onSubmit={handleAddLabel}>
+                      <input
+                        type="text"
+                        value={labelDraft}
+                        onChange={(e) => setLabelDraft(e.target.value)}
+                        placeholder="+ Add label (press Enter)"
+                        className="w-full h-6 rounded border border-border bg-surface px-1.5 text-[11px] text-text outline-none focus:border-brand"
+                      />
+                    </form>
                   </div>
 
                   {/* Sprint */}
@@ -536,9 +667,19 @@ export function IssueDetail({
                     <span className="text-text-subtle font-medium flex items-center gap-1.5">
                       <Award size={13} /> Sprint
                     </span>
-                    <span className="font-bold text-brand bg-brand/10 px-2 py-0.5 rounded text-[11px]">
-                      WSM Sprint 2 (Active)
-                    </span>
+                    <select
+                      value={sprintId}
+                      onChange={(e) => handleSprintChange(e.target.value)}
+                      className="h-6 rounded border border-border bg-surface px-2 text-xs font-bold text-text outline-none"
+                    >
+                      <option value="">Backlog</option>
+                      {sprints.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                          {s.status === "ACTIVE" ? " (Active)" : ""}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Story Points */}
@@ -547,10 +688,11 @@ export function IssueDetail({
                       <Award size={13} /> Story Points
                     </span>
                     <select
-                      value={storyPoints || 5}
-                      onChange={(e) => setStoryPoints(Number(e.target.value))}
+                      value={storyPoints ?? ""}
+                      onChange={(e) => handleStoryPointsChange(e.target.value)}
                       className="h-6 rounded border border-border bg-surface px-2 text-xs font-bold text-text outline-none"
                     >
+                      <option value="">—</option>
                       <option value={1}>1 pt</option>
                       <option value={2}>2 pts</option>
                       <option value={3}>3 pts</option>
@@ -601,25 +743,29 @@ export function IssueDetail({
               </button>
 
               {showDev && (
-                <div className="p-4 flex flex-col gap-3 text-xs">
+                <div className="p-4 flex flex-col gap-2 text-xs">
+                  {/* No VCS provider is connected yet, so show the suggested
+                      branch name rather than inventing commits and PRs. */}
+                  <p className="text-text-subtle">
+                    No source control provider is connected to this project.
+                  </p>
                   <div className="flex items-center justify-between p-2 rounded bg-neutral/30 border border-border/60">
-                    <div className="flex items-center gap-2">
-                      <GitBranch size={14} className="text-brand" />
-                      <span className="font-mono font-bold text-text text-[11px]">feature/wsm-157-posters</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <GitBranch size={14} className="text-brand shrink-0" />
+                      <span className="font-mono font-bold text-text text-[11px] truncate">
+                        {suggestedBranch}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">Active</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-text-subtle">
-                    <span className="flex items-center gap-1.5"><GitCommit size={13} /> Commits</span>
-                    <span className="font-bold text-text">3 commits</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-text-subtle">
-                    <span className="flex items-center gap-1.5"><GitPullRequest size={13} /> Pull Request</span>
-                    <span className="font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded text-[11px]">
-                      #42 Merged
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(suggestedBranch);
+                        showToast("Branch name copied");
+                      }}
+                      className="text-[10px] font-bold text-brand hover:underline shrink-0 ml-2"
+                    >
+                      Copy
+                    </button>
                   </div>
                 </div>
               )}
@@ -640,26 +786,41 @@ export function IssueDetail({
               {showAutomation && (
                 <div className="p-4 flex flex-col gap-3 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-text">Recent rule runs</span>
+                    <span className="font-bold text-text">Project rules</span>
                     <button
-                      onClick={() => showToast("Automation rule status refreshed")}
+                      onClick={() => {
+                        router.refresh();
+                        showToast("Automation rules refreshed");
+                      }}
                       className="text-text-subtle hover:text-brand flex items-center gap-1 text-[11px] font-semibold"
                     >
                       <RefreshCw size={12} /> Refresh
                     </button>
                   </div>
 
-                  <div className="p-2.5 rounded bg-neutral/30 border border-border/60 text-[11px] text-text-subtle flex flex-col gap-1">
-                    <span className="font-bold text-text">Auto-assigned ticket to lead</span>
-                    <span>Ran 2 hours ago • Success</span>
-                  </div>
+                  {automationRules.length === 0 ? (
+                    <p className="text-text-subtle italic">No automation rules for this project yet.</p>
+                  ) : (
+                    automationRules.map((r) => (
+                      <div
+                        key={r.id}
+                        className="p-2.5 rounded bg-neutral/30 border border-border/60 text-[11px] text-text-subtle flex flex-col gap-1"
+                      >
+                        <span className="font-bold text-text">{r.name}</span>
+                        <span>
+                          {String(r.trigger).replace(/_/g, " ").toLowerCase()} •{" "}
+                          {r.enabled ? "Enabled" : "Disabled"}
+                        </span>
+                      </div>
+                    ))
+                  )}
 
-                  <button
-                    onClick={() => showToast("Navigating to Automation Rule Builder")}
+                  <Link
+                    href="/settings/automation"
                     className="w-full py-2 rounded border border-brand/40 bg-brand/5 text-brand text-xs font-bold hover:bg-brand/10 transition-colors text-center"
                   >
-                    + Create new automation rule
-                  </button>
+                    Manage automation rules
+                  </Link>
                 </div>
               )}
             </div>

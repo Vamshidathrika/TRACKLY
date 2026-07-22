@@ -24,6 +24,7 @@ import {
 import { BoardColumn } from "./BoardColumn";
 import { type BoardIssue } from "./IssueCard";
 import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { toggleStarAction } from "@/app/(app)/chrome-actions";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { IssueTable } from "@/components/issues/IssueTable";
 import {
@@ -77,12 +78,17 @@ export function KanbanBoard({
   currentUserId,
   projectName = "My Kanban Space",
   projectKey = "DEMO",
+  projectId,
+  isStarred: initialIsStarred = false,
 }: {
   issues: BoardIssue[];
   currentUserId?: string;
   projectName?: string;
   projectKey?: string;
+  projectId?: string;
+  isStarred?: boolean;
 }) {
+  const [isStarred, setIsStarred] = useState(initialIsStarred);
   const [issues, setIssues] = useState<BoardIssue[]>(initialIssues);
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -182,6 +188,32 @@ export function KanbanBoard({
       navigator.clipboard.writeText(window.location.href);
       showToast("Space link copied to clipboard!");
     }
+  };
+
+  const handleToggleStar = async () => {
+    setShowSpaceMenu(false);
+    if (!projectId) return;
+    const res = await toggleStarAction(projectId);
+    setIsStarred(Boolean(res?.starred));
+    showToast(res?.starred ? "Space starred" : "Space unstarred");
+  };
+
+  const handleExport = () => {
+    setShowSpaceMenu(false);
+    // Export what the board is actually showing, respecting active filters.
+    const payload = {
+      project: { key: projectKey, name: projectName },
+      exportedAt: new Date().toISOString(),
+      issues: filteredIssues,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${projectKey}-board-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${filteredIssues.length} issues as JSON`);
   };
 
   const handleFullscreen = () => {
@@ -287,7 +319,7 @@ export function KanbanBoard({
       <div className="flex flex-col gap-1.5 pb-3">
         <span className="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">SPACES</span>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 relative">
+          <div className="flex items-center gap-3 relative dropdown-container">
             <div className="flex h-7 w-7 items-center justify-center rounded bg-selected text-selected-text">
               <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 fill-current" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" />
@@ -316,6 +348,7 @@ export function KanbanBoard({
                 <button
                   onClick={() => {
                     setShowSpaceMenu(false);
+                    navigator.clipboard.writeText(projectKey);
                     showToast(`Copied Project Key: ${projectKey}`);
                   }}
                   className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium"
@@ -323,19 +356,14 @@ export function KanbanBoard({
                   Copy Key ({projectKey})
                 </button>
                 <button
-                  onClick={() => {
-                    setShowSpaceMenu(false);
-                    showToast("Star status updated!");
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium"
+                  onClick={handleToggleStar}
+                  disabled={!projectId}
+                  className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium disabled:opacity-50"
                 >
-                  Star Space
+                  {isStarred ? "Unstar Space" : "Star Space"}
                 </button>
                 <button
-                  onClick={() => {
-                    setShowSpaceMenu(false);
-                    showToast("Exporting board data as JSON...");
-                  }}
+                  onClick={handleExport}
                   className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium border-t border-border"
                 >
                   Export Space Data
@@ -400,7 +428,7 @@ export function KanbanBoard({
             );
           })}
 
-          <div className="relative">
+          <div className="relative dropdown-container">
             <button
               onClick={() => setShowMoreTabsMenu((prev) => !prev)}
               className="flex items-center gap-1 px-3 pb-2.5 text-xs font-semibold text-text-subtle hover:text-text transition-colors whitespace-nowrap"

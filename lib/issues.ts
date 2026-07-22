@@ -76,6 +76,9 @@ export async function updateIssue(
     storyPoints?: number | null;
     assigneeId?: string | null;
     sprintId?: string | null;
+    startDate?: Date | null;
+    dueDate?: Date | null;
+    labels?: string[];
   }
 ) {
   const current = await prisma.issue.findUnique({ where: { id: issueId } });
@@ -156,6 +159,22 @@ export async function getIssueByKey(siteId: string, key: string) {
         include: { author: { select: { id: true, name: true, avatarUrl: true } } },
         orderBy: { startedAt: "desc" },
       },
+      subtasks: {
+        select: { id: true, key: true, summary: true, status: true },
+        orderBy: { number: "asc" },
+      },
+      parent: { select: { id: true, key: true, summary: true, type: true } },
+      sprint: { select: { id: true, name: true, status: true } },
+      attachments: {
+        include: { uploader: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      linksOut: {
+        include: {
+          targetIssue: { select: { id: true, key: true, summary: true, status: true, type: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -195,6 +214,11 @@ export async function getIssueByKey(siteId: string, key: string) {
         ],
         history: [],
         workLogs: [],
+        subtasks: [],
+        parent: null,
+        sprint: null,
+        attachments: [],
+        linksOut: [],
       } as any;
     }
   }

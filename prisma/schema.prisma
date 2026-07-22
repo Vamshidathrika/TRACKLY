@@ -84,6 +84,7 @@ model User {
   savedFilters           SavedFilter[]
   stars                  Star[]
   workLogs               WorkLog[]
+  attachments            Attachment[]
 }
 
 model Site {
@@ -173,6 +174,8 @@ model Issue {
   assigneeId  String?
   parentId    String?
   labels      String[]      @default([])
+  startDate   DateTime?
+  dueDate     DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -185,6 +188,9 @@ model Issue {
   history     IssueHistory[]
   watchers    Watcher[]
   workLogs    WorkLog[]
+  attachments Attachment[]
+  linksOut    IssueLink[]   @relation("LinkSource")
+  linksIn     IssueLink[]   @relation("LinkTarget")
 
   @@unique([projectId, number])
   @@unique([projectId, key])
@@ -211,6 +217,41 @@ model IssueHistory {
   createdAt DateTime @default(now())
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id])
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  issueId    String
+  uploaderId String
+  filename   String
+  url        String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  uploader   User     @relation(fields: [uploaderId], references: [id])
+
+  @@index([issueId])
+}
+
+enum LinkRelation {
+  RELATES_TO
+  BLOCKS
+  IS_BLOCKED_BY
+  DUPLICATES
+}
+
+model IssueLink {
+  id           String       @id @default(cuid())
+  sourceIssueId String
+  targetIssueId String
+  relation     LinkRelation
+  createdAt    DateTime     @default(now())
+  sourceIssue  Issue        @relation("LinkSource", fields: [sourceIssueId], references: [id], onDelete: Cascade)
+  targetIssue  Issue        @relation("LinkTarget", fields: [targetIssueId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceIssueId, targetIssueId, relation])
+  @@index([sourceIssueId])
 }
 
 model WorkLog {
