@@ -326,8 +326,8 @@ export function IssueDetail({
         <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle">
           <Link href="/projects" className="hover:text-text transition-colors">Spaces</Link>
           <span>/</span>
-          <Link href={`/projects/${issue.project?.key || "DEMO"}`} className="hover:text-text transition-colors flex items-center gap-1">
-            <span className="font-bold text-text">{issue.project?.name || "Demo Software Project"}</span>
+          <Link href={`/projects/${issue.project?.key || "project"}`} className="hover:text-text transition-colors flex items-center gap-1">
+            <span className="font-bold text-text">{issue.project?.name || "Project"}</span>
           </Link>
           <span>/</span>
           <span className="flex items-center gap-1 text-text font-bold">

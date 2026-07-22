@@ -76,8 +76,8 @@ function getUserColor(str: string): string {
 export function KanbanBoard({
   issues: initialIssues,
   currentUserId,
-  projectName = "My Kanban Space",
-  projectKey = "DEMO",
+  projectName = "Board",
+  projectKey = "PROJ",
   projectId,
   isStarred: initialIsStarred = false,
 }: {
