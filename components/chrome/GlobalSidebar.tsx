@@ -58,7 +58,7 @@ export function GlobalSidebar({ projects, starredProjectIds, collapsed }: {
       <div className="flex flex-col gap-0.5">
         <Item href="/filters/search" label="Filters" icon={Filter} />
         <Item href="/dashboards" label="Dashboards" icon={LayoutDashboard} />
-        <Item href="/teams" label="Teams" icon={Users} disabled title="Coming soon" />
+        <Item href="/settings/members" label="Invite Members" icon={Users} />
         <Item href="/plans" label="Plans" icon={Map} disabled title="Coming in V2-8" />
       </div>
     </nav>
