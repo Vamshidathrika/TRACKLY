@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { acceptInvite } from "@/lib/invites";
 
+export const dynamic = "force-dynamic";
+
 const messages = {
   INVALID: "This invite link is not valid.",
   EXPIRED: "This invite link has expired. Ask your admin to send a new one.",
