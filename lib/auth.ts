@@ -71,28 +71,6 @@ export async function getAuthUser() {
     }
   }
 
-  // Demo fallback user
-  let demoUser = await prisma.user.findUnique({ where: { email: "demo@trackly.dev" } });
-  if (!demoUser) {
-    const { makeSlug } = await import("./slug");
-    demoUser = await prisma.user.create({
-      data: {
-        email: "demo@trackly.dev",
-        name: "Demo User",
-      },
-    });
-    const site = await prisma.site.create({
-      data: { name: "Demo Workspace", slug: makeSlug("Demo Workspace") },
-    });
-    await prisma.membership.create({
-      data: { userId: demoUser.id, siteId: site.id, role: "ADMIN" },
-    });
-  }
-
-  return {
-    id: demoUser.id,
-    name: demoUser.name,
-    email: demoUser.email,
-    image: demoUser.avatarUrl,
-  };
+  const { redirect } = await import("next/navigation");
+  redirect("/login");
 }
