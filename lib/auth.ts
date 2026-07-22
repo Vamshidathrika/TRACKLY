@@ -22,10 +22,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { id: user.id, email: user.email, name: user.name, image: user.avatarUrl };
       },
     }),
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID || "unset",
-      clientSecret: process.env.AUTH_GOOGLE_SECRET || "unset",
-    }),
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+      ? [Google({ clientId: process.env.AUTH_GOOGLE_ID, clientSecret: process.env.AUTH_GOOGLE_SECRET })]
+      : []),
   ],
   callbacks: {
     ...authConfig.callbacks,
