@@ -2,47 +2,27 @@
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
-import { loginAction, demoLoginAction, googleLoginAction } from "../actions";
+import { loginAction, googleLoginAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export function LoginForm({
   googleEnabled = false,
-  demoEnabled = false,
 }: {
   googleEnabled?: boolean;
-  demoEnabled?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, action, pending] = useActionState(loginAction, {});
-  const [demoState, demoAction, demoPending] = useActionState(demoLoginAction, {});
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Development-only shortcut: the demo account's password is public. */}
-      {demoEnabled && (
-        <form action={demoAction} className="flex flex-col">
-          <Button
-            type="submit"
-            appearance="primary"
-            disabled={pending || demoPending}
-            className="w-full justify-center bg-brand hover:bg-brand-hovered text-white py-2.5 font-bold shadow-sm"
-          >
-            {demoPending ? "Logging in to Demo..." : "⚡ One-Click Demo Login"}
-          </Button>
-          <p className="mt-1 text-center text-xs text-text-subtle">
-            Pre-configured demo account (`demo@trackly.dev`)
-          </p>
-        </form>
-      )}
-
       {googleEnabled && (
         <form action={googleLoginAction} className="flex flex-col">
           <Button
             type="submit"
             appearance="default"
-            disabled={pending || demoPending}
+            disabled={pending}
             className="w-full justify-center gap-2 py-2.5 font-semibold border border-border"
           >
             <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
@@ -66,7 +46,7 @@ export function LoginForm({
           name="email"
           type="email"
           label="Email Address"
-          placeholder="e.g. demo@trackly.dev"
+          placeholder="e.g. alex@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -81,11 +61,11 @@ export function LoginForm({
           required
         />
 
-        {(state.error || demoState.error) && (
-          <p className="text-xs font-semibold text-danger">{state.error || demoState.error}</p>
+        {state.error && (
+          <p className="text-xs font-semibold text-danger">{state.error}</p>
         )}
 
-        <Button appearance="default" type="submit" disabled={pending || demoPending} className="justify-center font-medium">
+        <Button appearance="default" type="submit" disabled={pending} className="justify-center font-medium">
           {pending ? "Signing in..." : "Sign in"}
         </Button>
       </form>
