@@ -1,9 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { mkdir, writeFile, rm } from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { put, del } from "@vercel/blob";
 import { getAuthUser } from "@/lib/auth";
 import { updateIssue, addComment } from "@/lib/issues";
 import { extractMentions, createNotification, toggleWatcher } from "@/lib/notifications";
@@ -29,7 +27,7 @@ export async function updateIssueFieldAction(
   const user = await getAuthUser();
 
   try {
-    let data: Record<string, any> = {};
+    const data: Record<string, any> = {};
     if (field === "status") data.status = value as IssueStatus;
     if (field === "priority") data.priority = value as IssuePriority;
     if (field === "summary") data.summary = value;
@@ -213,28 +211,39 @@ export async function createSubtaskAction(parentIssueId: string, title: string) 
     });
     if (!parent) return { error: "This ticket is not persisted yet, so subtasks cannot be added." };
 
-    // key/number are unique per project, so derive the next number from the max.
-    const last = await prisma.issue.findFirst({
-      where: { projectId: parent.projectId },
-      orderBy: { number: "desc" },
-      select: { number: true },
-    });
-    const number = (last?.number ?? 0) + 1;
+    // number/key are unique per project and derived from the current max, so two
+    // concurrent creates can pick the same number. Retry on the resulting unique
+    // violation rather than surfacing a crash to whoever lost the race.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const last = await prisma.issue.findFirst({
+        where: { projectId: parent.projectId },
+        orderBy: { number: "desc" },
+        select: { number: true },
+      });
+      const number = (last?.number ?? 0) + 1;
 
-    await prisma.issue.create({
-      data: {
-        projectId: parent.projectId,
-        parentId: parent.id,
-        number,
-        key: `${parent.project.key}-${number}`,
-        summary: title.trim(),
-        type: "SUBTASK",
-        status: "TO_DO",
-        priority: parent.priority,
-        reporterId: user.id,
-        assigneeId: parent.assigneeId,
-      },
-    });
+      try {
+        await prisma.issue.create({
+          data: {
+            projectId: parent.projectId,
+            parentId: parent.id,
+            number,
+            key: `${parent.project.key}-${number}`,
+            summary: title.trim(),
+            type: "SUBTASK",
+            status: "TO_DO",
+            priority: parent.priority,
+            reporterId: user.id,
+            assigneeId: parent.assigneeId,
+          },
+        });
+        break;
+      } catch (e: any) {
+        // P2002 = unique constraint violation; anything else is a real failure.
+        if (e?.code !== "P2002") throw e;
+        if (attempt === 4) return { error: "Could not allocate a ticket number. Try again." };
+      }
+    }
 
     revalidatePath(`/projects/${parent.project.key}/issues/${parent.key}`);
     return { success: true };
@@ -379,8 +388,9 @@ export async function uploadAttachmentAction(issueId: string, formData: FormData
     const files = formData.getAll("files").filter((f): f is File => f instanceof File);
     if (files.length === 0) return { error: "No files provided" };
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", issueId);
-    await mkdir(uploadDir, { recursive: true });
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return { error: "File storage is not configured. Set BLOB_READ_WRITE_TOKEN." };
+    }
 
     for (const file of files) {
       if (file.size === 0) continue;
@@ -388,18 +398,21 @@ export async function uploadAttachmentAction(issueId: string, formData: FormData
         return { error: `${file.name} is larger than the 10 MB limit` };
       }
 
-      // Prefix with a random id so two uploads of the same filename don't collide.
+      // Blob storage, not local disk: serverless filesystems are read-only
+      // and wiped between invocations. addRandomSuffix keeps two uploads of
+      // the same filename from overwriting each other.
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const storedName = `${randomUUID()}-${safeName}`;
-      const bytes = Buffer.from(await file.arrayBuffer());
-      await writeFile(path.join(uploadDir, storedName), bytes);
+      const blob = await put(`attachments/${issueId}/${safeName}`, file, {
+        access: "public",
+        addRandomSuffix: true,
+      });
 
       await prisma.attachment.create({
         data: {
           issueId,
           uploaderId: user.id,
           filename: file.name,
-          url: `/uploads/${issueId}/${storedName}`,
+          url: blob.url,
           mimeType: file.type || "application/octet-stream",
           sizeBytes: file.size,
         },
@@ -427,8 +440,8 @@ export async function deleteAttachmentAction(attachmentId: string) {
     }
 
     await prisma.attachment.delete({ where: { id: attachmentId } });
-    // Remove the file too, but a missing file on disk must not fail the request.
-    await rm(path.join(process.cwd(), "public", attachment.url), { force: true }).catch(() => {});
+    // Best-effort blob cleanup: an already-deleted blob must not fail the request.
+    await del(attachment.url).catch(() => {});
 
     revalidatePath(
       `/projects/${attachment.issue.project.key}/issues/${attachment.issue.key}`

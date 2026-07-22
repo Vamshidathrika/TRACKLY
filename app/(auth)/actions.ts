@@ -44,6 +44,11 @@ export async function googleLoginAction() {
 }
 
 export async function demoLoginAction() {
+  // Hiding the button is not enough: server actions are POST-able directly, so
+  // the demo account has to be refused here too.
+  if (process.env.NODE_ENV === "production") {
+    return { error: "Demo login is disabled in production" };
+  }
   try {
     await signIn("credentials", {
       email: "demo@trackly.dev",

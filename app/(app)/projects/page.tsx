@@ -34,7 +34,7 @@ export default async function ProjectsPage() {
         <div className="mt-16 flex flex-col items-center gap-2 text-center">
           <p className="text-sm font-medium">No projects yet.</p>
           <p className="text-sm text-text-subtle">
-            Click "Create project" above to get started with your first board or sprint project.
+            Click &ldquo;Create project&rdquo; above to get started with your first board or sprint project.
           </p>
         </div>
       ) : (

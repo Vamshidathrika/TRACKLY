@@ -99,8 +99,6 @@ export function KanbanBoard({
   const [groupBy, setGroupBy] = useState<"None" | "Assignee" | "Priority">("None");
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
   const [activeTab, setActiveTab] = useState("Board");
-  const [showPromo, setShowPromo] = useState(true);
-  const [showQuickstart, setShowQuickstart] = useState(true);
 
   // Modals & Drawers state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -743,42 +741,6 @@ export function KanbanBoard({
         <SummaryView issues={issues} projectName={projectName} />
       )}
 
-      {/* Confluence Promo Widget Dialog */}
-      {showPromo && (
-        <div className="absolute bottom-6 left-6 z-30 max-w-sm rounded-md border border-border bg-surface p-5 shadow-xl animate-in fade-in duration-300">
-          <button
-            onClick={() => setShowPromo(false)}
-            className="absolute top-3 right-3 text-text-subtle hover:text-text"
-          >
-            <X size={14} />
-          </button>
-          <h4 className="text-sm font-bold text-text mb-2">Unlock clarity for all teams</h4>
-          <p className="text-xs text-text-subtle mb-4 leading-relaxed">
-            Imagine a single source of truth for team and company-wide knowledge. It&apos;s possible with Confluence.
-          </p>
-          <Button
-            appearance="primary"
-            onClick={() => setShowPromo(false)}
-            className="bg-brand hover:bg-brand-hovered text-white text-xs font-bold px-3 py-1.5 rounded-sm"
-          >
-            Explore today
-          </Button>
-        </div>
-      )}
-
-      {/* Floating Quickstart Pill Widget */}
-      {showQuickstart && (
-        <div className="fixed bottom-6 right-36 z-30 flex items-center gap-2 rounded-full bg-black px-4 py-2 text-xs font-bold text-white shadow-lg transition-transform hover:scale-105">
-          <Lightbulb size={13} className="text-yellow-400" />
-          <span>Quickstart</span>
-          <button
-            onClick={() => setShowQuickstart(false)}
-            className="ml-1 rounded-full p-0.5 hover:bg-white/20"
-          >
-            <X size={11} />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

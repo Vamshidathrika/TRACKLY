@@ -6,7 +6,13 @@ import { loginAction, demoLoginAction, googleLoginAction } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
-export function LoginForm({ googleEnabled = false }: { googleEnabled?: boolean }) {
+export function LoginForm({
+  googleEnabled = false,
+  demoEnabled = false,
+}: {
+  googleEnabled?: boolean;
+  demoEnabled?: boolean;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, action, pending] = useActionState(loginAction, {});
@@ -14,20 +20,22 @@ export function LoginForm({ googleEnabled = false }: { googleEnabled?: boolean }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Direct One-Click Demo Login Banner */}
-      <form action={demoAction} className="flex flex-col">
-        <Button
-          type="submit"
-          appearance="primary"
-          disabled={pending || demoPending}
-          className="w-full justify-center bg-brand hover:bg-brand-hovered text-white py-2.5 font-bold shadow-sm"
-        >
-          {demoPending ? "Logging in to Demo..." : "⚡ One-Click Demo Login"}
-        </Button>
-        <p className="mt-1 text-center text-xs text-text-subtle">
-          Pre-configured demo account (`demo@trackly.dev`)
-        </p>
-      </form>
+      {/* Development-only shortcut: the demo account's password is public. */}
+      {demoEnabled && (
+        <form action={demoAction} className="flex flex-col">
+          <Button
+            type="submit"
+            appearance="primary"
+            disabled={pending || demoPending}
+            className="w-full justify-center bg-brand hover:bg-brand-hovered text-white py-2.5 font-bold shadow-sm"
+          >
+            {demoPending ? "Logging in to Demo..." : "⚡ One-Click Demo Login"}
+          </Button>
+          <p className="mt-1 text-center text-xs text-text-subtle">
+            Pre-configured demo account (`demo@trackly.dev`)
+          </p>
+        </form>
+      )}
 
       {googleEnabled && (
         <form action={googleLoginAction} className="flex flex-col">

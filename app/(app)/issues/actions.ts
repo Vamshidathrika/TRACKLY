@@ -46,7 +46,7 @@ export async function createIssueAction(
 
 export async function fetchUserProjectsAction() {
   const user = await getAuthUser();
-  let membership = await prisma.membership.findFirst({ where: { userId: user.id } });
+  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
   const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id;
   if (!siteId) return [];
 
