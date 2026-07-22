@@ -8,8 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.ts",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
