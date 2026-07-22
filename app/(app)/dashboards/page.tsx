@@ -22,14 +22,17 @@ export default async function DashboardsPage() {
     orderBy: { updatedAt: "desc" },
   });
 
-  const recentActivity = await prisma.issueHistory.findMany({
-    include: {
-      author: { select: { name: true } },
-      issue: { select: { key: true, project: { select: { key: true } } } },
-    },
-    take: 6,
-    orderBy: { createdAt: "desc" },
-  });
+  const recentActivity = siteId
+    ? await prisma.issueHistory.findMany({
+        where: { issue: { project: { siteId } } },
+        include: {
+          author: { select: { name: true } },
+          issue: { select: { key: true, project: { select: { key: true } } } },
+        },
+        take: 6,
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto">
