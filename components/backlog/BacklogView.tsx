@@ -56,7 +56,10 @@ export function BacklogView({
   const handleCreateSprint = async () => {
     setIsCreatingSprint(true);
     const sprintName = `Sprint ${sprints.length + 1}`;
-    await createSprintAction(projectId, sprintName);
+    const res = await createSprintAction(projectId, sprintName);
+    if (res && res.sprint) {
+      setSprints((prev) => [...prev, res.sprint as SprintData]);
+    }
     setIsCreatingSprint(false);
   };
 

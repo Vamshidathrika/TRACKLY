@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getProjectByKey } from "@/lib/projects";
 import { ProjectNav } from "@/components/chrome/ProjectNav";
@@ -12,9 +12,8 @@ export default async function ProjectLayout({
   children: React.ReactNode;
   params: Promise<{ key: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const userId = (session.user as { id?: string }).id ?? "";
+  const user = await getAuthUser();
+  const userId = user.id;
 
   const { key } = await params;
 

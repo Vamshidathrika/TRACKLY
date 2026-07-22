@@ -18,10 +18,10 @@ test("Phase 2 Flow: Signup -> Create Project -> Create Issue -> View Issue Detai
   await page.getByPlaceholder("e.g. Mobile App").fill("Phase2 Core");
   await page.getByPlaceholder("e.g. MA").fill("P2C");
   await page.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.getByText("Phase2 Core")).toBeVisible();
+  await expect(page.getByRole("table").getByRole("link", { name: "Phase2 Core" })).toBeVisible();
 
   // 3. Open project page & create issue via top nav
-  await page.click("text=Phase2 Core");
+  await page.getByRole("table").getByRole("link", { name: "Phase2 Core" }).click();
   await expect(page).toHaveURL(/\/projects\/P2C/);
 
   await page.getByRole("button", { name: "Create issue" }).click();

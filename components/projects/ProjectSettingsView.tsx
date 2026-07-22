@@ -50,8 +50,12 @@ export function ProjectSettingsView({
     if (!fieldName.trim()) return;
 
     setIsAddingField(true);
-    await createCustomFieldAction(project.id, fieldName, fieldType, isRequired);
-    window.location.reload();
+    const res = await createCustomFieldAction(project.id, fieldName, fieldType, isRequired);
+    if (res && res.field) {
+      setCustomFields((prev) => [...prev, res.field]);
+      setFieldName("");
+    }
+    setIsAddingField(false);
   };
 
   const handleDeleteField = async (fieldId: string) => {

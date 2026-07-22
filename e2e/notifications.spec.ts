@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { loginDemo } from "./helpers";
 
 test("Phase 4 Flow: Notifications & Issue Watching", async ({ page }) => {
+  // Login first
+  await loginDemo(page);
+
   await page.goto("/projects/DEMO/issues/DEMO-3");
   await expect(page.getByText("DEMO-3")).toBeVisible();
 

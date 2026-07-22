@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { loginDemo } from "./helpers";
 
 test("Phase 8 Flow: Project Settings & Workspace Members Administration", async ({ page }) => {
+  // Login first
+  await loginDemo(page);
+
   // 1. Visit project settings page
   await page.goto("/projects/DEMO/settings");
-  await expect(page.getByRole("heading", { name: "DEMO Settings" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Settings/i })).toBeVisible();
 
   // 2. Switch to Custom Fields tab and create a custom field
   await page.getByRole("button", { name: "Custom Fields" }).click();

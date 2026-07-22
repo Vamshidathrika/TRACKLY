@@ -140,6 +140,7 @@ export async function getIssueByKey(siteId: string, key: string) {
       project: { select: { id: true, name: true, key: true } },
       reporter: { select: { id: true, name: true, avatarUrl: true } },
       assignee: { select: { id: true, name: true, avatarUrl: true } },
+      watchers: { select: { userId: true } },
       comments: {
         include: { author: { select: { id: true, name: true, avatarUrl: true } } },
         orderBy: { createdAt: "asc" },

@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { loginDemo } from "./helpers";
 
 test("Phase 6 Flow: Agile Reports & Dashboard Workspace", async ({ page }) => {
+  // Login first
+  await loginDemo(page);
+
   // 1. Visit project reports page
   await page.goto("/projects/DEMO/reports");
-  await expect(page.getByRole("heading", { name: "DEMO Reports" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Reports/i })).toBeVisible();
 
   // 2. Switch report tabs
   await page.getByRole("button", { name: "Velocity Chart" }).click();

@@ -16,9 +16,9 @@ export async function updateProjectDetailsAction(projectId: string, name: string
 
 export async function createCustomFieldAction(projectId: string, name: string, fieldType: string, required: boolean) {
   try {
-    await createCustomField({ projectId, name, fieldType, required });
+    const field = await createCustomField({ projectId, name, fieldType, required });
     revalidatePath("/projects");
-    return { success: true };
+    return { success: true, field };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     throw e;

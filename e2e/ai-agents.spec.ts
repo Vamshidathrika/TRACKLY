@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { loginDemo } from "./helpers";
 
 test("Phase 9 Flow: AI Copilot Drawer Interaction", async ({ page }) => {
+  // Login first
+  await loginDemo(page);
+
   // 1. Visit Kanban Board (auth bypassed)
   await page.goto("/projects/DEMO/board");
-  await expect(page.getByText("DEMO board")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Demo Software Project" })).toBeVisible();
 
   // 2. Locate and click floating AI Copilot button
   const copilotBtn = page.getByRole("button", { name: "AI Copilot" });

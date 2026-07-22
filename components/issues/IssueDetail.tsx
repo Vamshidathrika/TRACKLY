@@ -24,6 +24,7 @@ export type IssueDetailData = {
   project: { name: string; key: string };
   reporter: { id: string; name: string; avatarUrl?: string | null };
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
+  watchers?: { userId: string }[];
   comments: {
     id: string;
     body: string;
@@ -84,11 +85,17 @@ export function IssueDetail({
     setIsSubmittingComment(false);
   };
 
-  const [isWatching, setIsWatching] = useState(false);
+  const initiallyWatching = currentUserId
+    ? issue.watchers?.some((w) => w.userId === currentUserId) ?? false
+    : false;
+  const [isWatching, setIsWatching] = useState(initiallyWatching);
 
   const handleToggleWatch = async () => {
+    setIsWatching((prev) => !prev);
     const res = await toggleWatcherAction(issue.id);
-    if (res.isWatching !== undefined) setIsWatching(res.isWatching);
+    if (res && "isWatching" in res && typeof res.isWatching === "boolean") {
+      setIsWatching(res.isWatching);
+    }
   };
 
   return (

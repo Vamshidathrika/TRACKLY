@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { loginDemo } from "./helpers";
 
 test("Phase 7 Flow: Automation Rules & Settings Workspace", async ({ page }) => {
+  // Login first
+  await loginDemo(page);
+
   // 1. Visit automation settings route
   await page.goto("/settings/automation");
   await expect(page.getByRole("heading", { name: "Workflow & Automation Settings" })).toBeVisible();
