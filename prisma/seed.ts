@@ -59,11 +59,33 @@ async function main() {
       },
     });
 
-    // 5. Create Sample Issues
+    // 5. Create Demo Sprints: Sprint 1 (Active) & Sprint 2 (Future)
+    const sprint1 = await prisma.sprint.create({
+      data: {
+        projectId: project.id,
+        name: "Sprint 1",
+        goal: "Core Foundation UI, Kanban Board, and Issue Workflows",
+        status: "ACTIVE",
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    await prisma.sprint.create({
+      data: {
+        projectId: project.id,
+        name: "Sprint 2",
+        goal: "Reports, Dashboards, and Advanced Search Integration",
+        status: "FUTURE",
+      },
+    });
+
+    // 6. Create Sample Issues assigned to active Sprint 1
     await prisma.issue.createMany({
       data: [
         {
           projectId: project.id,
+          sprintId: sprint1.id,
           number: 1,
           key: "DEMO-1",
           summary: "Set up team project repository and database models",
@@ -78,6 +100,7 @@ async function main() {
         },
         {
           projectId: project.id,
+          sprintId: sprint1.id,
           number: 2,
           key: "DEMO-2",
           summary: "Design Atlassian-style UI primitives and layout shell",
@@ -92,6 +115,7 @@ async function main() {
         },
         {
           projectId: project.id,
+          sprintId: sprint1.id,
           number: 3,
           key: "DEMO-3",
           summary: "Build Issue Detail view with inline updates & activity feed",
@@ -106,6 +130,7 @@ async function main() {
         },
         {
           projectId: project.id,
+          sprintId: sprint1.id,
           number: 4,
           key: "DEMO-4",
           summary: "Fix navigation dropdown alignment on small screens",

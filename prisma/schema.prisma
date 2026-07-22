@@ -83,6 +83,7 @@ model User {
   watchedIssues          Watcher[]
   savedFilters           SavedFilter[]
   stars                  Star[]
+  workLogs               WorkLog[]
 }
 
 model Site {
@@ -166,6 +167,7 @@ model Issue {
   status      IssueStatus   @default(TO_DO)
   priority    IssuePriority @default(MEDIUM)
   storyPoints Float?
+  originalEstimate Float?
   rank        Float         @default(0)
   reporterId  String
   assigneeId  String?
@@ -182,6 +184,7 @@ model Issue {
   comments    Comment[]
   history     IssueHistory[]
   watchers    Watcher[]
+  workLogs    WorkLog[]
 
   @@unique([projectId, number])
   @@unique([projectId, key])
@@ -208,6 +211,20 @@ model IssueHistory {
   createdAt DateTime @default(now())
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id])
+}
+
+model WorkLog {
+  id          String   @id @default(cuid())
+  issueId     String
+  authorId    String
+  hours       Float
+  description String?
+  startedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id])
+
+  @@index([issueId])
 }
 
 model Notification {

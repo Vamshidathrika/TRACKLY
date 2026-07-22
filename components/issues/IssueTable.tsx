@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { TypeIcon } from "@/components/ui/TypeIcon";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
 import { Tag } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
+import { Clock } from "lucide-react";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
 export type IssueListItem = {
@@ -15,6 +18,7 @@ export type IssueListItem = {
   storyPoints?: number | null;
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
   projectKey: string;
+  loggedHours?: number;
 };
 
 const statusColors: Record<IssueStatus, "gray" | "blue" | "green" | "red"> = {
@@ -31,7 +35,17 @@ const statusLabels: Record<IssueStatus, string> = {
   DONE: "DONE",
 };
 
-export function IssueTable({ issues, projectKey }: { issues: IssueListItem[]; projectKey: string }) {
+export function IssueTable({
+  issues,
+  projectKey,
+  onAssigneeChange,
+  availableUsers = [],
+}: {
+  issues: IssueListItem[];
+  projectKey: string;
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void;
+  availableUsers?: { id: string; name: string; avatarUrl?: string | null }[];
+}) {
   if (issues.length === 0) {
     return (
       <div className="mt-12 text-center text-sm text-text-subtle">
@@ -49,7 +63,8 @@ export function IssueTable({ issues, projectKey }: { issues: IssueListItem[]; pr
           <th>Summary</th>
           <th className="w-32">Status</th>
           <th className="w-16">P</th>
-          <th className="w-32">Assignee</th>
+          <th className="w-40">Assignee</th>
+          <th className="w-24 text-center">Logged</th>
           <th className="w-16 text-right pr-2">Pts</th>
         </tr>
       </thead>
@@ -76,7 +91,20 @@ export function IssueTable({ issues, projectKey }: { issues: IssueListItem[]; pr
               <PriorityIcon priority={issue.priority} />
             </td>
             <td className="py-2">
-              {issue.assignee ? (
+              {availableUsers.length > 0 && onAssigneeChange ? (
+                <select
+                  value={issue.assignee?.id ?? ""}
+                  onChange={(e) => onAssigneeChange(issue.id, e.target.value || null)}
+                  className="h-7 rounded border border-border bg-surface px-1.5 text-xs font-medium text-text outline-none focus:border-brand cursor-pointer"
+                >
+                  <option value="">Unassigned</option>
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              ) : issue.assignee ? (
                 <div className="flex items-center gap-1.5" title={issue.assignee.name}>
                   <Avatar name={issue.assignee.name} src={issue.assignee.avatarUrl} size={24} />
                   <span className="truncate max-w-24 text-xs">{issue.assignee.name}</span>
@@ -84,6 +112,12 @@ export function IssueTable({ issues, projectKey }: { issues: IssueListItem[]; pr
               ) : (
                 <span className="text-xs text-text-subtle italic">Unassigned</span>
               )}
+            </td>
+            <td className="text-center font-mono text-xs text-text-subtle">
+              <span className="inline-flex items-center gap-1">
+                <Clock size={11} className="text-brand" />
+                {issue.loggedHours ? `${issue.loggedHours.toFixed(1)}h` : "-"}
+              </span>
             </td>
             <td className="pr-2 text-right font-mono text-xs text-text-subtle">
               {issue.storyPoints ?? "-"}
@@ -94,3 +128,4 @@ export function IssueTable({ issues, projectKey }: { issues: IssueListItem[]; pr
     </table>
   );
 }
+

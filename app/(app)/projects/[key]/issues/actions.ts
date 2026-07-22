@@ -105,6 +105,77 @@ export async function postCommentAction(issueId: string, body: string) {
   }
 }
 
+export async function logWorkAction(
+  issueId: string,
+  hours: number,
+  description: string,
+  startedAt?: string
+) {
+  const user = await getAuthUser();
+
+  if (!Number.isFinite(hours) || hours <= 0) return { error: "Time spent must be greater than 0" };
+  if (hours > 24 * 30) return { error: "Time spent is unrealistically large" };
+
+  try {
+    // Mock/unseeded issues have synthetic ids and no database row to attach to.
+    const issue = await prisma.issue.findUnique({
+      where: { id: issueId },
+      include: { project: true, watchers: true },
+    });
+    if (!issue) return { error: "This ticket is not persisted yet, so work cannot be logged." };
+
+    const log = await prisma.workLog.create({
+      data: {
+        issueId,
+        authorId: user.id,
+        hours,
+        description: description.trim() || null,
+        startedAt: startedAt ? new Date(startedAt) : new Date(),
+      },
+      include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+    });
+
+    for (const w of issue.watchers) {
+      if (w.userId === user.id) continue;
+      await createNotification({
+        userId: w.userId,
+        actorId: user.id,
+        type: "STATUS_CHANGE",
+        title: `Work logged on ${issue.key}`,
+        message: `${user.name} logged ${hours}h on ${issue.key}`,
+        link: `/projects/${issue.project.key}/issues/${issue.key}`,
+      });
+    }
+
+    revalidatePath(`/projects/${issue.project.key}/issues/${issue.key}`);
+    revalidatePath("/projects");
+    return { success: true, log };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function deleteWorkLogAction(workLogId: string) {
+  const user = await getAuthUser();
+  try {
+    const log = await prisma.workLog.findUnique({
+      where: { id: workLogId },
+      include: { issue: { include: { project: true } } },
+    });
+    if (!log) return { error: "Work log not found" };
+    if (log.authorId !== user.id) return { error: "You can only delete your own work logs" };
+
+    await prisma.workLog.delete({ where: { id: workLogId } });
+
+    revalidatePath(`/projects/${log.issue.project.key}/issues/${log.issue.key}`);
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
 export async function toggleWatcherAction(issueId: string) {
   const user = await getAuthUser();
   try {

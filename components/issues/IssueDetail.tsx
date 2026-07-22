@@ -42,7 +42,12 @@ import {
   ActivitySection,
 } from "@/components/issues/TaskWorkspaceComponents";
 import { TimeLogModal } from "@/components/issues/TimeLogModal";
-import { updateIssueFieldAction, postCommentAction } from "@/app/(app)/projects/[key]/issues/actions";
+import {
+  updateIssueFieldAction,
+  postCommentAction,
+  logWorkAction,
+  deleteWorkLogAction,
+} from "@/app/(app)/projects/[key]/issues/actions";
 import type { IssueStatus, IssueType, IssuePriority } from "@prisma/client";
 
 // Dynamic initials generator
@@ -88,7 +93,7 @@ export function IssueDetail({
   // Primary Editable State
   const [title, setTitle] = useState(issue.summary || "vbn jade posters and related work");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [description, setDescription] = useState(
+  const [description, setDescription] = useState<string>(
     issue.description ||
       `Date: 30th June 2026\n\nTasks:\n1. Designed a poster for Coordinators Intro\n2. Created a Google Form with brand aesthetics\n3. Designed and added a header poster for the Google Form\n\nDate: 1st July 2026\n\nTasks:\n1. Design and create a WhatsApp cover image poster\n2. Design and create a cover poster for Google Form`
   );
@@ -108,8 +113,13 @@ export function IssueDetail({
 
   // Modal / Toast States
   const [showTimeLog, setShowTimeLog] = useState(false);
-  const [loggedHours, setLoggedHours] = useState(4.5);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Work log is server-owned: derive everything from the issue payload so the
+  // numbers stay correct after router.refresh() revalidates the page.
+  const workLogs: any[] = issue.workLogs || [];
+  const loggedHours = workLogs.reduce((sum, w) => sum + Number(w.hours || 0), 0);
+  const estimatedHours = issue.originalEstimate ?? (issue.storyPoints ? issue.storyPoints * 1.5 : 8);
 
   // Quick Action Handlers
   const showToast = (msg: string) => {
@@ -162,6 +172,28 @@ export function IssueDetail({
     });
   };
 
+  // Returns an error message on failure, null on success, so the modal can
+  // surface the problem instead of silently closing.
+  const handleLogWork = async (hours: number, description: string, startedAt: string) => {
+    const res = await logWorkAction(issue.id, hours, description, startedAt);
+    if (res?.error) return res.error;
+    showToast(`Logged ${hours}h on ${issue.key}`);
+    router.refresh();
+    return null;
+  };
+
+  const handleDeleteWorkLog = (workLogId: string) => {
+    startTransition(async () => {
+      const res = await deleteWorkLogAction(workLogId);
+      if (res?.error) {
+        showToast(res.error);
+        return;
+      }
+      showToast("Work log deleted");
+      router.refresh();
+    });
+  };
+
   const availableUsers = [
     { id: "u-1", name: "Vamshi Krishna Dathrika" },
     { id: "u-2", name: "Vikram Dev" },
@@ -186,12 +218,10 @@ export function IssueDetail({
           isOpen={showTimeLog}
           onClose={() => setShowTimeLog(false)}
           issueKey={issue.key}
-          initialLoggedHours={loggedHours}
-          estimatedHours={storyPoints ? storyPoints * 1.5 : 8}
-          onSave={(hours) => {
-            setLoggedHours(hours);
-            showToast(`Logged ${hours}h total work on ${issue.key}`);
-          }}
+          issueSummary={title}
+          currentLoggedHours={loggedHours}
+          estimatedHours={estimatedHours}
+          onLogTime={handleLogWork}
         />
       )}
 
@@ -348,7 +378,13 @@ export function IssueDetail({
           <ActivitySection
             comments={issue.comments || []}
             history={issue.history || []}
+            workLogs={workLogs}
+            loggedHours={loggedHours}
+            estimatedHours={estimatedHours}
+            currentUserId={currentUserId}
             onAddComment={handleAddComment}
+            onLogWork={() => setShowTimeLog(true)}
+            onDeleteWorkLog={handleDeleteWorkLog}
           />
 
           {/* Timestamps Footer */}
@@ -529,10 +565,17 @@ export function IssueDetail({
                       <span className="text-text-subtle font-medium flex items-center gap-1">
                         <Clock size={12} /> Time Logged
                       </span>
-                      <span className="font-bold text-text">{loggedHours}h / 8.0h</span>
+                      <span className="font-bold text-text">
+                        {loggedHours.toFixed(1)}h / {estimatedHours.toFixed(1)}h
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-neutral overflow-hidden">
-                      <div style={{ width: `${Math.min(100, Math.round((loggedHours / 8) * 100))}%` }} className="h-full bg-brand transition-all" />
+                      <div
+                        style={{
+                          width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
+                        }}
+                        className="h-full bg-brand transition-all"
+                      />
                     </div>
                     <button
                       onClick={() => setShowTimeLog(true)}

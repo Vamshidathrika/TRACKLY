@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IssueCard, type BoardIssue } from "./IssueCard";
+import { IssueCard, type BoardIssue, type BoardUserOption } from "./IssueCard";
 import type { IssueStatus } from "@prisma/client";
 
 const columnTitles: Record<IssueStatus, string> = {
@@ -15,12 +15,16 @@ export function BoardColumn({
   status,
   issues,
   onStatusChange,
+  onAssigneeChange,
+  availableUsers = [],
   currentUserId,
   isAdmin = true,
 }: {
   status: IssueStatus;
   issues: BoardIssue[];
   onStatusChange: (issueId: string, newStatus: IssueStatus) => void;
+  onAssigneeChange?: (issueId: string, assigneeId: string | null) => void;
+  availableUsers?: BoardUserOption[];
   currentUserId?: string;
   isAdmin?: boolean;
 }) {
@@ -87,6 +91,8 @@ export function BoardColumn({
                 key={issue.id}
                 issue={issue}
                 onStatusChange={onStatusChange}
+                onAssigneeChange={onAssigneeChange}
+                availableUsers={availableUsers}
                 canEditStatus={canEditStatus}
               />
             );
@@ -96,3 +102,4 @@ export function BoardColumn({
     </div>
   );
 }
+
