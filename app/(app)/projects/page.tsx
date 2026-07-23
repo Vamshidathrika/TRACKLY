@@ -49,8 +49,8 @@ export default async function ProjectsPage() {
                   <Tag color={p.type === "SCRUM" ? "blue" : "gray"}>{p.type}</Tag>
                 </td>
                 <td className="flex items-center gap-2 py-2">
-                  <Avatar name={p.lead.name ?? p.lead.email} src={p.lead.avatarUrl} size={24} />
-                  <span>{p.lead.name ?? p.lead.email}</span>
+                  <Avatar name={p.lead?.name ?? p.lead?.email ?? "Lead"} src={p.lead?.avatarUrl} size={24} />
+                  <span>{p.lead?.name ?? p.lead?.email ?? "Unassigned"}</span>
                 </td>
                 <td className="text-text-subtle">{p._count.issues}</td>
               </tr>
