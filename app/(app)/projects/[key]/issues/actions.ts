@@ -7,7 +7,7 @@ import { updateIssue, addComment } from "@/lib/issues";
 import { extractMentions, createNotification, toggleWatcher } from "@/lib/notifications";
 import { evaluateAutomationTriggers } from "@/lib/automation";
 import { prisma } from "@/lib/prisma";
-import type { IssueStatus, IssuePriority, LinkRelation } from "@prisma/client";
+import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
 
 export async function updateIssueFieldAction(
   issueId: string,
