@@ -48,7 +48,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
-export async function getAuthUser() {
+export type AuthUser = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+};
+
+export async function getAuthUser(): Promise<AuthUser> {
   const session = await auth();
 
   if (session?.user?.id || session?.user?.email) {
@@ -72,5 +79,5 @@ export async function getAuthUser() {
   }
 
   const { redirect } = await import("next/navigation");
-  redirect("/login");
+  return redirect("/login") as never;
 }

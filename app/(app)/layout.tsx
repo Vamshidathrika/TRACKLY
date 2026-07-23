@@ -7,7 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { projects, starredProjectIds } = await getChromeData(user.id);
   return (
     <AppShell
-      user={{ name: user.name, email: user.email, avatarUrl: user.image }}
+      user={{ name: user.name ?? user.email, email: user.email, avatarUrl: user.image }}
       projects={projects}
       starredProjectIds={starredProjectIds}
     >

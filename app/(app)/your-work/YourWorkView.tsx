@@ -112,7 +112,7 @@ export function YourWorkView({
                   <div className="flex items-center gap-4 shrink-0">
                     <span className="text-xs text-text-subtle hidden sm:inline">{issue.project.name}</span>
                     <PriorityIcon priority={issue.priority} size={14} />
-                    <Tag appearance={issue.status === "DONE" ? "success" : issue.status === "IN_PROGRESS" ? "brand" : "default"}>
+                    <Tag color={issue.status === "DONE" ? "green" : issue.status === "IN_PROGRESS" ? "blue" : "gray"}>
                       {issue.status.replace("_", " ")}
                     </Tag>
                   </div>
@@ -149,7 +149,7 @@ export function YourWorkView({
                   <div className="flex items-center gap-4 shrink-0">
                     <span className="text-xs text-text-subtle hidden sm:inline">{issue.project.name}</span>
                     <PriorityIcon priority={issue.priority} size={14} />
-                    <Tag appearance={issue.status === "DONE" ? "success" : issue.status === "IN_PROGRESS" ? "brand" : "default"}>
+                    <Tag color={issue.status === "DONE" ? "green" : issue.status === "IN_PROGRESS" ? "blue" : "gray"}>
                       {issue.status.replace("_", " ")}
                     </Tag>
                   </div>
