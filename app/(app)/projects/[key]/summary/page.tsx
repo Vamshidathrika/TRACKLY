@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { DashboardView, type EpicProgressItem } from "@/components/dashboards/DashboardView";
 
@@ -9,16 +9,19 @@ export default async function ProjectSummaryPage({
 }: {
   params: Promise<{ key: string }>;
 }) {
+  const { userId, siteId } = await requireMembership();
   const { key } = await params;
   const upperKey = key.toUpperCase();
-  await getAuthUser();
 
   const project = await prisma.project.findFirst({
-    where: { key: upperKey },
+    where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, type: true, siteId: true },
   });
 
   if (!project) redirect("/projects");
+
+  const access = await checkProjectAccess(userId, project.id, siteId);
+  if (!access) redirect("/your-work");
 
   // Fetch issues & history for this project
   const issues = await prisma.issue.findMany({

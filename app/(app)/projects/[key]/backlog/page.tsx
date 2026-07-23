@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getIssuesByProject } from "@/lib/issues";
 import { getUsersForSite } from "@/lib/users";
@@ -12,28 +12,19 @@ import { Button } from "@/components/ui/Button";
 export default async function BacklogPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   const upperKey = key.toUpperCase();
-  const user = await getAuthUser();
+  const { userId, siteId } = await requireMembership();
 
-  // 1. Resolve project globally by key across all workspace sites
+  // 1. Resolve project strictly within user's workspace
   const project = await prisma.project.findFirst({
-    where: { key: upperKey },
+    where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
   if (!project) redirect("/projects");
 
-  // 2. Collaborative Access: Auto-grant Membership if visiting a shared backlog link
-  const membership = await prisma.membership.findFirst({
-    where: { userId: user.id, siteId: project.siteId },
-  });
-
-  if (!membership) {
-    await prisma.membership.create({
-      data: { userId: user.id, siteId: project.siteId, role: "MEMBER" },
-    });
-    const { delCache } = await import("@/lib/redis");
-    await delCache(`user:chrome:${user.id}`);
-  }
+  // 2. Check project-level access
+  const access = await checkProjectAccess(userId, project.id, siteId);
+  if (!access) redirect("/your-work");
 
   const [sprints, allIssues, siteUsers] = await Promise.all([
     getSprintsByProject(project.id),

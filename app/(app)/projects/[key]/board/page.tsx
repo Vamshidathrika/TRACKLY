@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getIssuesByProject } from "@/lib/issues";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getUsersForSite } from "@/lib/users";
@@ -9,21 +9,24 @@ import { KanbanBoard } from "@/components/board/KanbanBoard";
 export default async function BoardPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   const upperKey = key.toUpperCase();
-  const user = await getAuthUser();
+  const { userId, siteId } = await requireMembership();
 
   const project = await prisma.project.findFirst({
-    where: { key: upperKey },
+    where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
   if (!project) redirect("/projects");
+
+  const access = await checkProjectAccess(userId, project.id, siteId);
+  if (!access) redirect("/your-work");
 
   const [issues, sprints, siteUsers, star] = await Promise.all([
     getIssuesByProject(project.id),
     getSprintsByProject(project.id),
     getUsersForSite(project.siteId),
     prisma.star.findUnique({
-      where: { userId_projectId: { userId: user.id, projectId: project.id } },
+      where: { userId_projectId: { userId, projectId: project.id } },
     }),
   ]);
 
@@ -36,7 +39,7 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
           issues: s.issues.map((i) => ({ ...i, projectKey: project.key })),
         }))}
         availableUsers={siteUsers}
-        currentUserId={user.id}
+        currentUserId={userId}
         projectName={project.name}
         projectKey={project.key}
         projectId={project.id}

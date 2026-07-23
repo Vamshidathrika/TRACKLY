@@ -1,45 +1,24 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getIssueByKey } from "@/lib/issues";
+import { getUsersForSite } from "@/lib/users";
 import { IssueDetail } from "@/components/issues/IssueDetail";
 
 export default async function IssuePage({ params }: { params: Promise<{ key: string; issueKey: string }> }) {
   const { key, issueKey } = await params;
-  const user = await getAuthUser();
+  const { userId, siteId, role } = await requireMembership();
 
-  const issue = await getIssueByKey("", issueKey);
+  const issue = await getIssueByKey(siteId, issueKey);
   if (!issue) redirect(`/projects/${key}`);
 
-  const siteId = issue.project?.siteId;
+  const access = await checkProjectAccess(userId, issue.projectId, siteId);
+  if (!access) redirect("/your-work");
 
-  // Auto-join user to workspace if visiting shared ticket link
-  if (siteId) {
-    const siteExists = await prisma.site.findUnique({ where: { id: siteId }, select: { id: true } });
-    if (siteExists) {
-      const membership = await prisma.membership.findFirst({
-        where: { userId: user.id, siteId },
-      });
-      if (!membership) {
-        await prisma.membership.create({
-          data: { userId: user.id, siteId, role: "MEMBER" },
-        });
-        const { delCache } = await import("@/lib/redis");
-        await delCache(`user:chrome:${user.id}`);
-      }
-    }
-  }
-
-  const membership = siteId
-    ? await prisma.membership.findFirst({ where: { userId: user.id, siteId } })
-    : null;
-  const isAdmin = membership?.role === "ADMIN";
+  const isAdmin = role === "ADMIN" || access.projectRole === "WORKSPACE_ADMIN";
 
   const [members, sprints, automationRules] = await Promise.all([
-    prisma.user.findMany({
-      select: { id: true, name: true, email: true, avatarUrl: true },
-      orderBy: { name: "asc" },
-    }),
+    getUsersForSite(siteId),
     prisma.sprint.findMany({
       where: { projectId: issue.projectId },
       select: { id: true, name: true, status: true },
@@ -56,7 +35,7 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
     <main className="flex-1 px-8 py-6 overflow-y-auto">
       <IssueDetail
         issue={issue}
-        currentUserId={user.id}
+        currentUserId={userId}
         isAdmin={isAdmin}
         members={members.map((m) => ({ ...m, name: m.name ?? "Teammate" }))}
         sprints={sprints}
