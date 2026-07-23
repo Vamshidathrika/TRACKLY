@@ -114,6 +114,7 @@ export function IssueDetail({
   const [status, setStatus] = useState<IssueStatus>(issue.status || "TO_DO");
   const [priority, setPriority] = useState<IssuePriority>(issue.priority || "MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>(issue.assigneeId || "");
+  const [reporterId, setReporterId] = useState<string>(issue.reporterId || issue.reporter?.id || currentUserId || "");
   const [storyPoints, setStoryPoints] = useState<number | null>(issue.storyPoints ?? null);
   const [sprintId, setSprintId] = useState<string>(issue.sprintId || "");
   const [startDate, setStartDate] = useState<string>(toDateInput(issue.startDate));
@@ -223,6 +224,12 @@ export function IssueDetail({
     setAssigneeId(newAssigneeId);
     const name = members.find((m) => m.id === newAssigneeId)?.name;
     persistField("assigneeId", newAssigneeId, name ? `Assigned to ${name}` : "Set to Unassigned");
+  };
+
+  const handleReporterChange = (newReporterId: string) => {
+    setReporterId(newReporterId);
+    const name = members.find((m) => m.id === newReporterId)?.name;
+    persistField("reporterId", newReporterId, name ? `Reporter set to ${name}` : "Reporter updated");
   };
 
   const handleStoryPointsChange = (value: string) => {
@@ -578,14 +585,15 @@ export function IssueDetail({
                     <span className="text-text-subtle font-medium flex items-center gap-1.5">
                       <User size={13} /> Reporter
                     </span>
-                    {issue.reporter ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar name={issue.reporter.name} src={issue.reporter.avatarUrl} size={20} />
-                        <span className="font-bold text-text">{issue.reporter.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-text-subtle">—</span>
-                    )}
+                    <select
+                      value={reporterId}
+                      onChange={(e) => handleReporterChange(e.target.value)}
+                      className="h-7 rounded border border-border bg-surface px-2 text-xs font-semibold text-text outline-none"
+                    >
+                      {members.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Parent */}

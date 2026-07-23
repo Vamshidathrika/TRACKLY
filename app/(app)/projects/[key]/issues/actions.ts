@@ -18,6 +18,7 @@ export async function updateIssueFieldAction(
     | "description"
     | "storyPoints"
     | "assigneeId"
+    | "reporterId"
     | "sprintId"
     | "startDate"
     | "dueDate"
@@ -34,6 +35,7 @@ export async function updateIssueFieldAction(
     if (field === "description") data.description = value;
     if (field === "storyPoints") data.storyPoints = value ? parseFloat(value) : null;
     if (field === "assigneeId") data.assigneeId = value || null;
+    if (field === "reporterId") data.reporterId = value || null;
     if (field === "sprintId") data.sprintId = value || null;
     if (field === "startDate") data.startDate = value ? new Date(value) : null;
     if (field === "dueDate") data.dueDate = value ? new Date(value) : null;

@@ -76,6 +76,7 @@ export async function updateIssue(
     priority?: IssuePriority;
     storyPoints?: number | null;
     assigneeId?: string | null;
+    reporterId?: string | null;
     sprintId?: string | null;
     startDate?: Date | null;
     dueDate?: Date | null;

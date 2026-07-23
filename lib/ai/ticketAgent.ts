@@ -229,6 +229,6 @@ export async function executeAgentCommand(
 
   return {
     success: false,
-    message: "I recognized your intent but could not map it to an action. Try: 'create issue \"My Summary\"', 'move DEMO-1 to IN_PROGRESS', 'assign DEMO-1 to Demo User', or 'comment on DEMO-1 \"Work in progress\"'.",
+    message: "I recognized your intent but could not map it to an action. Try: 'create issue \"My Summary\"', 'move DEMO-1 to IN_PROGRESS', 'assign DEMO-1 to teammate', or 'comment on DEMO-1 \"Work in progress\"'.",
   };
 }

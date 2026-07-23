@@ -14,7 +14,7 @@ type Message = {
 const SUGGESTIONS = [
   'create issue "Fix mobile navigation alignment" as bug',
   'move DEMO-3 to IN_PROGRESS',
-  'assign DEMO-3 to Demo User',
+  'assign DEMO-3 to teammate',
   'comment on DEMO-3 "Ready for peer review"',
 ];
 
