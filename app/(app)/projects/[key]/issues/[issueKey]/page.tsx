@@ -8,12 +8,26 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
   const { key, issueKey } = await params;
   const user = await getAuthUser();
 
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
-
-  const issue = await getIssueByKey(siteId, issueKey);
+  const issue = await getIssueByKey("", issueKey);
   if (!issue) redirect(`/projects/${key}`);
 
+  const siteId = issue.project?.siteId || issue.projectId;
+
+  // Auto-join user to workspace if visiting shared ticket link
+  if (siteId) {
+    const membership = await prisma.membership.findFirst({
+      where: { userId: user.id, siteId },
+    });
+    if (!membership) {
+      await prisma.membership.create({
+        data: { userId: user.id, siteId, role: "MEMBER" },
+      });
+      const { delCache } = await import("@/lib/redis");
+      await delCache(`user:chrome:${user.id}`);
+    }
+  }
+
+  const membership = await prisma.membership.findFirst({ where: { userId: user.id, siteId } });
   const isAdmin = membership?.role === "ADMIN";
 
   const [members, sprints, automationRules] = await Promise.all([
@@ -40,7 +54,7 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
         issue={issue}
         currentUserId={user.id}
         isAdmin={isAdmin}
-        members={members}
+        members={members.map((m) => ({ ...m, name: m.name ?? "Teammate" }))}
         sprints={sprints}
         automationRules={automationRules}
       />

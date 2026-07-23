@@ -47,6 +47,23 @@ export async function updateIssueFieldAction(
     await updateIssue(issueId, user.id, data);
 
     // Notify watchers and trigger automation rules if status changed
+    if (field === "assigneeId" && value) {
+      const issue = await prisma.issue.findUnique({
+        where: { id: issueId },
+        include: { project: true },
+      });
+      if (issue && value !== user.id) {
+        await createNotification({
+          userId: value,
+          actorId: user.id,
+          type: "ASSIGNMENT",
+          title: `Assigned to ${issue.key}`,
+          message: `${user.name ?? "A teammate"} assigned ${issue.key} to you`,
+          link: `/projects/${issue.project.key}/issues/${issue.key}`,
+        });
+      }
+    }
+
     if (field === "status") {
       const issue = await prisma.issue.findUnique({
         where: { id: issueId },
@@ -92,13 +109,29 @@ export async function postCommentAction(issueId: string, body: string) {
     });
 
     if (issue) {
+      // Notify assignee & reporter if not self
+      const notifyUsers = new Set<string>();
+      if (issue.assigneeId && issue.assigneeId !== user.id) notifyUsers.add(issue.assigneeId);
+      if (issue.reporterId && issue.reporterId !== user.id) notifyUsers.add(issue.reporterId);
+
+      for (const recipientId of notifyUsers) {
+        await createNotification({
+          userId: recipientId,
+          actorId: user.id,
+          type: "COMMENT",
+          title: `New comment on ${issue.key}`,
+          message: `${user.name ?? "Teammate"}: "${body.slice(0, 50)}..."`,
+          link: `/projects/${issue.project.key}/issues/${issue.key}`,
+        });
+      }
+
       // Check for @mentions
       const mentionNames = extractMentions(body);
       for (const name of mentionNames) {
         const mentionedUser = await prisma.user.findFirst({
           where: { name: { contains: name, mode: "insensitive" } },
         });
-        if (mentionedUser) {
+        if (mentionedUser && mentionedUser.id !== user.id) {
           await createNotification({
             userId: mentionedUser.id,
             actorId: user.id,

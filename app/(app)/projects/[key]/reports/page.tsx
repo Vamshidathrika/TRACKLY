@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { getProjectByKey } from "@/lib/projects";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getBurndownData, getVelocityData, getProjectMetrics } from "@/lib/reports";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
@@ -11,13 +10,28 @@ import { Button } from "@/components/ui/Button";
 
 export default async function ReportsPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
+  const upperKey = key.toUpperCase();
   const user = await getAuthUser();
 
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
+  const project = await prisma.project.findFirst({
+    where: { key: upperKey },
+    select: { id: true, key: true, name: true, siteId: true },
+  });
 
-  const project = await getProjectByKey(siteId, key);
   if (!project) redirect("/projects");
+
+  // Collaborative Access check
+  const membership = await prisma.membership.findFirst({
+    where: { userId: user.id, siteId: project.siteId },
+  });
+
+  if (!membership) {
+    await prisma.membership.create({
+      data: { userId: user.id, siteId: project.siteId, role: "MEMBER" },
+    });
+    const { delCache } = await import("@/lib/redis");
+    await delCache(`user:chrome:${user.id}`);
+  }
 
   const sprints = await getSprintsByProject(project.id);
   const activeSprint = sprints.find((s) => s.status === "ACTIVE") || sprints[0];

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { getProjectByKey } from "@/lib/projects";
 import { getCustomFields } from "@/lib/admin";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { ProjectSettingsView } from "@/components/projects/ProjectSettingsView";
@@ -10,13 +9,27 @@ import { Button } from "@/components/ui/Button";
 
 export default async function ProjectSettingsPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
+  const upperKey = key.toUpperCase();
   const user = await getAuthUser();
 
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
+  const project = await prisma.project.findFirst({
+    where: { key: upperKey },
+    include: { lead: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+  });
 
-  const project = await getProjectByKey(siteId, key);
   if (!project) redirect("/projects");
+
+  const membership = await prisma.membership.findFirst({
+    where: { userId: user.id, siteId: project.siteId },
+  });
+
+  if (!membership) {
+    await prisma.membership.create({
+      data: { userId: user.id, siteId: project.siteId, role: "MEMBER" },
+    });
+    const { delCache } = await import("@/lib/redis");
+    await delCache(`user:chrome:${user.id}`);
+  }
 
   const customFields = await getCustomFields(project.id);
 
