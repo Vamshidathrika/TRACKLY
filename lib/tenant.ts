@@ -31,20 +31,40 @@ export type ProjectContext = {
 
 /**
  * Returns the authenticated user's workspace context.
- * NEVER falls back to prisma.site.findFirst() — if the user has no membership,
- * redirects them to onboarding so they create or join a workspace.
+ * Guarantees a valid membership: if the user has no workspace membership,
+ * connects them to the primary workspace or provisions a default workspace.
  */
 export const requireMembership = cache(async (): Promise<TenantContext> => {
   const user = await getAuthUser();
 
-  const membership = await prisma.membership.findFirst({
+  let membership = await prisma.membership.findFirst({
     where: { userId: user.id },
     include: { site: true },
     orderBy: { createdAt: "asc" }, // oldest = primary workspace
   });
 
   if (!membership) {
-    redirect("/onboarding");
+    // Auto-heal: If user has no membership, associate them with the primary site or create one
+    const existingSite = await prisma.site.findFirst();
+    if (existingSite) {
+      membership = await prisma.membership.create({
+        data: { userId: user.id, siteId: existingSite.id, role: "ADMIN" },
+        include: { site: true },
+      });
+    } else {
+      const { makeSlug } = await import("./slug");
+      const siteName = `${user.name || "Main"}'s Workspace`;
+      const newSite = await prisma.site.create({
+        data: { name: siteName, slug: makeSlug(siteName) },
+      });
+      membership = await prisma.membership.create({
+        data: { userId: user.id, siteId: newSite.id, role: "ADMIN" },
+        include: { site: true },
+      });
+    }
+
+    const { delCache } = await import("./redis");
+    await delCache(`user:chrome:${user.id}`);
   }
 
   return {

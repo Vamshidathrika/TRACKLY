@@ -89,7 +89,7 @@ export function YourWorkView({
     type: i.type,
     status: i.status,
     priority: i.priority,
-    projectKey: i.project.key,
+    projectKey: i.project?.key ?? "PRJ",
     assignee: i.assignee,
   }));
 
@@ -100,7 +100,7 @@ export function YourWorkView({
     type: i.type,
     status: i.status,
     priority: i.priority,
-    projectKey: i.project.key,
+    projectKey: i.project?.key ?? "PRJ",
     assignee: i.assignee,
   }));
 

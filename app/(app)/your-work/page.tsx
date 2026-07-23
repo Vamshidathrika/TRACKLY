@@ -1,21 +1,17 @@
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { getUsersForSite } from "@/lib/users";
+import { getProjectsForUser } from "@/lib/projects";
 import { YourWorkView } from "./YourWorkView";
+import { getAuthUser } from "@/lib/auth";
 
 export default async function YourWorkPage() {
+  const { userId, siteId } = await requireMembership();
   const user = await getAuthUser();
-  const memberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    include: { site: { include: { projects: true } } },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const siteIds = memberships.map((m) => m.siteId);
 
   const [assignedIssues, reportedIssues, userProjects, availableUsers] = await Promise.all([
     prisma.issue.findMany({
-      where: { assigneeId: user.id },
+      where: { assigneeId: userId, project: { siteId } },
       include: {
         project: { select: { key: true, name: true } },
         assignee: { select: { id: true, name: true, avatarUrl: true } },
@@ -23,27 +19,21 @@ export default async function YourWorkPage() {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.issue.findMany({
-      where: { reporterId: user.id },
+      where: { reporterId: userId, project: { siteId } },
       include: {
         project: { select: { key: true, name: true } },
         assignee: { select: { id: true, name: true, avatarUrl: true } },
       },
       orderBy: { updatedAt: "desc" },
     }),
-    siteIds.length > 0
-      ? prisma.project.findMany({
-          where: { siteId: { in: siteIds } },
-          select: { id: true, key: true, name: true, _count: { select: { issues: true } } },
-          orderBy: { createdAt: "desc" },
-        })
-      : [],
-    siteIds.length > 0 ? getUsersForSite(siteIds[0]) : [],
+    getProjectsForUser(siteId, userId),
+    getUsersForSite(siteId),
   ]);
 
   return (
     <YourWorkView
-      assignedIssues={assignedIssues}
-      reportedIssues={reportedIssues}
+      assignedIssues={assignedIssues.map((i) => ({ ...i, project: i.project ?? { key: "PRJ", name: "Project" } }))}
+      reportedIssues={reportedIssues.map((i) => ({ ...i, project: i.project ?? { key: "PRJ", name: "Project" } }))}
       userProjects={userProjects}
       userName={user.name ?? user.email}
       availableUsers={availableUsers}
