@@ -32,5 +32,5 @@ it("renders input when open and lists actions", async () => {
 
   expect(screen.getByPlaceholderText(/Search or jump/i)).toBeInTheDocument();
   expect(screen.getByText("Create issue")).toBeInTheDocument();
-  expect(screen.getByText("Toggle theme (Light/Dark)")).toBeInTheDocument();
+  expect(screen.getByText("Toggle theme")).toBeInTheDocument();
 });

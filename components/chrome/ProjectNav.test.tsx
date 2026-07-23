@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
 
 import { ProjectNav } from "./ProjectNav";
 
-it("renders project header, items, active board, disabled timeline", () => {
+it("renders project header, items, active board, enabled timeline", () => {
   render(
     <ProjectNav
       projectKey="TRK"
@@ -21,7 +21,7 @@ it("renders project header, items, active board, disabled timeline", () => {
     />
   );
   expect(screen.getByText("Trackly Core")).toBeInTheDocument();
-  expect(screen.getByText("Board").closest("a")).toHaveClass("bg-selected");
-  expect(screen.getByText("Timeline").parentElement).toHaveClass("cursor-not-allowed");
+  expect(screen.getByText("Board").closest("a")).toHaveClass("bg-brand/10");
+  expect(screen.getByText("Timeline").closest("a")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Star project" })).toBeInTheDocument();
 });

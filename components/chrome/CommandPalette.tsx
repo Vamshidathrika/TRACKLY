@@ -2,12 +2,33 @@
 
 import { useState, useEffect, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Search, Folder, Sliders, Briefcase, LayoutDashboard, Palette, FileText, Clock, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Folder,
+  Sliders,
+  Briefcase,
+  LayoutDashboard,
+  Palette,
+  FileText,
+  Clock,
+  ChevronRight,
+  Hash,
+  Zap,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { quickSearchAction } from "@/app/(app)/search/actions";
 
 type Proj = { id: string; key: string; name: string };
 type ThemePref = "light" | "dark" | "system";
+
+type ListItem = {
+  id: string;
+  type: "recent" | "action" | "project" | "issue";
+  label: string;
+  sublabel?: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  handler: () => void;
+};
 
 export function CommandPalette({
   open,
@@ -29,8 +50,8 @@ export function CommandPalette({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  // Load recent searches
   useEffect(() => {
     if (open) {
       setQuery("");
@@ -44,7 +65,6 @@ export function CommandPalette({
     }
   }, [open]);
 
-  // Live issue search with debounce
   useEffect(() => {
     if (!query.trim()) {
       setIssues([]);
@@ -55,75 +75,137 @@ export function CommandPalette({
       try {
         const res = await quickSearchAction(query);
         setIssues(res.issues);
-      } catch (err) {
+      } catch {
         setIssues([]);
       } finally {
         setIsLoading(false);
       }
     }, 200);
-
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Actions list
-  const actionsList = [
-    { id: "action-create", type: "action", label: "Create issue", icon: FileText, handler: () => { onCreateIssue(); onOpenChange(false); } },
-    { id: "action-theme", type: "action", label: "Toggle theme (Light/Dark)", icon: Palette, handler: () => { onSetTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); onOpenChange(false); } },
-    { id: "nav-work", type: "action", label: "Go to Your work", icon: Briefcase, handler: () => { router.push("/your-work"); onOpenChange(false); } },
-    { id: "nav-projects", type: "action", label: "Go to Projects", icon: Folder, handler: () => { router.push("/projects"); onOpenChange(false); } },
-    { id: "nav-filters", type: "action", label: "Go to Filters", icon: Sliders, handler: () => { router.push("/filters/search"); onOpenChange(false); } },
-    { id: "nav-dashboards", type: "action", label: "Go to Dashboards", icon: LayoutDashboard, handler: () => { router.push("/dashboards"); onOpenChange(false); } },
+  const close = () => onOpenChange(false);
+
+  const actionsList: ListItem[] = [
+    {
+      id: "action-create",
+      type: "action",
+      label: "Create issue",
+      sublabel: "Press C anywhere",
+      icon: Zap,
+      handler: () => { onCreateIssue(); close(); },
+    },
+    {
+      id: "action-theme",
+      type: "action",
+      label: "Toggle theme",
+      sublabel: "Light / Dark",
+      icon: Palette,
+      handler: () => {
+        onSetTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+        close();
+      },
+    },
+    {
+      id: "nav-work",
+      type: "action",
+      label: "Go to My Work",
+      icon: Briefcase,
+      handler: () => { router.push("/your-work"); close(); },
+    },
+    {
+      id: "nav-projects",
+      type: "action",
+      label: "Go to Projects",
+      icon: Folder,
+      handler: () => { router.push("/projects"); close(); },
+    },
+    {
+      id: "nav-filters",
+      type: "action",
+      label: "Go to Filters",
+      icon: Sliders,
+      handler: () => { router.push("/filters/search"); close(); },
+    },
+    {
+      id: "nav-dashboards",
+      type: "action",
+      label: "Go to Dashboards",
+      icon: LayoutDashboard,
+      handler: () => { router.push("/dashboards"); close(); },
+    },
   ];
 
-  // Filter actions & projects based on query
   const filteredActions = query.trim()
     ? actionsList.filter((a) => a.label.toLowerCase().includes(query.toLowerCase()))
     : actionsList;
 
   const filteredProjects = query.trim()
-    ? projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || p.key.toLowerCase().includes(query.toLowerCase()))
+    ? projects.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query.toLowerCase()) ||
+          p.key.toLowerCase().includes(query.toLowerCase())
+      )
     : [];
 
-  // Combine items to list them sequentially for keyboard navigation
-  const listItems: any[] = [];
-  
-  if (query.trim() === "") {
-    // Show recent searches headers if any
-    recentSearches.forEach((s) => {
-      listItems.push({ id: `recent-${s}`, type: "recent", label: s, handler: () => { setQuery(s); } });
+  // Build grouped sections
+  const sections: { label: string; items: ListItem[] }[] = [];
+
+  if (query.trim() === "" && recentSearches.length > 0) {
+    sections.push({
+      label: "Recent",
+      items: recentSearches.map((s) => ({
+        id: `recent-${s}`,
+        type: "recent" as const,
+        label: s,
+        icon: Clock,
+        handler: () => { setQuery(s); },
+      })),
     });
   }
 
-  filteredActions.forEach((act) => listItems.push(act));
-  
-  filteredProjects.forEach((proj) => {
-    listItems.push({
-      id: `project-${proj.id}`,
-      type: "project",
-      label: `${proj.name} (${proj.key})`,
-      icon: Folder,
-      handler: () => {
-        // Track recent search
-        saveRecentSearch(query);
-        router.push(`/projects/${proj.key}`);
-        onOpenChange(false);
-      },
-    });
-  });
+  if (filteredActions.length > 0) {
+    sections.push({ label: query ? "Actions" : "Quick Actions", items: filteredActions });
+  }
 
-  issues.forEach((issue) => {
-    listItems.push({
-      id: `issue-${issue.id}`,
-      type: "issue",
-      label: `${issue.key}: ${issue.summary}`,
-      icon: FileText,
-      handler: () => {
-        saveRecentSearch(query);
-        router.push(`/projects/${issue.project.key}/issues/${issue.key}`);
-        onOpenChange(false);
-      },
+  if (filteredProjects.length > 0) {
+    sections.push({
+      label: "Projects",
+      items: filteredProjects.map((proj) => ({
+        id: `project-${proj.id}`,
+        type: "project" as const,
+        label: proj.name,
+        sublabel: proj.key,
+        icon: Folder,
+        handler: () => {
+          saveRecentSearch(query);
+          router.push(`/projects/${proj.key}`);
+          close();
+        },
+      })),
     });
-  });
+  }
+
+  if (issues.length > 0) {
+    sections.push({
+      label: "Issues",
+      items: issues.map((issue) => ({
+        id: `issue-${issue.id}`,
+        type: "issue" as const,
+        label: issue.summary,
+        sublabel: issue.key,
+        icon: Hash,
+        handler: () => {
+          saveRecentSearch(query);
+          router.push(`/projects/${issue.project.key}/issues/${issue.key}`);
+          close();
+        },
+      })),
+    });
+  }
+
+  // Flatten for keyboard navigation
+  const flatItems = sections.flatMap((s) => s.items);
 
   const saveRecentSearch = (searchVal: string) => {
     const trimmed = searchVal.trim();
@@ -132,83 +214,134 @@ export function CommandPalette({
       const existing: string[] = JSON.parse(localStorage.getItem("trackly-recent-searches") ?? "[]");
       const updated = [trimmed, ...existing.filter((s) => s !== trimmed)].slice(0, 5);
       localStorage.setItem("trackly-recent-searches", JSON.stringify(updated));
-    } catch {
-      // Ignore storage errors
-    }
+    } catch { /* ignore */ }
   };
 
-  // Keep index within bounds
   useEffect(() => {
-    setSelectedIndex((prev) => Math.min(Math.max(0, prev), Math.max(0, listItems.length - 1)));
-  }, [listItems.length]);
+    setSelectedIndex((prev) => Math.min(Math.max(0, prev), Math.max(0, flatItems.length - 1)));
+  }, [flatItems.length]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    const el = listRef.current?.querySelector(`[data-selected="true"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % listItems.length);
+      setSelectedIndex((prev) => (prev + 1) % Math.max(1, flatItems.length));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + listItems.length) % listItems.length);
+      setSelectedIndex((prev) => (prev - 1 + flatItems.length) % Math.max(1, flatItems.length));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (listItems[selectedIndex]) {
-        listItems[selectedIndex].handler();
-      }
+      flatItems[selectedIndex]?.handler();
     } else if (e.key === "Escape") {
-      onOpenChange(false);
+      close();
     }
   };
+
+  // Compute running index for each section
+  let runningIndex = 0;
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-[#091E42]/40 backdrop-blur-xs" />
-        <Dialog.Content className="fixed top-[120px] left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 rounded-md border border-border-default bg-surface shadow-xl outline-none overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className="relative flex items-center border-b border-border-default px-4">
-            <Search size={18} className="text-subtlest" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+        <Dialog.Content className="fixed top-[15vh] left-1/2 z-50 w-full max-w-[580px] -translate-x-1/2 rounded-[16px] border border-border-default bg-surface shadow-xl outline-none overflow-hidden animate-scale-in">
+          {/* Search Input */}
+          <div className="flex items-center gap-3 border-b border-border-default px-4">
+            <Search size={16} className="text-subtlest shrink-0" />
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search or jump to..."
+              placeholder="Search or jump to…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
               onKeyDown={handleKeyDown}
-              className="h-12 w-full bg-transparent pl-3 text-sm text-default outline-none placeholder-subtlest"
+              className="h-13 w-full bg-transparent py-4 text-[15px] text-default outline-none placeholder:text-subtlest"
             />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="shrink-0 text-[11px] font-semibold text-subtlest bg-neutral hover:bg-neutral-hovered px-2 py-0.5 rounded-[4px] transition-colors"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
-          <div className="max-h-[360px] overflow-y-auto p-2 flex flex-col gap-1">
-            {listItems.length === 0 && !isLoading && (
-              <div className="p-8 text-center text-sm text-subtlest">No results found for &quot;{query}&quot;</div>
-            )}
-
+          {/* Results */}
+          <div ref={listRef} className="max-h-[380px] overflow-y-auto py-2">
             {isLoading && (
-              <div className="p-4 text-center text-xs text-subtlest font-medium">Searching issues...</div>
+              <div className="flex items-center justify-center py-8">
+                <span className="w-4 h-4 rounded-full border-2 border-brand/30 border-t-brand animate-spin" />
+              </div>
             )}
 
-            {/* List Groups */}
-            {recentSearches.length > 0 && query === "" && listItems.some((item) => item.type === "recent") && (
-              <div className="px-2 py-1.5 text-[11px] font-bold text-subtlest uppercase tracking-wide">Recent Searches</div>
+            {!isLoading && flatItems.length === 0 && query.trim() && (
+              <div className="py-12 text-center">
+                <p className="text-[13px] font-medium text-subtle">No results for &quot;{query}&quot;</p>
+                <p className="text-[11px] text-subtlest mt-1">Try a different search term</p>
+              </div>
             )}
-            
-            {listItems.map((item, idx) => {
-              const active = idx === selectedIndex;
-              const Icon = item.icon || Clock;
+
+            {!isLoading && sections.map((section) => {
+              const sectionStart = runningIndex;
+              runningIndex += section.items.length;
 
               return (
-                <button
-                  key={item.id}
-                  onClick={item.handler}
-                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                    active ? "bg-neutral text-default font-semibold" : "text-subtle hover:bg-neutral/40"
-                  }`}
-                >
-                  <Icon size={16} className={active ? "text-brand" : "text-subtlest"} />
-                  <span className="flex-1 truncate">{item.label}</span>
-                  {active && <ChevronRight size={14} className="text-subtlest" />}
-                </button>
+                <div key={section.label} className="mb-1">
+                  <p className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-subtlest">
+                    {section.label}
+                  </p>
+                  {section.items.map((item, i) => {
+                    const globalIdx = sectionStart + i;
+                    const active = globalIdx === selectedIndex;
+                    const Icon = item.icon ?? FileText;
+                    return (
+                      <button
+                        key={item.id}
+                        data-selected={active}
+                        onClick={item.handler}
+                        onMouseEnter={() => setSelectedIndex(globalIdx)}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                          active ? "bg-brand/8" : "hover:bg-neutral/60"
+                        }`}
+                      >
+                        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] ${
+                          active ? "bg-brand/15" : "bg-neutral"
+                        }`}>
+                          <Icon size={14} className={active ? "text-brand" : "text-subtle"} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[13px] font-medium truncate ${active ? "text-brand" : "text-default"}`}>
+                            {item.label}
+                          </span>
+                          {item.sublabel && (
+                            <span className="text-[11px] text-subtlest font-mono">
+                              {item.sublabel}
+                            </span>
+                          )}
+                        </div>
+                        {active && <ChevronRight size={13} className="shrink-0 text-brand/60 ml-auto" />}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
+          </div>
+
+          {/* Footer hints */}
+          <div className="flex items-center justify-between border-t border-border-default bg-neutral/30 px-4 py-2.5">
+            <div className="flex items-center gap-3 text-[11px] text-subtlest">
+              <span><kbd className="px-1.5 py-0.5 rounded-[4px] bg-surface border border-border-default font-mono font-bold text-[10px]">↑↓</kbd> Navigate</span>
+              <span><kbd className="px-1.5 py-0.5 rounded-[4px] bg-surface border border-border-default font-mono font-bold text-[10px]">↵</kbd> Select</span>
+              <span><kbd className="px-1.5 py-0.5 rounded-[4px] bg-surface border border-border-default font-mono font-bold text-[10px]">ESC</kbd> Close</span>
+            </div>
+            <span className="text-[11px] font-semibold text-brand">Press &quot;C&quot; to create</span>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

@@ -38,7 +38,7 @@ it("applies the Dark theme and persists the raw preference", async () => {
   const u = userEvent.setup({ pointerEventsCheck: 0 });
   render(<SettingsMenu />);
 
-  await u.click(screen.getByLabelText("Settings"));
+  await u.click(screen.getByLabelText(/display settings|settings/i));
   // Radix renders the menu into a portal.
   const dark = await screen.findByText("Dark");
   await u.click(dark);

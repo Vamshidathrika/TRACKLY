@@ -10,20 +10,23 @@ import {
   Maximize2,
   MoreHorizontal,
   Plus,
-  LineChart,
   Sliders,
-  X,
-  Lightbulb,
-  Check,
   ChevronDown,
   User,
   Layers,
   LayoutGrid,
   List as ListIcon,
+  Check,
+  CheckCircle2,
+  Calendar,
+  Sparkles,
+  Flame,
+  Target,
 } from "lucide-react";
 import { BoardColumn } from "./BoardColumn";
 import { type BoardIssue } from "./IssueCard";
 import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { completeSprintAction } from "@/app/(app)/projects/[key]/backlog/actions";
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { IssueTable } from "@/components/issues/IssueTable";
@@ -39,8 +42,8 @@ import {
   AddViewModal,
   AIAssistantDrawer,
 } from "./SpaceViews";
-import { Button } from "@/components/ui/Button";
-import type { IssueStatus, IssueType, IssuePriority } from "@prisma/client";
+import { Avatar } from "@/components/ui/Avatar";
+import type { IssueStatus, IssuePriority, IssueType } from "@prisma/client";
 
 // Dynamic initials generator
 function getInitials(name: string): string {
@@ -52,7 +55,6 @@ function getInitials(name: string): string {
   return parts[0].slice(0, 2).toUpperCase();
 }
 
-// Dynamic color palette generator
 const userColorPalette = [
   "bg-blue-600 border-blue-700 text-white",
   "bg-sky-600 border-sky-700 text-white",
@@ -73,8 +75,20 @@ function getUserColor(str: string): string {
   return userColorPalette[idx];
 }
 
+export type SprintOption = {
+  id: string;
+  name: string;
+  goal?: string | null;
+  status: "ACTIVE" | "FUTURE" | "CLOSED";
+  startDate?: Date | null;
+  endDate?: Date | null;
+  issues?: BoardIssue[];
+};
+
 export function KanbanBoard({
   issues: initialIssues,
+  sprints = [],
+  availableUsers = [],
   currentUserId,
   projectName = "Board",
   projectKey = "PROJ",
@@ -82,6 +96,8 @@ export function KanbanBoard({
   isStarred: initialIsStarred = false,
 }: {
   issues: BoardIssue[];
+  sprints?: SprintOption[];
+  availableUsers?: { id: string; name: string; avatarUrl?: string | null }[];
   currentUserId?: string;
   projectName?: string;
   projectKey?: string;
@@ -91,8 +107,23 @@ export function KanbanBoard({
   const [, startTransition] = useTransition();
   const [isStarred, setIsStarred] = useState(initialIsStarred);
   const [issues, setIssues] = useState<BoardIssue[]>(initialIssues);
+
+  // Board Mode: 'scrum' or 'kanban'
+  const [boardType, setBoardType] = useState<"scrum" | "kanban">("kanban");
+
+  // Selected Sprint in Scrum mode
+  const activeSprint = useMemo(
+    () => sprints.find((s) => s.status === "ACTIVE") ?? sprints[0],
+    [sprints]
+  );
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(
+    activeSprint?.id ?? null
+  );
+
+  // Filters state
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [myIssuesOnly, setMyIssuesOnly] = useState(false);
   const [filterUnassigned, setFilterUnassigned] = useState(false);
   const [filterType, setFilterType] = useState<string>("ALL");
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
@@ -112,10 +143,8 @@ export function KanbanBoard({
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Custom tabs added via + button
   const [extraTabs, setExtraTabs] = useState<string[]>([]);
 
-  // Close open dropdowns on outside clicks
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -135,12 +164,24 @@ export function KanbanBoard({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // 100% Dynamic extraction of board users from actual issues & default team
   const boardUsers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; avatarUrl?: string | null; initials: string; color: string }>();
+    const map = new Map<
+      string,
+      { id: string; name: string; avatarUrl?: string | null; initials: string; color: string }
+    >();
+
+    availableUsers.forEach((u) => {
+      map.set(u.id, {
+        id: u.id,
+        name: u.name,
+        avatarUrl: u.avatarUrl,
+        initials: getInitials(u.name),
+        color: getUserColor(u.name || u.id),
+      });
+    });
 
     issues.forEach((i) => {
-      if (i.assignee) {
+      if (i.assignee && !map.has(i.assignee.id)) {
         map.set(i.assignee.id, {
           id: i.assignee.id,
           name: i.assignee.name,
@@ -149,43 +190,15 @@ export function KanbanBoard({
           color: getUserColor(i.assignee.name || i.assignee.id),
         });
       }
-      if (i.reporter) {
-        map.set(i.reporter.id, {
-          id: i.reporter.id,
-          name: i.reporter.name,
-          avatarUrl: i.reporter.avatarUrl,
-          initials: getInitials(i.reporter.name),
-          color: getUserColor(i.reporter.name || i.reporter.id),
-        });
-      }
-    });
-
-    const defaultTeam = [
-      { id: "user-vd", name: "Vikram Dev" },
-      { id: "user-ns", name: "Nani Sharma" },
-      { id: "user-nk", name: "Neha Kumar" },
-      { id: "user-ss", name: "Swati Sen" },
-      { id: "user-sa", name: "Sameer Agarwal" },
-    ];
-
-    defaultTeam.forEach((d) => {
-      if (!map.has(d.id)) {
-        map.set(d.id, {
-          id: d.id,
-          name: d.name,
-          initials: getInitials(d.name),
-          color: getUserColor(d.name),
-        });
-      }
     });
 
     return Array.from(map.values());
-  }, [issues]);
+  }, [availableUsers, issues]);
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
-      showToast("Space link copied to clipboard!");
+      showToast("Board link copied to clipboard!");
     }
   };
 
@@ -194,12 +207,11 @@ export function KanbanBoard({
     if (!projectId) return;
     const res = await toggleStarAction(projectId);
     setIsStarred(Boolean(res?.starred));
-    showToast(res?.starred ? "Space starred" : "Space unstarred");
+    showToast(res?.starred ? "Project starred" : "Project unstarred");
   };
 
   const handleExport = () => {
     setShowSpaceMenu(false);
-    // Export what the board is actually showing, respecting active filters.
     const payload = {
       project: { key: projectKey, name: projectName },
       exportedAt: new Date().toISOString(),
@@ -226,9 +238,7 @@ export function KanbanBoard({
   };
 
   const handleStatusChange = (issueId: string, newStatus: IssueStatus) => {
-    setIssues((prev) =>
-      prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i))
-    );
+    setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i)));
     startTransition(async () => {
       await updateIssueFieldAction(issueId, "status", newStatus);
     });
@@ -239,7 +249,12 @@ export function KanbanBoard({
     setIssues((prev) =>
       prev.map((i) =>
         i.id === issueId
-          ? { ...i, assignee: targetUser ? { id: targetUser.id, name: targetUser.name, avatarUrl: targetUser.avatarUrl } : null }
+          ? {
+              ...i,
+              assignee: targetUser
+                ? { id: targetUser.id, name: targetUser.name, avatarUrl: targetUser.avatarUrl }
+                : null,
+            }
           : i
       )
     );
@@ -249,30 +264,61 @@ export function KanbanBoard({
     });
   };
 
-  const filteredIssues = issues.filter((i) => {
-    const matchesSearch =
-      i.summary.toLowerCase().includes(search.toLowerCase()) ||
-      i.key.toLowerCase().includes(search.toLowerCase());
+  const handleQuickCreated = (newIssue: BoardIssue) => {
+    setIssues((prev) => [newIssue, ...prev.filter((i) => i.id !== newIssue.id)]);
+    showToast(`Created issue ${newIssue.key}`);
+  };
 
-    let matchesUser = true;
-    if (filterUnassigned) {
-      matchesUser = !i.assignee;
-    } else if (selectedUserId) {
-      matchesUser = i.assignee?.id === selectedUserId || i.reporter?.id === selectedUserId;
-    }
+  const currentSprintObj = useMemo(() => {
+    return sprints.find((s) => s.id === selectedSprintId) ?? activeSprint;
+  }, [sprints, selectedSprintId, activeSprint]);
 
-    const matchesType = filterType === "ALL" || i.type === filterType;
-    const matchesPriority = filterPriority === "ALL" || i.priority === filterPriority;
+  const filteredIssues = useMemo(() => {
+    return issues.filter((i) => {
+      // In Scrum Mode, filter to selected sprint
+      if (boardType === "scrum" && currentSprintObj) {
+        // match sprintId if present
+        if (i.sprintId && i.sprintId !== currentSprintObj.id) return false;
+      }
 
-    return matchesSearch && matchesUser && matchesType && matchesPriority;
-  });
+      const matchesSearch =
+        !search ||
+        i.summary.toLowerCase().includes(search.toLowerCase()) ||
+        i.key.toLowerCase().includes(search.toLowerCase());
 
-  const columns: IssueStatus[] = ["TO_DO", "IN_PROGRESS", "DONE"];
+      let matchesUser = true;
+      if (myIssuesOnly && currentUserId) {
+        matchesUser = i.assignee?.id === currentUserId;
+      } else if (filterUnassigned) {
+        matchesUser = !i.assignee;
+      } else if (selectedUserId) {
+        matchesUser = i.assignee?.id === selectedUserId || i.reporter?.id === selectedUserId;
+      }
+
+      const matchesType = filterType === "ALL" || i.type === filterType;
+      const matchesPriority = filterPriority === "ALL" || i.priority === filterPriority;
+
+      return matchesSearch && matchesUser && matchesType && matchesPriority;
+    });
+  }, [
+    issues,
+    boardType,
+    currentSprintObj,
+    search,
+    myIssuesOnly,
+    currentUserId,
+    filterUnassigned,
+    selectedUserId,
+    filterType,
+    filterPriority,
+  ]);
+
+  const columns: IssueStatus[] = ["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
 
   const mainTabs = [
+    "Board",
     "Summary",
     "Timeline",
-    "Board",
     "Calendar",
     "List",
     "Forms",
@@ -283,9 +329,9 @@ export function KanbanBoard({
 
   const moreTabOptions = ["Reports & Analytics", "Release Notes", "Archived Issues"];
 
-  // Calculate active filter count for badge [ ☰ N ]
   const activeFilterCount =
     (selectedUserId ? 1 : 0) +
+    (myIssuesOnly ? 1 : 0) +
     (filterUnassigned ? 1 : 0) +
     (filterType !== "ALL" ? 1 : 0) +
     (filterPriority !== "ALL" ? 1 : 0) +
@@ -294,12 +340,19 @@ export function KanbanBoard({
   const displayedUsers = boardUsers.slice(0, 5);
   const extraUserCount = Math.max(0, boardUsers.length - 5);
 
+  // Calculate Scrum progress
+  const scrumTotalPoints = filteredIssues.reduce((acc, i) => acc + (i.storyPoints ?? 0), 0);
+  const scrumDonePoints = filteredIssues
+    .filter((i) => i.status === "DONE")
+    .reduce((acc, i) => acc + (i.storyPoints ?? 0), 0);
+  const scrumPct = scrumTotalPoints > 0 ? Math.round((scrumDonePoints / scrumTotalPoints) * 100) : 0;
+
   return (
     <div className="relative flex flex-col min-h-[calc(100vh-100px)]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-lg animate-in fade-in duration-200">
-          <Check size={14} />
+        <div className="fixed bottom-6 right-6 z-50 rounded-[12px] bg-[#1C1C1E]/95 backdrop-blur-md px-4 py-3 text-[13px] font-semibold text-white shadow-xl animate-toast flex items-center gap-2.5 border border-white/10">
+          <Check size={15} className="text-[#30D158] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -318,90 +371,110 @@ export function KanbanBoard({
       />
       <AIAssistantDrawer isOpen={showAIDrawer} onClose={() => setShowAIDrawer(false)} />
 
-      {/* 1. Spaces & Project Context Sub-Header */}
-      <div className="flex flex-col gap-1.5 pb-3">
-        <span className="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">SPACES</span>
+      {/* 1. Project Context Sub-Header */}
+      <div className="flex flex-col gap-1 pb-3">
+        <span className="text-[10px] font-bold text-subtlest uppercase tracking-widest">Project</span>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 relative dropdown-container">
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-selected text-selected-text">
-              <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 fill-current" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" />
-              </svg>
+          <div className="flex items-center gap-2.5 relative dropdown-container">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-brand/10 text-brand font-bold text-[15px]">
+              {projectName[0]?.toUpperCase() ?? "P"}
             </div>
-            <h2 className="text-xl font-bold text-text">{projectName}</h2>
-
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="rounded-md p-1 hover:bg-neutral-hovered transition-colors"
-              title="Invite team members"
-            >
-              <User size={16} className="text-text-subtle" />
-            </button>
+            <h2 className="text-[18px] font-bold text-default tracking-tight">{projectName}</h2>
+            {isStarred && <span title="Starred" className="text-warning">★</span>}
 
             <button
               onClick={() => setShowSpaceMenu((prev) => !prev)}
-              className="rounded-md p-1 hover:bg-neutral-hovered transition-colors"
-              title="More space options"
+              className="rounded-[6px] p-1.5 text-subtle hover:bg-neutral hover:text-default transition-all"
+              title="More options"
             >
-              <MoreHorizontal size={16} className="text-text-subtle" />
+              <MoreHorizontal size={15} />
             </button>
 
             {showSpaceMenu && (
-              <div className="absolute top-9 left-36 z-30 w-48 rounded-md border border-border bg-surface py-1 shadow-lg text-xs">
+              <div className="absolute top-10 left-20 z-30 w-52 rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl py-1.5 shadow-lg text-[13px] animate-fade-in-down">
                 <button
                   onClick={() => {
                     setShowSpaceMenu(false);
                     navigator.clipboard.writeText(projectKey);
-                    showToast(`Copied Project Key: ${projectKey}`);
+                    showToast(`Copied project key: ${projectKey}`);
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium"
+                  className="w-full text-left px-3.5 py-2 hover:bg-neutral text-default font-medium transition-colors"
                 >
-                  Copy Key ({projectKey})
+                  Copy key ({projectKey})
                 </button>
                 <button
                   onClick={handleToggleStar}
                   disabled={!projectId}
-                  className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium disabled:opacity-50"
+                  className="w-full text-left px-3.5 py-2 hover:bg-neutral text-default font-medium transition-colors disabled:opacity-50"
                 >
-                  {isStarred ? "Unstar Space" : "Star Space"}
+                  {isStarred ? "Remove from starred" : "Add to starred"}
                 </button>
+                <div className="border-t border-border-default my-1" />
                 <button
                   onClick={handleExport}
-                  className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium border-t border-border"
+                  className="w-full text-left px-3.5 py-2 hover:bg-neutral text-default font-medium transition-colors"
                 >
-                  Export Space Data
+                  Export as JSON
                 </button>
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Board Type Switch: Scrum vs Kanban */}
+            <div className="flex items-center rounded-[8px] border border-border-default bg-neutral p-0.5 mr-2">
+              <button
+                onClick={() => setBoardType("kanban")}
+                className={`flex h-7 items-center gap-1 px-2.5 rounded-[6px] text-[12px] font-semibold transition-all ${
+                  boardType === "kanban"
+                    ? "bg-surface text-brand shadow-xs"
+                    : "text-subtle hover:text-default"
+                }`}
+              >
+                <LayoutGrid size={13} />
+                <span>Kanban</span>
+              </button>
+              <button
+                onClick={() => setBoardType("scrum")}
+                className={`flex h-7 items-center gap-1 px-2.5 rounded-[6px] text-[12px] font-semibold transition-all ${
+                  boardType === "scrum"
+                    ? "bg-surface text-brand shadow-xs"
+                    : "text-subtle hover:text-default"
+                }`}
+              >
+                <Flame size={13} />
+                <span>Scrum Board</span>
+              </button>
+            </div>
+
             <button
               onClick={handleShare}
-              className="flex h-8 items-center gap-1.5 rounded bg-neutral px-3 text-xs font-semibold text-text hover:bg-neutral-hovered transition-colors"
+              className="flex h-8 items-center gap-1.5 rounded-[8px] border border-border-default bg-surface px-3 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
               title="Share space link"
             >
               <Share2 size={13} /> Share
             </button>
             <button
               onClick={() => setShowAutomationModal(true)}
-              className="flex h-8 items-center gap-1.5 rounded bg-neutral px-3 text-xs font-semibold text-text hover:bg-neutral-hovered transition-colors"
+              className="flex h-8 items-center gap-1.5 rounded-[8px] border border-border-default bg-surface px-3 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
               title="Manage automation rules"
             >
               <Zap size={13} /> Automation
             </button>
             <button
               onClick={() => setShowAIDrawer((prev) => !prev)}
-              className={`flex h-8 items-center justify-center rounded w-8 h-8 transition-colors ${
-                showAIDrawer ? "bg-brand text-white" : "bg-neutral hover:bg-neutral-hovered text-text-subtle"
+              className={`flex h-8 w-8 items-center justify-center rounded-[8px] border transition-all ${
+                showAIDrawer
+                  ? "bg-brand border-brand text-white"
+                  : "border-border-default bg-surface text-subtle hover:bg-neutral hover:text-default"
               }`}
-              title="AI Assistant Chat"
+              title="AI PM Co-Pilot"
             >
               <MessageSquare size={14} />
             </button>
             <button
               onClick={handleFullscreen}
-              className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered text-text-subtle transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-border-default bg-surface text-subtle hover:bg-neutral hover:text-default transition-all"
               title="Toggle Fullscreen"
             >
               <Maximize2 size={14} />
@@ -411,22 +484,20 @@ export function KanbanBoard({
       </div>
 
       {/* 2. Tab Navigation bar */}
-      <div className="flex items-center justify-between border-b border-border mb-4">
-        <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="flex items-center justify-between border-b border-border-default mb-4">
+        <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
           {mainTabs.map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3.5 pb-2.5 text-xs font-semibold transition-all relative whitespace-nowrap ${
-                  isActive ? "text-brand font-bold" : "text-text-subtle hover:text-text"
+                className={`relative px-4 py-2.5 text-[13px] font-medium transition-all whitespace-nowrap ${
+                  isActive ? "text-brand font-semibold" : "text-subtle hover:text-default"
                 }`}
               >
                 {tab}
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-brand rounded-t" />
-                )}
+                {isActive && <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-brand rounded-full" />}
               </button>
             );
           })}
@@ -434,13 +505,13 @@ export function KanbanBoard({
           <div className="relative dropdown-container">
             <button
               onClick={() => setShowMoreTabsMenu((prev) => !prev)}
-              className="flex items-center gap-1 px-3 pb-2.5 text-xs font-semibold text-text-subtle hover:text-text transition-colors whitespace-nowrap"
+              className="flex items-center gap-1 px-3 py-2.5 text-[13px] font-medium text-subtle hover:text-default transition-colors whitespace-nowrap"
             >
-              More {moreTabOptions.length} <ChevronDown size={12} />
+              More <ChevronDown size={12} />
             </button>
 
             {showMoreTabsMenu && (
-              <div className="absolute top-8 left-0 z-30 w-44 rounded-md border border-border bg-surface py-1 shadow-lg text-xs">
+              <div className="absolute top-10 left-0 z-30 w-52 rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl py-1.5 shadow-lg text-[13px] animate-fade-in-down">
                 {moreTabOptions.map((opt) => (
                   <button
                     key={opt}
@@ -448,7 +519,7 @@ export function KanbanBoard({
                       setActiveTab(opt);
                       setShowMoreTabsMenu(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-neutral-hovered text-text font-medium"
+                    className="w-full text-left px-3.5 py-2 hover:bg-neutral text-default font-medium transition-colors"
                   >
                     {opt}
                   </button>
@@ -459,49 +530,151 @@ export function KanbanBoard({
 
           <button
             onClick={() => setShowAddViewModal(true)}
-            className="px-3 pb-2.5 text-xs font-bold text-text-subtle hover:text-text transition-colors"
-            title="Add view or tab"
+            className="px-3 py-2.5 text-[13px] font-medium text-subtlest hover:text-brand transition-colors"
+            title="Add custom view"
           >
             +
           </button>
         </div>
       </div>
 
+      {/* Scrum Active Sprint Banner (when in Scrum Mode) */}
+      {activeTab === "Board" && boardType === "scrum" && (
+        <div className="mb-4 rounded-[14px] border border-border-default bg-surface p-4 shadow-xs animate-fade-in flex flex-col gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-brand/10 text-brand">
+                <Flame size={16} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[15px] text-default">
+                    {currentSprintObj ? currentSprintObj.name : "Active Sprint"}
+                  </span>
+                  {currentSprintObj && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                        currentSprintObj.status === "ACTIVE"
+                          ? "bg-brand/10 text-brand"
+                          : "bg-neutral text-subtle"
+                      }`}
+                    >
+                      {currentSprintObj.status}
+                    </span>
+                  )}
+                </div>
+                {currentSprintObj?.goal && (
+                  <p className="text-[12px] text-subtle italic flex items-center gap-1 mt-0.5">
+                    <Target size={11} className="text-brand" /> {currentSprintObj.goal}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Sprint selector */}
+              {sprints.length > 1 && (
+                <select
+                  value={selectedSprintId ?? ""}
+                  onChange={(e) => setSelectedSprintId(e.target.value)}
+                  className="h-8 rounded-[8px] border border-border-default bg-surface px-2.5 text-[12px] font-semibold text-default outline-none hover:bg-neutral cursor-pointer"
+                >
+                  {sprints.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.status})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {currentSprintObj?.status === "ACTIVE" && (
+                <button
+                  onClick={async () => {
+                    await completeSprintAction(currentSprintObj.id);
+                    showToast(`Completed ${currentSprintObj.name}!`);
+                  }}
+                  className="h-8 px-3 rounded-[8px] border border-border-default bg-surface text-[12px] font-semibold text-success hover:bg-success/10 transition-all flex items-center gap-1.5"
+                >
+                  <CheckCircle2 size={14} /> Complete sprint
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Sprint Velocity / Burnup Bar */}
+          <div className="flex items-center gap-4 border-t border-border-default pt-3 text-[12px]">
+            <div className="flex-1">
+              <div className="flex items-center justify-between text-subtle font-medium mb-1">
+                <span>Sprint Progress</span>
+                <span className="font-semibold text-default">
+                  {scrumDonePoints}/{scrumTotalPoints} points ({scrumPct}%)
+                </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
+                <div
+                  style={{ width: `${scrumPct}%` }}
+                  className="h-full rounded-full bg-brand transition-all duration-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. Render Active Tab View Content */}
       {activeTab === "Board" && (
         <>
-          {/* Dynamic Filter Controls Toolbar (Matching Image 02) */}
+          {/* Dynamic Filter Controls Toolbar */}
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Search input field */}
               <div className="relative">
-                <Search size={14} className="absolute top-2.5 left-2.5 text-text-subtle" />
+                <Search size={14} className="absolute top-2.5 left-2.5 text-subtlest" />
                 <input
                   type="text"
-                  placeholder="Search board..."
+                  placeholder="Search board…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-8 w-40 rounded border border-border bg-surface pl-8 pr-2.5 text-xs outline-none transition-all focus:w-56 focus:border-brand"
+                  className="h-8 w-40 rounded-[8px] border border-border-default bg-surface pl-8 pr-2.5 text-[13px] text-default outline-none transition-all focus:w-56 focus:border-brand placeholder:text-subtlest"
                 />
               </div>
 
-              {/* Unassigned Bubble Filter */}
+              {/* Only My Issues 1-Click Filter Button */}
+              {currentUserId && (
+                <button
+                  onClick={() => {
+                    setMyIssuesOnly((prev) => !prev);
+                    setSelectedUserId(null);
+                    setFilterUnassigned(false);
+                  }}
+                  className={`h-8 px-3 rounded-[8px] border text-[12px] font-semibold transition-all ${
+                    myIssuesOnly
+                      ? "border-brand bg-brand/10 text-brand ring-1 ring-brand/30"
+                      : "border-border-default bg-surface text-subtle hover:bg-neutral hover:text-default"
+                  }`}
+                >
+                  Only my issues
+                </button>
+              )}
+
+              {/* Unassigned Filter Bubble */}
               <button
                 onClick={() => {
                   setFilterUnassigned((prev) => !prev);
                   setSelectedUserId(null);
+                  setMyIssuesOnly(false);
                 }}
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all border ${
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold transition-all border ${
                   filterUnassigned
-                    ? "bg-slate-700 text-white border-slate-900 ring-2 ring-brand ring-offset-1 scale-105"
-                    : "bg-neutral text-text-subtle border-border hover:bg-neutral-hovered"
+                    ? "bg-slate-700 text-white border-slate-900 ring-2 ring-brand"
+                    : "bg-neutral text-subtle border-border-default hover:bg-neutral-hovered"
                 }`}
                 title="Filter Unassigned Issues"
               >
                 <User size={13} />
               </button>
 
-              {/* DYNAMIC USER AVATAR BUBBLES (Extracted 100% dynamically from users/tickets!) */}
+              {/* Teammate Avatar Filter Circles */}
               <div className="flex items-center gap-1">
                 {displayedUsers.map((usr) => {
                   const isSelected = selectedUserId === usr.id;
@@ -510,12 +683,13 @@ export function KanbanBoard({
                       key={usr.id}
                       onClick={() => {
                         setFilterUnassigned(false);
+                        setMyIssuesOnly(false);
                         setSelectedUserId((prev) => (prev === usr.id ? null : usr.id));
                       }}
                       className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition-all border shadow-xs ${usr.color} ${
                         isSelected
                           ? "ring-2 ring-brand ring-offset-1 border-brand scale-110 z-10"
-                          : "hover:scale-105 hover:shadow-md opacity-90 hover:opacity-100"
+                          : "hover:scale-105 opacity-90 hover:opacity-100"
                       }`}
                       title={`Filter tickets for ${usr.name}`}
                     >
@@ -526,7 +700,7 @@ export function KanbanBoard({
 
                 {extraUserCount > 0 && (
                   <span
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral text-[11px] font-bold text-text-subtle border border-border"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral text-[11px] font-bold text-subtle border border-border-default"
                     title={`${extraUserCount} more team members`}
                   >
                     +{extraUserCount}
@@ -534,14 +708,14 @@ export function KanbanBoard({
                 )}
               </div>
 
-              {/* Active Filter Counter Badge Button [ ☰ N ] (Matching Image 02!) */}
+              {/* Filter Counter Dropdown */}
               <div className="relative dropdown-container">
                 <button
                   onClick={() => setShowFilterDropdown((prev) => !prev)}
-                  className={`flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-all ${
+                  className={`flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[12px] font-semibold transition-all ${
                     activeFilterCount > 0
                       ? "border-brand bg-brand/10 text-brand ring-1 ring-brand/30"
-                      : "border-border bg-surface text-text hover:bg-neutral-hovered"
+                      : "border-border-default bg-surface text-subtle hover:bg-neutral hover:text-default"
                   }`}
                 >
                   <Filter size={13} />
@@ -553,15 +727,15 @@ export function KanbanBoard({
                   )}
                 </button>
 
-                {/* Filter Options Dropdown Panel */}
                 {showFilterDropdown && (
-                  <div className="absolute top-9 left-0 z-40 w-56 rounded-md border border-border bg-surface p-3 shadow-xl text-xs flex flex-col gap-3 animate-in fade-in duration-150">
-                    <div className="flex items-center justify-between border-b border-border pb-1.5">
-                      <span className="font-bold text-text">Filter Board</span>
+                  <div className="absolute top-10 left-0 z-40 w-56 rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl p-3 shadow-lg text-[12px] flex flex-col gap-3 animate-fade-in-down">
+                    <div className="flex items-center justify-between border-b border-border-default pb-2">
+                      <span className="font-bold text-default">Filter Board</span>
                       {activeFilterCount > 0 && (
                         <button
                           onClick={() => {
                             setSelectedUserId(null);
+                            setMyIssuesOnly(false);
                             setFilterUnassigned(false);
                             setFilterType("ALL");
                             setFilterPriority("ALL");
@@ -575,11 +749,11 @@ export function KanbanBoard({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-text-subtle uppercase mb-1">Issue Type</label>
+                      <label className="block text-[10px] font-bold text-subtlest uppercase mb-1">Issue Type</label>
                       <select
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="w-full h-7 rounded border border-border bg-surface px-2 outline-none"
+                        className="w-full h-8 rounded-[6px] border border-border-default bg-surface px-2 outline-none text-[12px]"
                       >
                         <option value="ALL">All Types</option>
                         <option value="STORY">Story</option>
@@ -590,11 +764,11 @@ export function KanbanBoard({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-text-subtle uppercase mb-1">Priority</label>
+                      <label className="block text-[10px] font-bold text-subtlest uppercase mb-1">Priority</label>
                       <select
                         value={filterPriority}
                         onChange={(e) => setFilterPriority(e.target.value)}
-                        className="w-full h-7 rounded border border-border bg-surface px-2 outline-none"
+                        className="w-full h-8 rounded-[6px] border border-border-default bg-surface px-2 outline-none text-[12px]"
                       >
                         <option value="ALL">All Priorities</option>
                         <option value="HIGHEST">Highest</option>
@@ -607,19 +781,19 @@ export function KanbanBoard({
                 )}
               </div>
 
-              {/* Group Dropdown [ 📚 Group ] (Matching Image 02!) */}
+              {/* Swimlanes / Grouping Dropdown */}
               <div className="relative dropdown-container">
                 <button
                   onClick={() => setShowGroupDropdown((prev) => !prev)}
-                  className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-text hover:bg-neutral-hovered transition-colors"
+                  className="flex h-8 items-center gap-1.5 rounded-[8px] border border-border-default bg-surface px-3 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
                 >
-                  <Layers size={13} className="text-text-subtle" />
+                  <Layers size={13} className="text-subtle" />
                   <span>Group: <strong className="text-brand">{groupBy}</strong></span>
                   <ChevronDown size={12} />
                 </button>
 
                 {showGroupDropdown && (
-                  <div className="absolute top-9 left-0 z-40 w-40 rounded-md border border-border bg-surface py-1 shadow-xl text-xs">
+                  <div className="absolute top-10 left-0 z-40 w-44 rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl py-1.5 shadow-lg text-[13px] animate-fade-in-down">
                     {(["None", "Assignee", "Priority"] as const).map((opt) => (
                       <button
                         key={opt}
@@ -627,8 +801,8 @@ export function KanbanBoard({
                           setGroupBy(opt);
                           setShowGroupDropdown(false);
                         }}
-                        className={`w-full text-left px-3 py-1.5 hover:bg-neutral-hovered text-text font-medium ${
-                          groupBy === opt ? "bg-selected/40 font-bold" : ""
+                        className={`w-full text-left px-3.5 py-2 hover:bg-neutral text-default font-medium transition-colors ${
+                          groupBy === opt ? "bg-brand/10 text-brand font-semibold" : ""
                         }`}
                       >
                         {opt}
@@ -639,13 +813,13 @@ export function KanbanBoard({
               </div>
             </div>
 
-            {/* Right Side Mode Toggles [ 🍱 ] [ 📄 ] */}
+            {/* Right Side Mode Toggles [ Board ] [ List ] */}
             <div className="flex items-center gap-1">
-              <div className="flex items-center rounded-md border border-border bg-neutral p-0.5">
+              <div className="flex items-center rounded-[8px] border border-border-default bg-neutral p-0.5">
                 <button
                   onClick={() => setViewMode("board")}
-                  className={`flex h-7 w-7 items-center justify-center rounded text-xs transition-colors ${
-                    viewMode === "board" ? "bg-surface text-brand shadow-xs font-bold" : "text-text-subtle hover:text-text"
+                  className={`flex h-7 w-7 items-center justify-center rounded-[6px] text-xs transition-colors ${
+                    viewMode === "board" ? "bg-surface text-brand shadow-xs font-bold" : "text-subtle hover:text-default"
                   }`}
                   title="Board View"
                 >
@@ -653,24 +827,20 @@ export function KanbanBoard({
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex h-7 w-7 items-center justify-center rounded text-xs transition-colors ${
-                    viewMode === "list" ? "bg-surface text-brand shadow-xs font-bold" : "text-text-subtle hover:text-text"
+                  className={`flex h-7 w-7 items-center justify-center rounded-[6px] text-xs transition-colors ${
+                    viewMode === "list" ? "bg-surface text-brand shadow-xs font-bold" : "text-subtle hover:text-default"
                   }`}
                   title="List View"
                 >
                   <ListIcon size={14} />
                 </button>
               </div>
-
-              <button className="flex h-8 items-center justify-center rounded bg-neutral w-8 h-8 hover:bg-neutral-hovered text-text-subtle">
-                <Sliders size={14} />
-              </button>
             </div>
           </div>
 
-          {/* 4. Kanban Board Content (Board Grid vs List View) */}
+          {/* 4. Kanban / Swimlane Board Content */}
           {viewMode === "list" ? (
-            <div className="rounded-lg border border-border bg-surface p-4 shadow-xs">
+            <div className="rounded-[14px] border border-border-default bg-surface p-4 shadow-xs">
               <IssueTable
                 issues={filteredIssues.map((i) => ({
                   ...i,
@@ -684,37 +854,98 @@ export function KanbanBoard({
                 availableUsers={boardUsers}
               />
             </div>
-          ) : (
+          ) : groupBy === "None" ? (
+            /* Standard Column Layout */
             <div className="flex gap-4 overflow-x-auto pb-6">
               {columns.map((colStatus) => (
-                <div key={colStatus} className="flex flex-col gap-2">
-                  <BoardColumn
-                    status={colStatus}
-                    issues={filteredIssues.filter((i) => i.status === colStatus)}
-                    onStatusChange={handleStatusChange}
-                    onAssigneeChange={handleAssigneeChange}
-                    availableUsers={boardUsers}
-                    currentUserId={currentUserId}
-                    wipLimit={colStatus === "IN_PROGRESS" ? 5 : null}
-                  />
-
-                  <div className="px-1 mt-1">
-                    <CreateIssueModal
-                      trigger={
-                        <button className="flex w-full items-center gap-1.5 rounded-md py-1.5 px-2.5 text-xs font-semibold text-text-subtle hover:bg-neutral-hovered hover:text-text transition-colors">
-                          <span className="text-sm font-bold">+</span> Create
-                        </button>
-                      }
-                    />
-                  </div>
-                </div>
+                <BoardColumn
+                  key={colStatus}
+                  status={colStatus}
+                  issues={filteredIssues.filter((i) => i.status === colStatus)}
+                  onStatusChange={handleStatusChange}
+                  onAssigneeChange={handleAssigneeChange}
+                  availableUsers={boardUsers}
+                  currentUserId={currentUserId}
+                  wipLimit={boardType === "kanban" && colStatus === "IN_PROGRESS" ? 5 : null}
+                  projectId={projectId}
+                  projectKey={projectKey}
+                  sprintId={currentSprintObj?.id}
+                  onQuickCreated={handleQuickCreated}
+                />
               ))}
+            </div>
+          ) : groupBy === "Assignee" ? (
+            /* Swimlanes grouped by Assignee */
+            <div className="flex flex-col gap-6 overflow-x-auto pb-6">
+              {[...boardUsers, { id: "unassigned", name: "Unassigned", avatarUrl: null }].map((usr) => {
+                const groupIssues = filteredIssues.filter((i) =>
+                  usr.id === "unassigned" ? !i.assignee : i.assignee?.id === usr.id
+                );
+                if (groupIssues.length === 0) return null;
 
-              <div className="flex items-start pt-1">
-                <button className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border bg-neutral text-text-subtle hover:bg-neutral-hovered hover:text-text transition-all hover:border-brand">
-                  <Plus size={16} />
-                </button>
-              </div>
+                return (
+                  <div key={usr.id} className="flex flex-col gap-2 rounded-[14px] border border-border-default bg-surface p-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border-default">
+                      <Avatar name={usr.name} src={usr.avatarUrl} size={24} />
+                      <span className="font-bold text-[14px] text-default">{usr.name}</span>
+                      <span className="text-[12px] font-semibold text-subtlest font-mono">({groupIssues.length})</span>
+                    </div>
+
+                    <div className="flex gap-4 overflow-x-auto pt-2">
+                      {columns.map((colStatus) => (
+                        <BoardColumn
+                          key={colStatus}
+                          status={colStatus}
+                          issues={groupIssues.filter((i) => i.status === colStatus)}
+                          onStatusChange={handleStatusChange}
+                          onAssigneeChange={handleAssigneeChange}
+                          availableUsers={boardUsers}
+                          currentUserId={currentUserId}
+                          projectId={projectId}
+                          projectKey={projectKey}
+                          sprintId={currentSprintObj?.id}
+                          onQuickCreated={handleQuickCreated}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Swimlanes grouped by Priority */
+            <div className="flex flex-col gap-6 overflow-x-auto pb-6">
+              {(["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"] as const).map((prio) => {
+                const groupIssues = filteredIssues.filter((i) => i.priority === prio);
+                if (groupIssues.length === 0) return null;
+
+                return (
+                  <div key={prio} className="flex flex-col gap-2 rounded-[14px] border border-border-default bg-surface p-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border-default">
+                      <span className="font-bold text-[14px] text-default capitalize">{prio.toLowerCase()} Priority</span>
+                      <span className="text-[12px] font-semibold text-subtlest font-mono">({groupIssues.length})</span>
+                    </div>
+
+                    <div className="flex gap-4 overflow-x-auto pt-2">
+                      {columns.map((colStatus) => (
+                        <BoardColumn
+                          key={colStatus}
+                          status={colStatus}
+                          issues={groupIssues.filter((i) => i.status === colStatus)}
+                          onStatusChange={handleStatusChange}
+                          onAssigneeChange={handleAssigneeChange}
+                          availableUsers={boardUsers}
+                          currentUserId={currentUserId}
+                          projectId={projectId}
+                          projectKey={projectKey}
+                          sprintId={currentSprintObj?.id}
+                          onQuickCreated={handleQuickCreated}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
@@ -724,7 +955,7 @@ export function KanbanBoard({
       {activeTab === "Timeline" && <TimelineView issues={issues} />}
       {activeTab === "Calendar" && <CalendarView issues={issues} />}
       {activeTab === "List" && (
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs">
+        <div className="rounded-[14px] border border-border-default bg-surface p-4 shadow-xs">
           <IssueTable
             issues={issues.map((i) => ({
               ...i,
@@ -739,16 +970,15 @@ export function KanbanBoard({
           />
         </div>
       )}
-      {activeTab === "Forms" && <FormsView projectName={projectName} />}
+      {activeTab === "Forms" && (
+        <FormsView projectName={projectName} projectId={projectId} projectKey={projectKey} />
+      )}
       {activeTab === "Development" && <DevView />}
       {activeTab === "Code" && <CodeView />}
 
       {!["Board", "Summary", "Timeline", "Calendar", "List", "Forms", "Development", "Code"].includes(activeTab) && (
         <SummaryView issues={issues} projectName={projectName} />
       )}
-
     </div>
   );
 }
-
-

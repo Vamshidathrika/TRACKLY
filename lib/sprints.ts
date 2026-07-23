@@ -19,6 +19,16 @@ export async function createSprint(input: {
   });
 }
 
+export async function updateSprint(
+  sprintId: string,
+  data: { name?: string; goal?: string; startDate?: Date; endDate?: Date }
+) {
+  return prisma.sprint.update({
+    where: { id: sprintId },
+    data,
+  });
+}
+
 export async function startSprint(
   sprintId: string,
   options?: { startDate?: Date; endDate?: Date; goal?: string }

@@ -29,6 +29,7 @@ export type BoardIssue = {
   storyPoints?: number | null;
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
   reporter?: { id: string; name: string; avatarUrl?: string | null } | null;
+  sprintId?: string | null;
   projectKey: string;
   loggedHours?: number;
   estimatedHours?: number;
