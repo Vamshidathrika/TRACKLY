@@ -109,7 +109,7 @@ export async function updateIssue(
 
   const updated = await prisma.issue.update({
     where: { id: issueId },
-    data,
+    data: data as any,
   });
 
   if (historyEntries.length > 0) {
