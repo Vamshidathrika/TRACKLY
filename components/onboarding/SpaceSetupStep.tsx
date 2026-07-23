@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, ArrowRight, ArrowLeft, Layers, Columns3, CheckCircle2, Sparkles } from "lucide-react";
+import { Plus, X, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 const NAME_PRESETS = [
@@ -171,7 +171,7 @@ export function SpaceSetupStep({
             </div>
 
             <span className="text-[11px] text-subtlest italic">
-              Don't worry, you can easily add, rename, or reorder these columns later in project settings.
+              Don&apos;t worry, you can easily add, rename, or reorder these columns later in project settings.
             </span>
           </div>
         </div>

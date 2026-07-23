@@ -21,7 +21,7 @@ export async function provisionWorkspaceAction(input: ProvisionInput) {
   const name = input.projectName.trim() || "My New Project";
 
   // Find user's primary site or create one
-  let membership = await prisma.membership.findFirst({
+  const membership = await prisma.membership.findFirst({
     where: { userId },
     include: { site: true },
   });

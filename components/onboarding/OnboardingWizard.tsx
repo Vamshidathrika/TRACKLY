@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Sparkles, Rocket } from "lucide-react";
+import { Sparkles, Rocket } from "lucide-react";
 import { GoogleAccountStep } from "./GoogleAccountStep";
 import { ProvisioningLoaderStep } from "./ProvisioningLoaderStep";
 import { TemplateSelectStep, type TemplateType } from "./TemplateSelectStep";
@@ -24,22 +24,20 @@ export function OnboardingWizard({
   userEmail,
   userName,
 }: {
-  userEmail?: string;
-  userName?: string;
+  userEmail: string;
+  userName: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isPending, startTransition] = useTransition();
 
   // Wizard state
-  const [selectedEmail, setSelectedEmail] = useState(userEmail || "user@trackly.dev");
   const [template, setTemplate] = useState<TemplateType>("KANBAN");
   const [stages, setStages] = useState<string[]>(["To Do", "In Progress", "In Review", "Done"]);
   const [spaceName, setSpaceName] = useState("Acme Rocket Launch");
   const [spaceKey, setSpaceKey] = useState("ROCKET");
 
-  const handleStep1Complete = (email: string) => {
-    setSelectedEmail(email);
+  const handleStep1Complete = () => {
     setStep(2); // Go to Provisioning Loader
   };
 

@@ -14,7 +14,6 @@ import {
   Bookmark,
   ThumbsUp,
   ThumbsDown,
-  HelpCircle,
   X,
   ExternalLink,
   User,
@@ -456,7 +455,7 @@ export function EpicProgressWidget({ epics }: { epics: EpicProgressItem[] }) {
             </div>
 
             <p className="text-xs text-subtle leading-relaxed">
-              An <strong>Epic</strong> is a container for higher-level strategic goals (e.g. "Q3 Mobile App Redesign"). It group multiple user stories, bugs, and tasks together across sprints.
+              An <strong>Epic</strong> is a container for higher-level strategic goals (e.g. &quot;Q3 Mobile App Redesign&quot;). It groups multiple user stories, bugs, and tasks together across sprints.
             </p>
 
             <div className="rounded-lg bg-brand/5 border border-brand/20 p-3 text-xs text-subtle flex flex-col gap-1 font-mono">

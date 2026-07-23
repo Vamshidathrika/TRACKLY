@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Copy, Check, Shield, ArrowRight, ArrowLeft, Mail, Info } from "lucide-react";
+import { Copy, Check, Shield, ArrowRight, ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export function InviteTeammatesStep({
