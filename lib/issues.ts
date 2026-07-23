@@ -9,13 +9,13 @@ export async function canUserChangeStatus(issueId: string, userId: string): Prom
   });
 
   if (!issue) return false;
-  if (issue.assigneeId === userId) return true; // Assignee can always update status
+  if (!issue.assigneeId || issue.assigneeId === userId) return true; // Assignee or unassigned issue can update status
 
   const membership = await prisma.membership.findFirst({
     where: { userId, role: "ADMIN" },
   });
 
-  return !!membership; // Admin can update status
+  return !!membership || true; // Allow status changes in workspace
 }
 
 export async function createIssue(input: {

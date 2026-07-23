@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Play, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Play, CheckCircle2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { TypeIcon } from "@/components/ui/TypeIcon";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
+import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
+import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
 import {
   createSprintAction,
   startSprintAction,
@@ -38,20 +40,82 @@ export type SprintData = {
   issues: BacklogIssue[];
 };
 
+const statusColors: Record<IssueStatus, string> = {
+  TO_DO: "bg-slate-100 text-slate-700 border-slate-300",
+  IN_PROGRESS: "bg-blue-50 text-blue-700 border-blue-200",
+  IN_REVIEW: "bg-amber-50 text-amber-700 border-amber-200",
+  DONE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
 export function BacklogView({
   projectId,
   projectKey,
   sprints: initialSprints,
   backlogIssues: initialBacklog,
+  availableUsers: passedUsers = [],
 }: {
   projectId: string;
   projectKey: string;
   sprints: SprintData[];
   backlogIssues: BacklogIssue[];
+  availableUsers?: TeammateUser[];
 }) {
+  const [, startTransition] = useTransition();
   const [sprints, setSprints] = useState<SprintData[]>(initialSprints);
   const [backlog, setBacklog] = useState<BacklogIssue[]>(initialBacklog);
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
+
+  // Filters state
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [filterUnassigned, setFilterUnassigned] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+
+  // Extract all available team users dynamically
+  const allUsers = useMemo(() => {
+    const userMap = new Map<string, TeammateUser>();
+    passedUsers.forEach((u) => userMap.set(u.id, u));
+
+    const collectIssueUsers = (i: BacklogIssue) => {
+      if (i.assignee) {
+        userMap.set(i.assignee.id, {
+          id: i.assignee.id,
+          name: i.assignee.name,
+          avatarUrl: i.assignee.avatarUrl,
+        });
+      }
+    };
+
+    backlog.forEach(collectIssueUsers);
+    sprints.forEach((s) => s.issues.forEach(collectIssueUsers));
+
+    return Array.from(userMap.values());
+  }, [backlog, sprints, passedUsers]);
+
+  // Helper filter function
+  const filterSingleIssue = (i: BacklogIssue) => {
+    const matchesSearch =
+      !searchQuery ||
+      i.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.key.toLowerCase().includes(searchQuery.toLowerCase());
+
+    let matchesUser = true;
+    if (filterUnassigned) {
+      matchesUser = !i.assignee;
+    } else if (selectedUserId) {
+      matchesUser = i.assignee?.id === selectedUserId;
+    }
+
+    const matchesStatus = statusFilter === "ALL" || i.status === statusFilter;
+    const matchesPriority = priorityFilter === "ALL" || i.priority === priorityFilter;
+    const matchesType = typeFilter === "ALL" || i.type === typeFilter;
+
+    return matchesSearch && matchesUser && matchesStatus && matchesPriority && matchesType;
+  };
+
+  const filteredBacklog = useMemo(() => backlog.filter(filterSingleIssue), [backlog, searchQuery, filterUnassigned, selectedUserId, statusFilter, priorityFilter, typeFilter]);
 
   const handleCreateSprint = async () => {
     setIsCreatingSprint(true);
@@ -78,9 +142,59 @@ export function BacklogView({
   };
 
   const handleMoveIssue = async (issueId: string, targetSprintId: string | null) => {
-    // Optimistic UI move
     await moveIssueToSprintAction(issueId, targetSprintId);
     window.location.reload();
+  };
+
+  const handleStatusChange = (issueId: string, newStatus: IssueStatus) => {
+    setBacklog((prev) => prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i)));
+    setSprints((prev) =>
+      prev.map((s) => ({
+        ...s,
+        issues: s.issues.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i)),
+      }))
+    );
+    startTransition(async () => {
+      await updateIssueFieldAction(issueId, "status", newStatus);
+    });
+  };
+
+  const handlePriorityChange = (issueId: string, newPriority: IssuePriority) => {
+    setBacklog((prev) => prev.map((i) => (i.id === issueId ? { ...i, priority: newPriority } : i)));
+    setSprints((prev) =>
+      prev.map((s) => ({
+        ...s,
+        issues: s.issues.map((i) => (i.id === issueId ? { ...i, priority: newPriority } : i)),
+      }))
+    );
+    startTransition(async () => {
+      await updateIssueFieldAction(issueId, "priority", newPriority);
+    });
+  };
+
+  const handleAssigneeChange = (issueId: string, assigneeId: string | null) => {
+    const targetUser = allUsers.find((u) => u.id === assigneeId);
+    const updatedAssignee = targetUser ? { id: targetUser.id, name: targetUser.name, avatarUrl: targetUser.avatarUrl } : null;
+
+    setBacklog((prev) => prev.map((i) => (i.id === issueId ? { ...i, assignee: updatedAssignee } : i)));
+    setSprints((prev) =>
+      prev.map((s) => ({
+        ...s,
+        issues: s.issues.map((i) => (i.id === issueId ? { ...i, assignee: updatedAssignee } : i)),
+      }))
+    );
+    startTransition(async () => {
+      await updateIssueFieldAction(issueId, "assigneeId", assigneeId || "");
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSelectedUserId(null);
+    setFilterUnassigned(false);
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setPriorityFilter("ALL");
+    setTypeFilter("ALL");
   };
 
   return (
@@ -93,10 +207,36 @@ export function BacklogView({
         </Button>
       </div>
 
+      {/* Top Profile Circles Filter Toolbar */}
+      <IssueFilterToolbar
+        users={allUsers}
+        selectedUserId={selectedUserId}
+        onSelectUser={(id) => {
+          setFilterUnassigned(false);
+          setSelectedUserId(id);
+        }}
+        filterUnassigned={filterUnassigned}
+        onToggleUnassigned={() => {
+          setSelectedUserId(null);
+          setFilterUnassigned((prev) => !prev);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        priorityFilter={priorityFilter}
+        onPriorityFilterChange={setPriorityFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
+        onClearFilters={handleClearFilters}
+      />
+
       {/* Sprints Section */}
       <div className="flex flex-col gap-6">
         {sprints.map((sprint) => {
-          const totalPoints = sprint.issues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+          const sprintFilteredIssues = sprint.issues.filter(filterSingleIssue);
+          const totalPoints = sprintFilteredIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0);
+
           return (
             <div key={sprint.id} className="rounded-ds border border-border bg-surface p-4 shadow-xs">
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
@@ -106,7 +246,7 @@ export function BacklogView({
                     {sprint.status}
                   </Tag>
                   <span className="text-xs text-text-subtle">
-                    ({sprint.issues.length} issues • {totalPoints} pts)
+                    ({sprintFilteredIssues.length} issues • {totalPoints} pts)
                   </span>
                 </div>
 
@@ -134,40 +274,87 @@ export function BacklogView({
 
               {/* Sprint Issue List */}
               <div className="flex flex-col gap-1.5">
-                {sprint.issues.length === 0 ? (
+                {sprintFilteredIssues.length === 0 ? (
                   <div className="py-4 text-center text-xs text-text-subtle italic">
-                    Plan a sprint by dragging or moving issues into this section.
+                    No issues matching criteria in this sprint.
                   </div>
                 ) : (
-                  sprint.issues.map((issue) => (
+                  sprintFilteredIssues.map((issue) => (
                     <div
                       key={issue.id}
-                      className="flex items-center justify-between rounded-ds border border-border/60 bg-background px-3 py-2 text-sm hover:border-brand/40"
+                      className="flex items-center justify-between rounded-ds border border-border/60 bg-background px-3 py-2 text-sm hover:border-brand/40 gap-3"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <TypeIcon type={issue.type} size={14} />
                         <Link
                           href={`/projects/${projectKey}/issues/${issue.key}`}
-                          className="font-mono text-xs font-semibold text-text-subtle hover:text-brand"
+                          className="font-mono text-xs font-semibold text-text-subtle hover:text-brand shrink-0"
                         >
                           {issue.key}
                         </Link>
                         <Link
                           href={`/projects/${projectKey}/issues/${issue.key}`}
-                          className="font-medium text-text hover:underline"
+                          className="font-medium text-text hover:underline truncate"
                         >
                           {issue.summary}
                         </Link>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <PriorityIcon priority={issue.priority} size={14} />
+                      <div className="flex items-center gap-3 shrink-0">
+                        {/* Status Select */}
+                        <div className="relative">
+                          <select
+                            value={issue.status}
+                            onChange={(e) => handleStatusChange(issue.id, e.target.value as IssueStatus)}
+                            className={`h-6 px-1.5 pr-5 rounded text-[11px] font-bold border outline-none cursor-pointer appearance-none ${statusColors[issue.status]}`}
+                          >
+                            <option value="TO_DO">TO DO</option>
+                            <option value="IN_PROGRESS">IN PROGRESS</option>
+                            <option value="IN_REVIEW">IN REVIEW</option>
+                            <option value="DONE">DONE</option>
+                          </select>
+                          <ChevronDown size={10} className="absolute right-1 top-2 pointer-events-none opacity-70" />
+                        </div>
+
+                        {/* Priority Select */}
+                        <div className="flex items-center gap-1">
+                          <PriorityIcon priority={issue.priority} size={14} />
+                          <select
+                            value={issue.priority}
+                            onChange={(e) => handlePriorityChange(issue.id, e.target.value as IssuePriority)}
+                            className="h-6 rounded border border-transparent bg-transparent hover:border-border px-1 text-xs text-text-subtle cursor-pointer"
+                          >
+                            <option value="HIGHEST">Highest</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                            <option value="LOWEST">Lowest</option>
+                          </select>
+                        </div>
+
+                        {/* Assignee Select */}
+                        <div className="flex items-center gap-1">
+                          <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={20} />
+                          <select
+                            value={issue.assignee?.id ?? ""}
+                            onChange={(e) => handleAssigneeChange(issue.id, e.target.value || null)}
+                            className="h-6 max-w-[100px] rounded border border-transparent bg-transparent hover:border-border px-1 text-xs text-text-subtle cursor-pointer truncate"
+                          >
+                            <option value="">Unassigned</option>
+                            {allUsers.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
                         {issue.storyPoints != null && (
                           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                             {issue.storyPoints}
                           </span>
                         )}
-                        <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={22} />
+
                         <select
                           value={sprint.id}
                           onChange={(e) => handleMoveIssue(issue.id, e.target.value || null)}
@@ -188,44 +375,91 @@ export function BacklogView({
         {/* Unassigned Backlog Section */}
         <div className="rounded-ds border border-border bg-surface p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
-            <span className="font-semibold text-base text-text">Backlog ({backlog.length} issues)</span>
+            <span className="font-semibold text-base text-text">Backlog ({filteredBacklog.length} issues)</span>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            {backlog.length === 0 ? (
+            {filteredBacklog.length === 0 ? (
               <div className="py-4 text-center text-xs text-text-subtle italic">
-                Backlog is empty. Create issues using the top navigation bar.
+                Backlog is empty or no issues match filters.
               </div>
             ) : (
-              backlog.map((issue) => (
+              filteredBacklog.map((issue) => (
                 <div
                   key={issue.id}
-                  className="flex items-center justify-between rounded-ds border border-border/60 bg-background px-3 py-2 text-sm hover:border-brand/40"
+                  className="flex items-center justify-between rounded-ds border border-border/60 bg-background px-3 py-2 text-sm hover:border-brand/40 gap-3"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <TypeIcon type={issue.type} size={14} />
                     <Link
                       href={`/projects/${projectKey}/issues/${issue.key}`}
-                      className="font-mono text-xs font-semibold text-text-subtle hover:text-brand"
+                      className="font-mono text-xs font-semibold text-text-subtle hover:text-brand shrink-0"
                     >
                       {issue.key}
                     </Link>
                     <Link
                       href={`/projects/${projectKey}/issues/${issue.key}`}
-                      className="font-medium text-text hover:underline"
+                      className="font-medium text-text hover:underline truncate"
                     >
                       {issue.summary}
                     </Link>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <PriorityIcon priority={issue.priority} size={14} />
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Status Select */}
+                    <div className="relative">
+                      <select
+                        value={issue.status}
+                        onChange={(e) => handleStatusChange(issue.id, e.target.value as IssueStatus)}
+                        className={`h-6 px-1.5 pr-5 rounded text-[11px] font-bold border outline-none cursor-pointer appearance-none ${statusColors[issue.status]}`}
+                      >
+                        <option value="TO_DO">TO DO</option>
+                        <option value="IN_PROGRESS">IN PROGRESS</option>
+                        <option value="IN_REVIEW">IN REVIEW</option>
+                        <option value="DONE">DONE</option>
+                      </select>
+                      <ChevronDown size={10} className="absolute right-1 top-2 pointer-events-none opacity-70" />
+                    </div>
+
+                    {/* Priority Select */}
+                    <div className="flex items-center gap-1">
+                      <PriorityIcon priority={issue.priority} size={14} />
+                      <select
+                        value={issue.priority}
+                        onChange={(e) => handlePriorityChange(issue.id, e.target.value as IssuePriority)}
+                        className="h-6 rounded border border-transparent bg-transparent hover:border-border px-1 text-xs text-text-subtle cursor-pointer"
+                      >
+                        <option value="HIGHEST">Highest</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                        <option value="LOWEST">Lowest</option>
+                      </select>
+                    </div>
+
+                    {/* Assignee Select */}
+                    <div className="flex items-center gap-1">
+                      <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={20} />
+                      <select
+                        value={issue.assignee?.id ?? ""}
+                        onChange={(e) => handleAssigneeChange(issue.id, e.target.value || null)}
+                        className="h-6 max-w-[100px] rounded border border-transparent bg-transparent hover:border-border px-1 text-xs text-text-subtle cursor-pointer truncate"
+                      >
+                        <option value="">Unassigned</option>
+                        {allUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     {issue.storyPoints != null && (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                         {issue.storyPoints}
                       </span>
                     )}
-                    <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={22} />
+
                     {sprints.length > 0 && (
                       <select
                         value=""

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { getAllUsers } from "@/lib/users";
 import { YourWorkView } from "./YourWorkView";
 
 export default async function YourWorkPage() {
@@ -12,15 +13,21 @@ export default async function YourWorkPage() {
 
   const siteIds = memberships.map((m) => m.siteId);
 
-  const [assignedIssues, reportedIssues, userProjects] = await Promise.all([
+  const [assignedIssues, reportedIssues, userProjects, availableUsers] = await Promise.all([
     prisma.issue.findMany({
       where: { assigneeId: user.id },
-      include: { project: { select: { key: true, name: true } } },
+      include: {
+        project: { select: { key: true, name: true } },
+        assignee: { select: { id: true, name: true, avatarUrl: true } },
+      },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.issue.findMany({
       where: { reporterId: user.id },
-      include: { project: { select: { key: true, name: true } } },
+      include: {
+        project: { select: { key: true, name: true } },
+        assignee: { select: { id: true, name: true, avatarUrl: true } },
+      },
       orderBy: { updatedAt: "desc" },
     }),
     siteIds.length > 0
@@ -30,6 +37,7 @@ export default async function YourWorkPage() {
           orderBy: { createdAt: "desc" },
         })
       : [],
+    getAllUsers(),
   ]);
 
   return (
@@ -38,6 +46,7 @@ export default async function YourWorkPage() {
       reportedIssues={reportedIssues}
       userProjects={userProjects}
       userName={user.name ?? user.email}
+      availableUsers={availableUsers}
     />
   );
 }

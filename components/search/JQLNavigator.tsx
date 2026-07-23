@@ -1,13 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Search, Bookmark, Plus } from "lucide-react";
+import { Search, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { TypeIcon } from "@/components/ui/TypeIcon";
-import { PriorityIcon } from "@/components/ui/PriorityIcon";
-import { Avatar } from "@/components/ui/Avatar";
-import { Tag } from "@/components/ui/Tag";
+import { IssueTable, type IssueListItem } from "@/components/issues/IssueTable";
+import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
 import { getJQLSuggestions } from "@/lib/jql";
 import { executeJQLQueryAction, saveFilterAction } from "@/app/(app)/filters/actions";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
@@ -34,10 +31,12 @@ export function JQLNavigator({
   initialJql = "",
   initialIssues = [],
   savedFilters: initialSaved = [],
+  availableUsers = [],
 }: {
   initialJql?: string;
   initialIssues?: JQLIssue[];
   savedFilters?: SavedFilterItem[];
+  availableUsers?: TeammateUser[];
 }) {
   const [jql, setJql] = useState(initialJql);
   const [issues, setIssues] = useState<JQLIssue[]>(initialIssues);
@@ -47,6 +46,14 @@ export function JQLNavigator({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Client side quick filters state
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [filterUnassigned, setFilterUnassigned] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
 
   const handleSearch = async (queryToRun = jql) => {
     const res = await executeJQLQueryAction(queryToRun);
@@ -81,6 +88,46 @@ export function JQLNavigator({
     }
     setIsSaving(false);
   };
+
+  const filteredIssues = issues.filter((i) => {
+    const matchesSearch =
+      !searchQuery ||
+      i.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.key.toLowerCase().includes(searchQuery.toLowerCase());
+
+    let matchesUser = true;
+    if (filterUnassigned) {
+      matchesUser = !i.assignee;
+    } else if (selectedUserId) {
+      matchesUser = i.assignee?.id === selectedUserId;
+    }
+
+    const matchesStatus = statusFilter === "ALL" || i.status === statusFilter;
+    const matchesPriority = priorityFilter === "ALL" || i.priority === priorityFilter;
+    const matchesType = typeFilter === "ALL" || i.type === typeFilter;
+
+    return matchesSearch && matchesUser && matchesStatus && matchesPriority && matchesType;
+  });
+
+  const handleClearFilters = () => {
+    setSelectedUserId(null);
+    setFilterUnassigned(false);
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setPriorityFilter("ALL");
+    setTypeFilter("ALL");
+  };
+
+  const formattedIssues: IssueListItem[] = filteredIssues.map((i) => ({
+    id: i.id,
+    key: i.key,
+    summary: i.summary,
+    type: i.type,
+    status: i.status,
+    priority: i.priority,
+    projectKey: i.project.key,
+    assignee: i.assignee,
+  }));
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl">
@@ -173,60 +220,43 @@ export function JQLNavigator({
         </div>
       )}
 
-      {/* Search Results Table */}
-      <div className="rounded-ds border border-border bg-surface overflow-hidden shadow-xs">
-        <div className="flex items-center justify-between p-3 border-b border-border bg-surface-sunken">
-          <span className="text-xs font-bold text-text-subtle">
-            Matching Issues ({issues.length})
+      {/* Profile Circles Filter Toolbar */}
+      <IssueFilterToolbar
+        users={availableUsers}
+        selectedUserId={selectedUserId}
+        onSelectUser={(id) => {
+          setFilterUnassigned(false);
+          setSelectedUserId(id);
+        }}
+        filterUnassigned={filterUnassigned}
+        onToggleUnassigned={() => {
+          setSelectedUserId(null);
+          setFilterUnassigned((prev) => !prev);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        priorityFilter={priorityFilter}
+        onPriorityFilterChange={setPriorityFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
+        onClearFilters={handleClearFilters}
+      />
+
+      {/* Search Results Table with Dropdowns */}
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+          <span className="text-sm font-bold text-text">
+            Matching Issues ({formattedIssues.length})
           </span>
         </div>
 
-        {issues.length === 0 ? (
-          <div className="p-8 text-center text-xs text-text-subtle italic">
-            No issues match the search query. Try modifying your JQL terms.
-          </div>
-        ) : (
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border text-text-subtle font-semibold">
-                <th className="p-3">Type</th>
-                <th className="p-3">Key</th>
-                <th className="p-3">Summary</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Priority</th>
-                <th className="p-3">Assignee</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {issues.map((issue) => (
-                <tr key={issue.id} className="hover:bg-neutral transition-colors">
-                  <td className="p-3">
-                    <TypeIcon type={issue.type} size={14} />
-                  </td>
-                  <td className="p-3 font-mono font-semibold">
-                    <Link href={`/projects/${issue.project.key}/issues/${issue.key}`} className="hover:text-brand">
-                      {issue.key}
-                    </Link>
-                  </td>
-                  <td className="p-3 font-medium text-text">
-                    <Link href={`/projects/${issue.project.key}/issues/${issue.key}`} className="hover:underline">
-                      {issue.summary}
-                    </Link>
-                  </td>
-                  <td className="p-3">
-                    <Tag>{issue.status.replace("_", " ")}</Tag>
-                  </td>
-                  <td className="p-3">
-                    <PriorityIcon priority={issue.priority} size={14} />
-                  </td>
-                  <td className="p-3">
-                    <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={20} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <IssueTable
+          issues={formattedIssues}
+          projectKey={formattedIssues[0]?.projectKey ?? "PROJ"}
+          availableUsers={availableUsers}
+        />
       </div>
     </div>
   );

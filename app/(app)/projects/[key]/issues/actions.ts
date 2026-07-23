@@ -14,6 +14,7 @@ export async function updateIssueFieldAction(
   field:
     | "status"
     | "priority"
+    | "type"
     | "summary"
     | "description"
     | "storyPoints"
@@ -31,6 +32,7 @@ export async function updateIssueFieldAction(
     const data: Record<string, any> = {};
     if (field === "status") data.status = value as IssueStatus;
     if (field === "priority") data.priority = value as IssuePriority;
+    if (field === "type") data.type = value as IssueType;
     if (field === "summary") data.summary = value;
     if (field === "description") data.description = value;
     if (field === "storyPoints") data.storyPoints = value ? parseFloat(value) : null;

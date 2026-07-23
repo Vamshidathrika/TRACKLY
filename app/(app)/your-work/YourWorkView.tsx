@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Clock, Folder, UserCheck, Plus } from "lucide-react";
-import { TypeIcon } from "@/components/ui/TypeIcon";
-import { PriorityIcon } from "@/components/ui/PriorityIcon";
-import { Tag } from "@/components/ui/Tag";
+import { IssueTable, type IssueListItem } from "@/components/issues/IssueTable";
+import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
@@ -19,6 +18,7 @@ export type UserWorkIssue = {
   priority: IssuePriority;
   updatedAt: Date;
   project: { key: string; name: string };
+  assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
 };
 
 export type UserWorkProject = {
@@ -33,13 +33,76 @@ export function YourWorkView({
   reportedIssues,
   userProjects,
   userName,
+  availableUsers = [],
 }: {
   assignedIssues: UserWorkIssue[];
   reportedIssues: UserWorkIssue[];
   userProjects: UserWorkProject[];
   userName: string;
+  availableUsers?: TeammateUser[];
 }) {
   const [activeTab, setActiveTab] = useState<"assigned" | "reported" | "projects">("assigned");
+
+  // Filters state for assigned / reported tabs
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [filterUnassigned, setFilterUnassigned] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+
+  const filterIssues = (issues: UserWorkIssue[]) => {
+    return issues.filter((i) => {
+      const matchesSearch =
+        !searchQuery ||
+        i.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.key.toLowerCase().includes(searchQuery.toLowerCase());
+
+      let matchesUser = true;
+      if (filterUnassigned) {
+        matchesUser = !i.assignee;
+      } else if (selectedUserId) {
+        matchesUser = i.assignee?.id === selectedUserId;
+      }
+
+      const matchesStatus = statusFilter === "ALL" || i.status === statusFilter;
+      const matchesPriority = priorityFilter === "ALL" || i.priority === priorityFilter;
+      const matchesType = typeFilter === "ALL" || i.type === typeFilter;
+
+      return matchesSearch && matchesUser && matchesStatus && matchesPriority && matchesType;
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSelectedUserId(null);
+    setFilterUnassigned(false);
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setPriorityFilter("ALL");
+    setTypeFilter("ALL");
+  };
+
+  const formattedAssigned: IssueListItem[] = filterIssues(assignedIssues).map((i) => ({
+    id: i.id,
+    key: i.key,
+    summary: i.summary,
+    type: i.type,
+    status: i.status,
+    priority: i.priority,
+    projectKey: i.project.key,
+    assignee: i.assignee,
+  }));
+
+  const formattedReported: IssueListItem[] = filterIssues(reportedIssues).map((i) => ({
+    id: i.id,
+    key: i.key,
+    summary: i.summary,
+    type: i.type,
+    status: i.status,
+    priority: i.priority,
+    projectKey: i.project.key,
+    assignee: i.assignee,
+  }));
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto max-w-6xl">
@@ -85,6 +148,32 @@ export function YourWorkView({
         </button>
       </div>
 
+      {/* Profile Circles Filter Toolbar */}
+      {activeTab !== "projects" && (
+        <IssueFilterToolbar
+          users={availableUsers}
+          selectedUserId={selectedUserId}
+          onSelectUser={(id) => {
+            setFilterUnassigned(false);
+            setSelectedUserId(id);
+          }}
+          filterUnassigned={filterUnassigned}
+          onToggleUnassigned={() => {
+            setSelectedUserId(null);
+            setFilterUnassigned((prev) => !prev);
+          }}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          priorityFilter={priorityFilter}
+          onPriorityFilterChange={setPriorityFilter}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          onClearFilters={handleClearFilters}
+        />
+      )}
+
       {/* Tab Content: Assigned to Me */}
       {activeTab === "assigned" && (
         <div className="flex flex-col gap-3">
@@ -96,28 +185,12 @@ export function YourWorkView({
               <CreateIssueModal trigger={<Button appearance="primary" className="mx-auto bg-brand text-white">Create First Task</Button>} />
             </div>
           ) : (
-            <div className="divide-y divide-border border border-border rounded-lg bg-surface overflow-hidden">
-              {assignedIssues.map((issue) => (
-                <Link
-                  key={issue.id}
-                  href={`/projects/${issue.project.key}/issues/${issue.key}`}
-                  className="flex items-center justify-between p-4 hover:bg-neutral/60 transition-colors group"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <TypeIcon type={issue.type} size={16} />
-                    <span className="font-mono text-xs font-bold text-text-subtle group-hover:text-brand">{issue.key}</span>
-                    <span className="text-sm font-semibold text-text truncate">{issue.summary}</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    <span className="text-xs text-text-subtle hidden sm:inline">{issue.project.name}</span>
-                    <PriorityIcon priority={issue.priority} size={14} />
-                    <Tag color={issue.status === "DONE" ? "green" : issue.status === "IN_PROGRESS" ? "blue" : "gray"}>
-                      {issue.status.replace("_", " ")}
-                    </Tag>
-                  </div>
-                </Link>
-              ))}
+            <div className="border border-border rounded-lg bg-surface p-4 shadow-xs">
+              <IssueTable
+                issues={formattedAssigned}
+                projectKey={assignedIssues[0]?.project.key ?? "PROJ"}
+                availableUsers={availableUsers}
+              />
             </div>
           )}
         </div>
@@ -133,28 +206,12 @@ export function YourWorkView({
               <p className="text-xs text-text-subtle mt-1">Issues created by you will appear here.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border border border-border rounded-lg bg-surface overflow-hidden">
-              {reportedIssues.map((issue) => (
-                <Link
-                  key={issue.id}
-                  href={`/projects/${issue.project.key}/issues/${issue.key}`}
-                  className="flex items-center justify-between p-4 hover:bg-neutral/60 transition-colors group"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <TypeIcon type={issue.type} size={16} />
-                    <span className="font-mono text-xs font-bold text-text-subtle group-hover:text-brand">{issue.key}</span>
-                    <span className="text-sm font-semibold text-text truncate">{issue.summary}</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    <span className="text-xs text-text-subtle hidden sm:inline">{issue.project.name}</span>
-                    <PriorityIcon priority={issue.priority} size={14} />
-                    <Tag color={issue.status === "DONE" ? "green" : issue.status === "IN_PROGRESS" ? "blue" : "gray"}>
-                      {issue.status.replace("_", " ")}
-                    </Tag>
-                  </div>
-                </Link>
-              ))}
+            <div className="border border-border rounded-lg bg-surface p-4 shadow-xs">
+              <IssueTable
+                issues={formattedReported}
+                projectKey={reportedIssues[0]?.project.key ?? "PROJ"}
+                availableUsers={availableUsers}
+              />
             </div>
           )}
         </div>

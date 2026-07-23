@@ -1,4 +1,5 @@
 import { getSavedFiltersAction, executeJQLQueryAction } from "@/app/(app)/filters/actions";
+import { getAllUsers } from "@/lib/users";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { JQLNavigator } from "@/components/search/JQLNavigator";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -11,7 +12,11 @@ export default async function FilterSearchPage({
 }) {
   const { jql } = await searchParams;
 
-  const savedFilters = await getSavedFiltersAction();
+  const [savedFilters, allUsers] = await Promise.all([
+    getSavedFiltersAction(),
+    getAllUsers(),
+  ]);
+
   const initialJql = jql || "status = IN_PROGRESS OR status = TO_DO";
   const initialIssues = await executeJQLQueryAction(initialJql);
 
@@ -30,6 +35,7 @@ export default async function FilterSearchPage({
         initialJql={initialJql}
         initialIssues={initialIssues.map((i) => ({ ...i, project: { key: i.project.key, name: i.project.name } }))}
         savedFilters={savedFilters}
+        availableUsers={allUsers}
       />
     </div>
   );
