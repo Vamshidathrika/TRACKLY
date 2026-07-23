@@ -57,7 +57,10 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
       <BacklogView
         projectId={project.id}
         projectKey={project.key}
-        sprints={sprints}
+        sprints={sprints.map((s) => ({
+          ...s,
+          issues: s.issues.map((i) => ({ ...i, projectKey: project.key })),
+        }))}
         backlogIssues={backlogIssues.map((i) => ({ ...i, projectKey: project.key }))}
         availableUsers={siteUsers}
       />

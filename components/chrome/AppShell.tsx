@@ -62,6 +62,7 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
         onToggleSidebar={toggleSidebar}
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenCreate={() => createTriggerRef.current?.click()}
+        onOpenHelp={() => setHelpOpen(true)}
       />
       <div className="flex min-h-0 flex-1">
         <GlobalSidebar projects={projects} starredProjectIds={starredProjectIds} collapsed={collapsed} />

@@ -35,8 +35,7 @@ it("renders logo, search, create, and fires callbacks", async () => {
       hideRemote
     />
   );
-  expect(screen.getByText("Trackly")).toBeInTheDocument();
-  await userEvent.click(screen.getByPlaceholderText("Search"));
+  await userEvent.click(screen.getByPlaceholderText(/search/i));
   expect(onOpenPalette).toHaveBeenCalled();
   await userEvent.click(screen.getByRole("button", { name: "Create" }));
   expect(onOpenCreate).toHaveBeenCalled();

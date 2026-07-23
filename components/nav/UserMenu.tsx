@@ -1,35 +1,59 @@
 "use client";
 import * as DM from "@radix-ui/react-dropdown-menu";
 import { Avatar } from "@/components/ui/Avatar";
+import { Settings, LogOut, ExternalLink } from "lucide-react";
+
 export type UserMenuProps = { name: string; email: string; avatarUrl: string | null };
 
 export function UserMenu({ user }: { user: UserMenuProps }) {
   return (
     <DM.Root>
       <DM.Trigger asChild>
-        <button aria-label="Your profile" className="ml-1 rounded-full p-0.5 hover:opacity-80">
-          <Avatar name={user.name} src={user.avatarUrl} size={24} />
+        <button
+          aria-label="Your profile"
+          className="flex h-8 w-8 items-center justify-center rounded-full hover:ring-2 hover:ring-brand/30 transition-all ml-0.5"
+        >
+          <Avatar name={user.name} src={user.avatarUrl} size={28} />
         </button>
       </DM.Trigger>
       <DM.Portal>
-        <DM.Content align="end" sideOffset={4}
-          className="z-50 min-w-55 rounded-ds border border-border bg-surface py-2 shadow-[0_4px_8px_-2px_rgba(9,30,66,0.25)]">
-          <div className="flex items-center gap-2 px-4 pb-2">
-            <Avatar name={user.name} src={user.avatarUrl} size={32} />
-            <div>
-              <p className="text-sm font-medium">{user.name}</p>
-              <p className="text-xs text-text-subtle">{user.email}</p>
+        <DM.Content
+          align="end"
+          sideOffset={8}
+          className="z-50 w-[220px] rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl py-1.5 shadow-lg animate-fade-in-down"
+        >
+          {/* Profile header */}
+          <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-border-default">
+            <Avatar name={user.name} src={user.avatarUrl} size={34} />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-default truncate">{user.name}</p>
+              <p className="text-[11px] text-subtlest truncate">{user.email}</p>
             </div>
           </div>
-          <div className="my-1 border-t border-border" />
-          <DM.Item asChild className="cursor-pointer px-4 py-1.5 text-sm outline-none data-[highlighted]:bg-neutral">
-            <a href="/settings/members">Site settings</a>
-          </DM.Item>
-          <DM.Item asChild className="cursor-pointer px-4 py-1.5 text-sm outline-none data-[highlighted]:bg-neutral">
-            <button className="w-full text-left" onClick={() => { window.location.href = "/api/auth/signout"; }}>
-              Log out
-            </button>
-          </DM.Item>
+
+          <div className="py-1">
+            <DM.Item asChild>
+              <a
+                href="/settings/members"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-default font-medium cursor-pointer outline-none hover:bg-neutral rounded-[6px] mx-1 transition-colors"
+              >
+                <Settings size={14} className="text-subtle" />
+                Settings
+              </a>
+            </DM.Item>
+          </div>
+
+          <div className="border-t border-border-default py-1">
+            <DM.Item asChild>
+              <button
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] text-danger font-medium cursor-pointer outline-none hover:bg-danger/6 rounded-[6px] mx-1 transition-colors"
+                onClick={() => { window.location.href = "/api/auth/signout"; }}
+              >
+                <LogOut size={14} />
+                Sign out
+              </button>
+            </DM.Item>
+          </div>
         </DM.Content>
       </DM.Portal>
     </DM.Root>

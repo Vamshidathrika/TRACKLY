@@ -310,10 +310,10 @@ export function IssueDetail({
 
   return (
     <div className="flex flex-col gap-5 max-w-7xl mx-auto pb-16">
-      {/* Toast Notification */}
+      {/* Toast Notification — Apple-style */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-md bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-xl animate-in fade-in duration-200 flex items-center gap-2">
-          <CheckCircle2 size={14} className="text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 rounded-[12px] bg-[#1C1C1E]/95 backdrop-blur-md px-4 py-3 text-[13px] font-semibold text-white shadow-xl animate-toast flex items-center gap-2.5 border border-white/10">
+          <CheckCircle2 size={15} className="text-[#30D158] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -332,49 +332,64 @@ export function IssueDetail({
       )}
 
       {/* 1. Breadcrumbs & Top Bar Controls */}
-      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-border pb-3">
+      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-border-default pb-4">
         {/* Breadcrumb path */}
-        <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle">
-          <Link href="/projects" className="hover:text-text transition-colors">Spaces</Link>
-          <span>/</span>
-          <Link href={`/projects/${issue.project?.key || "project"}`} className="hover:text-text transition-colors flex items-center gap-1">
-            <span className="font-bold text-text">{issue.project?.name || "Project"}</span>
+        <div className="flex items-center gap-1.5 text-[12px] font-medium text-subtle">
+          <Link href="/projects" className="hover:text-default transition-colors">Projects</Link>
+          <span className="text-subtlest">/</span>
+          <Link href={`/projects/${issue.project?.key || "project"}`} className="hover:text-default transition-colors font-semibold text-default">
+            {issue.project?.name || "Project"}
           </Link>
-          <span>/</span>
-          <span className="flex items-center gap-1 text-text font-bold">
-            <TypeIcon type={issue.type || "TASK"} size={14} />
+          <span className="text-subtlest">/</span>
+          <span className="flex items-center gap-1.5 text-default font-semibold">
+            <TypeIcon type={issue.type || "TASK"} size={13} />
             <span>{issue.key}</span>
           </span>
+          {/* Copy issue key */}
+          <button
+            onClick={() => { navigator.clipboard.writeText(issue.key); showToast(`Copied ${issue.key} to clipboard`); }}
+            title="Copy issue key"
+            className="ml-0.5 flex items-center justify-center h-5 w-5 rounded-[4px] text-subtlest hover:bg-neutral hover:text-default transition-all"
+          >
+            <ArrowLeft size={11} className="rotate-[135deg]" />
+          </button>
         </div>
 
         {/* Top Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Watch */}
           <button
             onClick={toggleWatch}
-            className={`flex h-8 items-center gap-1.5 rounded border px-3 text-xs font-semibold transition-colors ${
-              isWatching ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-text hover:bg-neutral"
+            className={`flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[12px] font-semibold transition-all ${
+              isWatching
+                ? "border-brand/30 bg-brand/8 text-brand"
+                : "border-border-default bg-surface text-subtle hover:bg-neutral hover:text-default"
             }`}
-            title="Watch this task for updates"
+            title={isWatching ? "Stop watching" : "Watch for updates"}
           >
             <Eye size={13} />
             <span>{watchers}</span>
           </button>
 
+          {/* Share */}
           <button
             onClick={handleShare}
-            className="flex h-8 items-center gap-1.5 rounded border border-border bg-surface px-3 text-xs font-semibold text-text hover:bg-neutral transition-colors"
-            title="Share ticket link"
+            className="flex h-8 items-center gap-1.5 rounded-[8px] border border-border-default bg-surface px-3 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
+            title="Share issue link"
           >
             <Share2 size={13} /> Share
           </button>
 
-          <button
-            onClick={() => showToast("More options menu opened")}
-            className="flex h-8 w-8 items-center justify-center rounded border border-border bg-surface text-text-subtle hover:bg-neutral transition-colors"
-            title="More actions"
-          >
-            <MoreHorizontal size={14} />
-          </button>
+          {/* More actions */}
+          <div className="relative">
+            <button
+              onClick={() => showToast("Copy link: " + window.location.href)}
+              className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-border-default bg-surface text-subtle hover:bg-neutral hover:text-default transition-all"
+              title="More actions"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -702,7 +717,7 @@ export function IssueDetail({
                     <select
                       value={storyPoints ?? ""}
                       onChange={(e) => handleStoryPointsChange(e.target.value)}
-                      className="h-6 rounded border border-border bg-surface px-2 text-xs font-bold text-text outline-none"
+                      className="h-7 rounded-[6px] border border-border-default bg-surface px-2 text-[12px] font-semibold text-default outline-none cursor-pointer hover:bg-neutral transition-colors"
                     >
                       <option value="">—</option>
                       <option value={1}>1 pt</option>
@@ -710,6 +725,8 @@ export function IssueDetail({
                       <option value={3}>3 pts</option>
                       <option value={5}>5 pts</option>
                       <option value={8}>8 pts</option>
+                      <option value={13}>13 pts</option>
+                      <option value={21}>21 pts</option>
                     </select>
                   </div>
 

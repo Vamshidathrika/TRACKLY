@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Folder, List, Columns3, BarChart3, Calendar, Settings, Star, ChevronLeft, ChevronRight } from "lucide-react";
-import { Item } from "./GlobalSidebar";
+import { NavItem } from "./GlobalSidebar";
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 
 export function ProjectNav({
@@ -91,14 +91,13 @@ export function ProjectNav({
         </button>
       </div>
 
-      {/* Navigation Items */}
       <nav className="flex flex-col gap-0.5">
-        <Item href={`/projects/${projectKey}`} label="Issues List" icon={Folder} />
-        <Item href={`/projects/${projectKey}/backlog`} label="Backlog" icon={List} />
-        <Item href={`/projects/${projectKey}/board`} label="Board" icon={Columns3} />
-        <Item href={`/projects/${projectKey}/reports`} label="Reports" icon={BarChart3} />
-        <Item href={`/projects/${projectKey}/timeline`} label="Timeline" icon={Calendar} />
-        <Item href={`/projects/${projectKey}/settings`} label="Settings" icon={Settings} />
+        <NavItem href={`/projects/${projectKey}`} label="Tickets List" icon={Folder} />
+        <NavItem href={`/projects/${projectKey}/backlog`} label="Backlog" icon={List} />
+        <NavItem href={`/projects/${projectKey}/board`} label="Board" icon={Columns3} />
+        <NavItem href={`/projects/${projectKey}/reports`} label="Reports" icon={BarChart3} />
+        <NavItem href={`/projects/${projectKey}/timeline`} label="Timeline" icon={Calendar} />
+        <NavItem href={`/projects/${projectKey}/settings`} label="Settings" icon={Settings} />
       </nav>
     </aside>
   );

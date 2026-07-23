@@ -8,14 +8,16 @@ const projects = [{ id: "p1", key: "TRK", name: "Trackly Core" }];
 
 it("renders sections and marks active route", () => {
   render(<GlobalSidebar projects={projects} starredProjectIds={[]} collapsed={false} />);
-  for (const label of ["Your work", "Projects", "Filters", "Dashboards", "Plans"]) {
+  for (const label of ["My Work", "Projects", "Filters", "Dashboards", "Plans & Roadmap"]) {
     expect(screen.getByText(label)).toBeInTheDocument();
   }
   expect(screen.getByText("Trackly Core")).toBeInTheDocument();
-  expect(screen.getByText("Dashboards").closest("a")).toHaveClass("bg-selected");
+  expect(screen.getByText("Dashboards").closest("a")).toHaveClass("bg-brand/10");
 });
 
-it("renders nothing when collapsed", () => {
+it("renders icon-only mode when collapsed", () => {
   const { container } = render(<GlobalSidebar projects={projects} starredProjectIds={[]} collapsed />);
-  expect(container.querySelector("nav")).toBeNull();
+  const nav = container.querySelector("nav");
+  expect(nav).toBeInTheDocument();
+  expect(nav).toHaveClass("w-[52px]");
 });

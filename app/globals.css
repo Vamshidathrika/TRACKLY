@@ -1,87 +1,180 @@
 @import "tailwindcss";
 
+/* ─── Apple-Inspired Design System ──────────────────────────────────────── */
+/* Uses SF Pro / -apple-system stack for maximum Apple aesthetics            */
+
 :root, :root[data-theme="light"] {
+  /* Core Surfaces - Frosted glass hierarchy */
   --ds-surface: #FFFFFF;
-  --ds-surface-sunken: #F7F8F9;
+  --ds-surface-sunken: #F5F5F7;
   --ds-surface-raised: #FFFFFF;
-  --ds-surface-overlay: #FFFFFF;
-  --ds-text: #172B4D;
-  --ds-text-subtle: #44546F;
-  --ds-text-subtlest: #626F86;
-  --ds-border: #091E4224;
-  --ds-brand: #0C66E4;
-  --ds-brand-hovered: #0055CC;
-  --ds-bg-neutral: #091E420F;
-  --ds-bg-neutral-hovered: #091E4224;
-  --ds-bg-selected: #E9F2FF;
-  --ds-text-selected: #0C66E4;
-  --ds-danger: #C9372C;
-  --ds-success: #22A06B;
-  --ds-warning: #E2B203;
+  --ds-surface-overlay: rgba(255, 255, 255, 0.92);
+  --ds-surface-glass: rgba(255, 255, 255, 0.75);
+
+  /* Typography */
+  --ds-text: #1D1D1F;
+  --ds-text-subtle: #6E6E73;
+  --ds-text-subtlest: #98989D;
+
+  /* Borders — very subtle, Apple-style */
+  --ds-border: rgba(0, 0, 0, 0.08);
+  --ds-border-strong: rgba(0, 0, 0, 0.14);
+
+  /* Brand — Apple Blue */
+  --ds-brand: #007AFF;
+  --ds-brand-hovered: #0071E3;
+  --ds-brand-subtle: rgba(0, 122, 255, 0.1);
+  --ds-brand-subtle-hover: rgba(0, 122, 255, 0.15);
+
+  /* Neutrals */
+  --ds-bg-neutral: rgba(0, 0, 0, 0.04);
+  --ds-bg-neutral-hovered: rgba(0, 0, 0, 0.07);
+  --ds-bg-selected: rgba(0, 122, 255, 0.08);
+  --ds-text-selected: #007AFF;
+
+  /* Semantic */
+  --ds-danger: #FF3B30;
+  --ds-success: #34C759;
+  --ds-warning: #FF9500;
+  --ds-purple: #AF52DE;
+  --ds-teal: #30D1C7;
+
+  /* Shadows — Apple elevation system */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.14), 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 :root[data-theme="dark"] {
-  --ds-surface: #1D2125;
-  --ds-surface-sunken: #161A1D;
-  --ds-surface-raised: #22272B;
-  --ds-surface-overlay: #282E33;
-  --ds-text: #B6C2CF;
-  --ds-text-subtle: #9FADBC;
-  --ds-text-subtlest: #8C9BAB;
-  --ds-border: #A6C5E229;
-  --ds-brand: #579DFF;
-  --ds-brand-hovered: #85B8FF;
-  --ds-bg-neutral: #A1BDD914;
-  --ds-bg-neutral-hovered: #A6C5E229;
-  --ds-bg-selected: #1C2B41;
-  --ds-text-selected: #579DFF;
-  --ds-danger: #F87168;
-  --ds-success: #4BCE97;
-  --ds-warning: #F5CD47;
+  /* Core Surfaces */
+  --ds-surface: #1C1C1E;
+  --ds-surface-sunken: #000000;
+  --ds-surface-raised: #2C2C2E;
+  --ds-surface-overlay: rgba(44, 44, 46, 0.92);
+  --ds-surface-glass: rgba(28, 28, 30, 0.75);
+
+  /* Typography */
+  --ds-text: #F5F5F7;
+  --ds-text-subtle: #98989D;
+  --ds-text-subtlest: #636366;
+
+  /* Borders */
+  --ds-border: rgba(255, 255, 255, 0.08);
+  --ds-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Brand */
+  --ds-brand: #0A84FF;
+  --ds-brand-hovered: #409CFF;
+  --ds-brand-subtle: rgba(10, 132, 255, 0.15);
+  --ds-brand-subtle-hover: rgba(10, 132, 255, 0.22);
+
+  /* Neutrals */
+  --ds-bg-neutral: rgba(255, 255, 255, 0.06);
+  --ds-bg-neutral-hovered: rgba(255, 255, 255, 0.10);
+  --ds-bg-selected: rgba(10, 132, 255, 0.15);
+  --ds-text-selected: #0A84FF;
+
+  /* Semantic */
+  --ds-danger: #FF453A;
+  --ds-success: #30D158;
+  --ds-warning: #FF9F0A;
+  --ds-purple: #BF5AF2;
+  --ds-teal: #5AC8FA;
+
+  /* Shadows — reduced opacity for dark mode */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
-  /* new tokens */
+  /* Surfaces */
   --color-surface: var(--ds-surface);
   --color-surface-sunken: var(--ds-surface-sunken);
   --color-surface-raised: var(--ds-surface-raised);
   --color-surface-overlay: var(--ds-surface-overlay);
+  --color-surface-glass: var(--ds-surface-glass);
+
+  /* Text */
   --color-default: var(--ds-text);
   --color-subtle: var(--ds-text-subtle);
   --color-subtlest: var(--ds-text-subtlest);
+
+  /* Borders */
   --color-border-default: var(--ds-border);
+  --color-border-strong: var(--ds-border-strong);
+
+  /* Brand */
+  --color-brand: var(--ds-brand);
+  --color-brand-hovered: var(--ds-brand-hovered);
+  --color-brand-subtle: var(--ds-brand-subtle);
+  --color-brand-subtle-hover: var(--ds-brand-subtle-hover);
+
+  /* Neutrals */
   --color-neutral: var(--ds-bg-neutral);
   --color-neutral-hovered: var(--ds-bg-neutral-hovered);
   --color-selected: var(--ds-bg-selected);
   --color-selected-text: var(--ds-text-selected);
-  --color-brand-hovered: var(--ds-brand-hovered);
-  /* legacy aliases — keep old classes working until Task 8 sweep */
-  --color-brand: var(--ds-brand);
+
+  /* Semantic */
+  --color-danger: var(--ds-danger);
+  --color-success: var(--ds-success);
+  --color-warning: var(--ds-warning);
+  --color-purple: var(--ds-purple);
+  --color-teal: var(--ds-teal);
+
+  /* Legacy aliases */
   --color-brand-hover: var(--ds-brand-hovered);
   --color-text: var(--ds-text);
   --color-text-subtle: var(--ds-text-subtle);
   --color-background: var(--ds-surface-sunken);
   --color-border: var(--ds-border);
-  --color-danger: var(--ds-danger);
-  --color-success: var(--ds-success);
-  --color-warning: var(--ds-warning);
-  --radius-ds: 3px;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  /* Radius — Apple uses very specific border-radius */
+  --radius-ds: 6px;
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  /* Typography — SF Pro system font */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  text-rendering: optimizeLegibility;
 }
 
 body {
   font-family: var(--font-sans);
   font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
   color: var(--ds-text);
   background: var(--ds-surface-sunken);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-x: hidden;
 }
 
-/* Liquid Smooth UI Scrollbar */
+/* ─── Apple-style Scrollbar ───────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -90,37 +183,224 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--ds-bg-neutral-hovered);
-  border-radius: 4px;
+  border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--ds-text-subtlest);
 }
 
-/* Micro-animations and interactive feedback */
-button, a {
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
-button:active, a:active {
-  transform: scale(0.98);
+/* ─── Interactive Feedback — Apple-style precision ────────────────────────── */
+
+button, a[role="button"] {
+  transition: 
+    background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+    border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+    color 0.18s cubic-bezier(0.4, 0, 0.2, 1), 
+    box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.18s ease;
 }
+
+button:active:not(:disabled), a[role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* ─── Keyframe Animations ─────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
 }
 
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.3); }
+  50%       { box-shadow: 0 0 0 4px rgba(0, 122, 255, 0); }
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── Utility Animation Classes ───────────────────────────────────────────── */
+
 .animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-in-right {
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast {
+  animation: toastSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ─── Apple Vibrancy / Glass Effects ─────────────────────────────────────── */
+
+.glass {
+  background: var(--ds-surface-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.glass-overlay {
+  background: var(--ds-surface-overlay);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+}
+
+/* ─── Typography Utilities ────────────────────────────────────────────────── */
+
+.label-xs {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-text-subtlest);
+}
+
+.label-sm {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-subtlest);
+}
+
+/* ─── Focus Ring — Apple style blue glow ─────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--ds-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Selection ───────────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--ds-brand-subtle);
+  color: var(--ds-text);
+}
+
+/* ─── Input Autofill Fix ──────────────────────────────────────────────────── */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px var(--ds-surface) inset;
+  -webkit-text-fill-color: var(--ds-text);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ─── Smooth page transitions ─────────────────────────────────────────────── */
+
+main {
+  animation: fadeIn 0.18s ease;
+}
+
+/* ─── Stagger animation helpers ──────────────────────────────────────────── */
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* ─── Sidebar transition ──────────────────────────────────────────────────── */
+
+.sidebar-expanded {
+  width: 232px;
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-collapsed {
+  width: 52px;
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Kanban Card hover lift ──────────────────────────────────────────────── */
+
+.card-hover {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── Gradient text utility ───────────────────────────────────────────────── */
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--ds-brand), var(--ds-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

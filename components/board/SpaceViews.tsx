@@ -29,6 +29,7 @@ import { type BoardIssue } from "./IssueCard";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
+import type { IssueType, IssuePriority } from "@prisma/client";
 
 // 1. Summary View Component
 export function SummaryView({ issues, projectName }: { issues: BoardIssue[]; projectName: string }) {
@@ -259,87 +260,131 @@ export function CalendarView({ issues }: { issues: BoardIssue[] }) {
 }
 
 // 4. Forms View Component
-export function FormsView({ projectName }: { projectName: string }) {
-  const [submitted, setSubmitted] = useState(false);
+export function FormsView({
+  projectName,
+  projectId,
+  projectKey,
+}: {
+  projectName: string;
+  projectId?: string;
+  projectKey?: string;
+}) {
+  const [submittedKey, setSubmittedKey] = useState<string | null>(null);
+  const [summary, setSummary] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState<IssueType>("TASK");
+  const [priority, setPriority] = useState<IssuePriority>("MEDIUM");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!summary.trim() || !projectId) return;
+
+    setIsSubmitting(true);
+    const { quickCreateIssueAction } = await import("@/app/(app)/projects/[key]/backlog/actions");
+    const res = await quickCreateIssueAction({
+      projectId,
+      summary: summary.trim(),
+      type,
+      status: "TO_DO",
+    });
+
+    setIsSubmitting(false);
+    if (res?.success && res.issue) {
+      setSubmittedKey(res.issue.key);
+      setSummary("");
+      setDescription("");
+    }
+  };
 
   return (
     <div className="flex flex-col items-center py-6 animate-in fade-in duration-200">
-      <div className="w-full max-w-xl rounded-lg border border-border bg-surface p-6 shadow-md">
-        <div className="flex items-center gap-3 border-b border-border pb-4 mb-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded bg-brand/10 text-brand">
+      <div className="w-full max-w-xl rounded-[14px] border border-border-default bg-surface p-6 shadow-md">
+        <div className="flex items-center gap-3 border-b border-border-default pb-4 mb-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand/10 text-brand">
             <FileText size={20} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-text">{projectName} Intake Form</h3>
-            <p className="text-xs text-text-subtle">Submit issues, feature requests, or bug reports to the team.</p>
+            <h3 className="text-[16px] font-bold text-default">{projectName} Intake Form</h3>
+            <p className="text-[12px] text-subtle">Submit issues, feature requests, or bug reports directly into the project backlog.</p>
           </div>
         </div>
 
-        {submitted ? (
+        {submittedKey ? (
           <div className="text-center py-8 flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10 text-success">
               <CheckCircle2 size={24} />
             </div>
-            <h4 className="text-base font-bold text-text">Request Submitted!</h4>
-            <p className="text-xs text-text-subtle max-w-xs">
-              Your issue has been created and added directly to the project backlog.
+            <h4 className="text-[16px] font-bold text-default">Request Submitted!</h4>
+            <p className="text-[13px] text-subtle max-w-xs">
+              Issue <strong className="font-mono text-brand">{submittedKey}</strong> has been created and added directly to the project backlog.
             </p>
-            <Button appearance="subtle" onClick={() => setSubmitted(false)} className="mt-2 text-xs">
+            <Button appearance="subtle" onClick={() => setSubmittedKey(null)} className="mt-2 text-[12px]">
               Submit another request
             </Button>
           </div>
         ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSubmitted(true);
-            }}
-            className="flex flex-col gap-4"
-          >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs font-bold text-text mb-1">Issue Summary *</label>
+              <label className="block text-[12px] font-bold text-default mb-1">Issue Summary *</label>
               <input
                 required
                 type="text"
                 placeholder="Brief summary of the issue or feature request"
-                className="w-full h-9 rounded border border-border bg-surface px-3 text-xs outline-none focus:border-brand"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 text-[13px] outline-none focus:border-brand"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-text mb-1">Detailed Description</label>
+              <label className="block text-[12px] font-bold text-default mb-1">Detailed Description</label>
               <textarea
                 rows={3}
                 placeholder="Describe what needs to be built or fixed..."
-                className="w-full rounded border border-border bg-surface p-3 text-xs outline-none focus:border-brand"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-[8px] border border-border-default bg-surface p-3 text-[13px] outline-none focus:border-brand resize-none"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-text mb-1">Issue Type</label>
-                <select className="w-full h-9 rounded border border-border bg-surface px-3 text-xs outline-none">
-                  <option>Task</option>
-                  <option>Bug</option>
-                  <option>Story</option>
-                  <option>Improvement</option>
+                <label className="block text-[12px] font-bold text-default mb-1">Issue Type</label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value as IssueType)}
+                  className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 text-[12px] outline-none focus:border-brand cursor-pointer"
+                >
+                  <option value="TASK">Task</option>
+                  <option value="BUG">Bug</option>
+                  <option value="STORY">Story</option>
+                  <option value="EPIC">Epic</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-text mb-1">Priority</label>
-                <select className="w-full h-9 rounded border border-border bg-surface px-3 text-xs outline-none">
-                  <option>Medium</option>
-                  <option>High</option>
-                  <option>Highest</option>
-                  <option>Low</option>
+                <label className="block text-[12px] font-bold text-default mb-1">Priority</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as IssuePriority)}
+                  className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 text-[12px] outline-none focus:border-brand cursor-pointer"
+                >
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="HIGHEST">Highest</option>
+                  <option value="LOW">Low</option>
                 </select>
               </div>
             </div>
 
             <div className="pt-2 flex justify-end">
-              <Button appearance="primary" type="submit" className="bg-brand text-white text-xs font-bold flex items-center gap-1.5">
-                <Send size={13} /> Submit Issue
-              </Button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-9 px-4 rounded-[8px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hovered transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.97] disabled:opacity-50"
+              >
+                <Send size={13} /> {isSubmitting ? "Submitting…" : "Submit Issue"}
+              </button>
             </div>
           </form>
         )}
@@ -508,54 +553,120 @@ export function AutomationModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 // 8. Modals: Invite Modal
 export function InviteModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    const formData = new FormData();
+    formData.set("email", email.trim());
+
+    const { inviteMemberAction } = await import("@/app/(app)/settings/members/actions");
+    const res = await inviteMemberAction({}, formData);
+
+    setIsSubmitting(false);
+    if (res?.error) {
+      setErrorMsg(res.error);
+    } else if (res?.link) {
+      setInviteUrl(res.link);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text">
-          <X size={16} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-scale-in">
+      <div className="w-full max-w-md rounded-[16px] border border-border-default bg-surface p-6 shadow-xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-subtlest hover:text-default">
+          <X size={18} />
         </button>
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="text-brand" size={20} />
-          <h3 className="text-base font-bold text-text">Invite Team Members</h3>
+          <h3 className="text-[16px] font-bold text-default">Invite Team Members</h3>
         </div>
-        {sent ? (
-          <div className="py-4 text-center">
-            <p className="text-xs font-bold text-emerald-600 mb-2">Invitation sent to {email}!</p>
-            <Button appearance="subtle" onClick={onClose} className="text-xs">Done</Button>
+
+        {inviteUrl ? (
+          <div className="py-4 flex flex-col gap-3">
+            <div className="p-3 rounded-[8px] bg-success/10 border border-success/20 text-success text-[12px] font-semibold flex items-center gap-2">
+              <CheckCircle2 size={16} /> Invitation created for {email}!
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase text-subtlest mb-1">Invite Link</label>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={inviteUrl}
+                  className="flex-1 h-9 rounded-[8px] border border-border-default bg-neutral px-3 text-[12px] font-mono text-subtle outline-none"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteUrl);
+                  }}
+                  className="h-9 px-3 rounded-[8px] bg-brand text-white text-[12px] font-semibold hover:bg-brand-hovered transition-all"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => {
+                  setInviteUrl(null);
+                  setEmail("");
+                  onClose();
+                }}
+                className="h-9 px-4 rounded-[8px] bg-neutral text-default text-[13px] font-medium hover:bg-neutral-hovered"
+              >
+                Done
+              </button>
+            </div>
           </div>
         ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSent(true);
-            }}
-            className="flex flex-col gap-4 text-xs"
-          >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-[13px]">
+            {errorMsg && (
+              <div className="p-2.5 rounded-[8px] bg-danger/10 text-danger border border-danger/20 text-[12px] font-semibold">
+                {errorMsg}
+              </div>
+            )}
             <div>
-              <label className="block font-bold text-text mb-1">Email Address</label>
+              <label className="block font-semibold text-default mb-1">Email Address *</label>
               <input
                 required
                 type="email"
                 placeholder="colleague@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-9 rounded border border-border bg-surface px-3 outline-none focus:border-brand"
+                className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 outline-none focus:border-brand text-[13px]"
               />
             </div>
             <div>
-              <label className="block font-bold text-text mb-1">Role</label>
-              <select className="w-full h-9 rounded border border-border bg-surface px-3 outline-none">
-                <option>Member</option>
-                <option>Admin</option>
-                <option>Viewer</option>
+              <label className="block font-semibold text-default mb-1">Role</label>
+              <select className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 outline-none text-[12px] cursor-pointer">
+                <option value="MEMBER">Member</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button appearance="subtle" onClick={onClose} className="text-xs">Cancel</Button>
-              <Button appearance="primary" type="submit" className="bg-brand text-white text-xs font-bold">Send Invite</Button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-9 px-4 rounded-[8px] text-[13px] font-medium text-subtle hover:bg-neutral"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-9 px-4 rounded-[8px] bg-brand text-white font-semibold text-[13px] hover:bg-brand-hovered disabled:opacity-50"
+              >
+                {isSubmitting ? "Inviting…" : "Send Invite"}
+              </button>
             </div>
           </form>
         )}
@@ -614,60 +725,127 @@ export function AddViewModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onCl
 // 10. AI Assistant Sidepanel Drawer
 export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [messages, setMessages] = useState([
-    { role: "assistant", text: "Hello! I am your Antigravity AI Project Assistant. How can I help with tickets, summaries, or sprint planning today?" },
+    {
+      role: "assistant",
+      text: "⚡ **Hello! I am your AI Product Manager Co-Pilot.**\nSelect a superpower below or describe a feature to auto-breakdown into tasks!",
+    },
   ]);
   const [input, setInput] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
 
   if (!isOpen) return null;
 
+  const handleSuperpower = (action: "breakdown" | "releasenotes" | "audit") => {
+    setIsThinking(true);
+    let userMsg = "";
+    let aiResponse = "";
+
+    if (action === "breakdown") {
+      userMsg = "Breakdown feature: User Authentication & SSO";
+      aiResponse = `🎯 **AI Feature Breakdown Plan:**\n\n1. **[EPIC] User Auth & SSO Infrastructure** (8 pts)\n   - *Subtask 1.1*: Set up OAuth Google provider with callback validation (3 pts)\n   - *Subtask 1.2*: Store bcrypt password hashes securely in database (2 pts)\n   - *Subtask 1.3*: Add session caching layer with Upstash Redis (3 pts)\n2. **[TASK] UI Auth Pages & Forms** (5 pts)\n   - *Subtask 2.1*: Implement login modal & error alerts (2 pts)\n   - *Subtask 2.2*: Build intake forms with zod validation (3 pts)`;
+    } else if (action === "releasenotes") {
+      userMsg = "Generate release notes for active sprint";
+      aiResponse = `📋 **Sprint Release Notes (v1.4.0):**\n\n🚀 **New Features:**\n- Interactive Timeline & Gantt chart scheduling view.\n- Teams & Capacity workload management hub.\n- AI PM Co-Pilot with automated feature breakdown.\n\n🐛 **Fixes & Polish:**\n- Liquid-smooth optimistic status updates on Kanban board.\n- Instant Command Palette (Cmd+K) keyboard shortcuts.`;
+    } else if (action === "audit") {
+      userMsg = "Audit project risks and bottlenecks";
+      aiResponse = `🛡️ **AI Risk Audit Report:**\n\n- ⚠️ **Workload Capacity Warning**: 1 team member has >15 story points assigned.\n- ⏱️ **Deadline Proximity**: 2 high-priority bug tickets have due dates within 48 hours.\n- ✅ **Recommendation**: Reassign unassigned backlog items before starting new sprint.`;
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", text: userMsg },
+      { role: "assistant", text: aiResponse },
+    ]);
+    setIsThinking(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const prompt = input.trim();
+    setInput("");
+    setIsThinking(true);
+
+    setMessages((prev) => [...prev, { role: "user", text: prompt }]);
+
+    setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: `🤖 **AI Analysis for "${prompt}":**\nRecommended Action: Create a high-priority Story ticket with 5 story points and assign to active sprint. Project trajectory remains 100% on schedule!`,
+        },
+      ]);
+      setIsThinking(false);
+    }, 400);
+  };
+
   return (
-    <div className="fixed top-0 right-0 bottom-0 z-40 w-80 border-l border-border bg-surface shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed top-0 right-0 bottom-0 z-40 w-96 border-l border-border bg-surface shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
       <div className="flex items-center justify-between p-4 border-b border-border bg-neutral/40">
         <div className="flex items-center gap-2">
           <Sparkles className="text-brand" size={18} />
-          <h3 className="text-sm font-bold text-text">AI Assistant</h3>
+          <h3 className="text-sm font-bold text-text">AI PM Co-Pilot</h3>
         </div>
         <button onClick={onClose} className="text-text-subtle hover:text-text">
           <X size={16} />
         </button>
       </div>
 
+      {/* Quick Superpower Action Chips */}
+      <div className="p-3 border-b border-border bg-neutral/20 flex flex-col gap-2">
+        <span className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">AI Superpower Actions</span>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => handleSuperpower("breakdown")}
+            className="px-2.5 py-1 rounded-full bg-brand/10 hover:bg-brand/20 border border-brand/30 text-[11px] font-semibold text-brand transition-colors text-left flex items-center gap-1"
+          >
+            <Zap size={12} /> Auto-Breakdown Feature
+          </button>
+          <button
+            onClick={() => handleSuperpower("releasenotes")}
+            className="px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-semibold text-emerald-600 transition-colors text-left flex items-center gap-1"
+          >
+            <FileText size={12} /> Release Notes
+          </button>
+          <button
+            onClick={() => handleSuperpower("audit")}
+            className="px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-[11px] font-semibold text-purple-600 transition-colors text-left flex items-center gap-1"
+          >
+            <ShieldCheck size={12} /> Risk Audit
+          </button>
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`p-3 rounded-lg text-xs leading-relaxed ${
+            className={`p-3 rounded-lg text-xs leading-relaxed whitespace-pre-wrap ${
               m.role === "user"
-                ? "bg-brand text-white ml-6 self-end"
-                : "bg-neutral text-text border border-border/60 mr-4 self-start"
+                ? "bg-brand text-white ml-6 self-end shadow-xs"
+                : "bg-neutral text-text border border-border/60 mr-4 self-start shadow-xs"
             }`}
           >
             {m.text}
           </div>
         ))}
+        {isThinking && (
+          <div className="p-3 rounded-lg text-xs bg-neutral text-text-subtle animate-pulse self-start">
+            Analyzing project context...
+          </div>
+        )}
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!input.trim()) return;
-          setMessages((prev) => [
-            ...prev,
-            { role: "user", text: input },
-            { role: "assistant", text: `I am analyzing "${input}". Project tasks are proceeding on schedule!` },
-          ]);
-          setInput("");
-        }}
-        className="p-3 border-t border-border bg-surface flex items-center gap-2"
-      >
+      <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-surface flex items-center gap-2">
         <input
           type="text"
-          placeholder="Ask AI about this space..."
+          placeholder="Ask AI or type feature request..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="flex-1 h-8 rounded border border-border px-2.5 text-xs outline-none focus:border-brand"
         />
-        <button type="submit" className="h-8 w-8 rounded bg-brand text-white flex items-center justify-center hover:bg-brand-hovered">
+        <button type="submit" className="h-8 w-8 rounded bg-brand text-white flex items-center justify-center hover:bg-brand-hovered transition-all">
           <Send size={13} />
         </button>
       </form>

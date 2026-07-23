@@ -4,6 +4,7 @@ vi.mock("./prisma", () => ({
   prisma: {
     invite: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     membership: { upsert: vi.fn() },
+    project: { findFirst: vi.fn() },
     $transaction: vi.fn(async (ops: unknown[]) => ops),
   },
 }));
@@ -40,7 +41,8 @@ describe("acceptInvite", () => {
     (prisma.invite.findUnique as any).mockResolvedValue({
       id: "i1", siteId: "s1", role: "MEMBER", expiresAt: new Date(Date.now() + 1000), acceptedAt: null,
     });
-    expect(await acceptInvite("t", "u1")).toEqual({ ok: true });
+    (prisma.project.findFirst as any).mockResolvedValue({ key: "TRK" });
+    expect(await acceptInvite("t", "u1")).toEqual({ ok: true, projectKey: "TRK", siteId: "s1" });
     expect(prisma.membership.upsert).toHaveBeenCalled();
     expect(prisma.invite.update).toHaveBeenCalled();
   });

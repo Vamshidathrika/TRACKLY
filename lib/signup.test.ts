@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./prisma", () => ({
   prisma: {
     user: { findUnique: vi.fn() },
+    invite: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
 }));

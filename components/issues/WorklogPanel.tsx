@@ -118,7 +118,7 @@ export function WorklogPanel({
                 <span className="font-semibold text-default">{log.author.name}</span>
                 <span className="text-subtlest font-mono">logged {log.hours}h</span>
                 {log.description && (
-                  <span className="text-subtle italic truncate max-w-64">"{log.description}"</span>
+                  <span className="text-subtle italic truncate max-w-64">&quot;{log.description}&quot;</span>
                 )}
               </div>
               <span className="text-subtlest text-[11px]">
