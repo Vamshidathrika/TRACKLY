@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getIssuesByProject } from "@/lib/issues";
-import { getAllUsers } from "@/lib/users";
+import { getUsersForSite } from "@/lib/users";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { BacklogView } from "@/components/backlog/BacklogView";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -35,10 +35,10 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
     await delCache(`user:chrome:${user.id}`);
   }
 
-  const [sprints, allIssues, allUsers] = await Promise.all([
+  const [sprints, allIssues, siteUsers] = await Promise.all([
     getSprintsByProject(project.id),
     getIssuesByProject(project.id),
-    getAllUsers(),
+    getUsersForSite(project.siteId),
   ]);
 
   const backlogIssues = allIssues.filter((i) => !i.sprintId);
@@ -59,7 +59,7 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
         projectKey={project.key}
         sprints={sprints}
         backlogIssues={backlogIssues.map((i) => ({ ...i, projectKey: project.key }))}
-        availableUsers={allUsers}
+        availableUsers={siteUsers}
       />
     </main>
   );

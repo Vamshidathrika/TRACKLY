@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
 import { getIssuesByProject } from "@/lib/issues";
-import { getAllUsers } from "@/lib/users";
+import { getUsersForSite } from "@/lib/users";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { IssueListContainer } from "@/components/issues/IssueListContainer";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -20,9 +20,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   if (!project) redirect("/projects");
 
-  const [issues, allUsers] = await Promise.all([
+  const [issues, siteUsers] = await Promise.all([
     getIssuesByProject(project.id),
-    getAllUsers(),
+    getUsersForSite(project.siteId),
   ]);
 
   return (
@@ -40,7 +40,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         title="Issues"
         issues={issues.map((i) => ({ ...i, projectKey: project.key }))}
         projectKey={project.key}
-        availableUsers={allUsers}
+        availableUsers={siteUsers}
       />
     </main>
   );

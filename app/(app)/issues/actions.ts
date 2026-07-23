@@ -60,8 +60,20 @@ export async function fetchUserProjectsAction() {
 }
 
 export async function fetchWorkspaceMembersAction() {
-  await getAuthUser();
+  const user = await getAuthUser();
+  const userMemberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    select: { siteId: true },
+  });
+  const siteIds = userMemberships.map((m) => m.siteId);
+  if (siteIds.length === 0) return [];
+
   return prisma.user.findMany({
+    where: {
+      memberships: {
+        some: { siteId: { in: siteIds } },
+      },
+    },
     select: { id: true, name: true, email: true, avatarUrl: true },
     orderBy: { name: "asc" },
   });
