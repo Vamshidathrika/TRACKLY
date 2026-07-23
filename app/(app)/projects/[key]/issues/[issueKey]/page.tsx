@@ -37,8 +37,7 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
 
   const [members, sprints, automationRules] = await Promise.all([
     prisma.user.findMany({
-      where: siteId ? { memberships: { some: { siteId } } } : undefined,
-      select: { id: true, name: true, avatarUrl: true },
+      select: { id: true, name: true, email: true, avatarUrl: true },
       orderBy: { name: "asc" },
     }),
     prisma.sprint.findMany({

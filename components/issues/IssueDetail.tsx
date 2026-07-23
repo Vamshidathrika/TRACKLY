@@ -568,7 +568,7 @@ export function IssueDetail({
                     >
                       <option value="">Unassigned</option>
                       {members.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
+                        <option key={u.id} value={u.id}>{u.name || u.email}</option>
                       ))}
                     </select>
                   </div>

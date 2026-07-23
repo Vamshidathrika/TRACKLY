@@ -58,3 +58,11 @@ export async function fetchUserProjectsAction() {
     orderBy: { name: "asc" },
   });
 }
+
+export async function fetchWorkspaceMembersAction() {
+  await getAuthUser();
+  return prisma.user.findMany({
+    select: { id: true, name: true, email: true, avatarUrl: true },
+    orderBy: { name: "asc" },
+  });
+}

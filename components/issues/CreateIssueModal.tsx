@@ -5,16 +5,18 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { createIssueAction, fetchUserProjectsAction } from "@/app/(app)/issues/actions";
+import { createIssueAction, fetchUserProjectsAction, fetchWorkspaceMembersAction } from "@/app/(app)/issues/actions";
 
 export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<{ id: string; name: string; key: string }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [state, action, pending] = useActionState(createIssueAction, {} as { error?: string; success?: boolean });
 
   useEffect(() => {
     if (open) {
       fetchUserProjectsAction().then(setProjects);
+      fetchWorkspaceMembersAction().then(setMembers);
     }
   }, [open]);
 
@@ -85,6 +87,22 @@ export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
                 placeholder="Add more detail..."
                 className="rounded-ds border-2 border-border bg-surface p-2 text-sm outline-none transition-colors focus:border-brand"
               />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-text-subtle">Assignee</label>
+              <select
+                name="assigneeId"
+                defaultValue=""
+                className="h-9 rounded-ds border-2 border-border bg-surface px-2 text-sm outline-none transition-colors focus:border-brand"
+              >
+                <option value="">Unassigned</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name || m.email}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
