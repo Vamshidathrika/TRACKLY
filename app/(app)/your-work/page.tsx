@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { getAllUsers } from "@/lib/users";
+import { getUsersForSite } from "@/lib/users";
 import { YourWorkView } from "./YourWorkView";
 
 export default async function YourWorkPage() {
@@ -37,7 +37,7 @@ export default async function YourWorkPage() {
           orderBy: { createdAt: "desc" },
         })
       : [],
-    getAllUsers(),
+    siteIds.length > 0 ? getUsersForSite(siteIds[0]) : [],
   ]);
 
   return (

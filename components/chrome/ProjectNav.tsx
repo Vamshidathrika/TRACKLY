@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Folder, List, Columns3, BarChart3, Calendar, Settings, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Folder, List, Columns3, BarChart3, Calendar, Settings, Star, ChevronLeft, ChevronRight, LayoutDashboard } from "lucide-react";
 import { NavItem } from "./GlobalSidebar";
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 
@@ -92,6 +92,7 @@ export function ProjectNav({
       </div>
 
       <nav className="flex flex-col gap-0.5">
+        <NavItem href={`/projects/${projectKey}/summary`} label="Summary" icon={LayoutDashboard} />
         <NavItem href={`/projects/${projectKey}`} label="Tickets List" icon={Folder} />
         <NavItem href={`/projects/${projectKey}/backlog`} label="Backlog" icon={List} />
         <NavItem href={`/projects/${projectKey}/board`} label="Board" icon={Columns3} />

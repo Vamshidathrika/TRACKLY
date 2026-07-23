@@ -83,8 +83,10 @@ export function IssueFilterToolbar({
     (priorityFilter !== "ALL" ? 1 : 0) +
     (typeFilter !== "ALL" ? 1 : 0);
 
-  const displayedUsers = users.slice(0, 7);
-  const extraUserCount = Math.max(0, users.length - 7);
+  const displayedUsers = Array.from(
+    new Map(users.map((u) => [(u.name || u.id).toLowerCase().trim(), u])).values()
+  ).slice(0, 7);
+  const extraUserCount = Math.max(0, users.length - displayedUsers.length);
 
   return (
     <div className="flex flex-col gap-3 mb-4">

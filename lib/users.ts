@@ -31,12 +31,22 @@ export const getUsersForSite = cache(async (siteId: string): Promise<UserOption[
       orderBy: { user: { name: "asc" } },
     });
 
-    return memberships.map((m) => ({
-      id: m.user.id,
-      name: m.user.name || m.user.email || "Teammate",
-      avatarUrl: m.user.avatarUrl,
-      email: m.user.email,
-    }));
+    const userMap = new Map<string, UserOption>();
+    memberships.forEach((m) => {
+      const email = m.user.email?.toLowerCase().trim() || m.user.id;
+      if (email !== "demo@trackly.dev" && !email.includes("demo@")) {
+        if (!userMap.has(email)) {
+          userMap.set(email, {
+            id: m.user.id,
+            name: m.user.name || m.user.email || "Teammate",
+            avatarUrl: m.user.avatarUrl,
+            email: m.user.email,
+          });
+        }
+      }
+    });
+
+    return Array.from(userMap.values());
   } catch (e) {
     console.error("Failed to fetch site users:", e);
     return [];
@@ -92,12 +102,17 @@ export const getUsersForAuthUser = cache(async (userId: string): Promise<UserOpt
 
     const userMap = new Map<string, UserOption>();
     siteMemberships.forEach((m) => {
-      userMap.set(m.user.id, {
-        id: m.user.id,
-        name: m.user.name || m.user.email || "Teammate",
-        avatarUrl: m.user.avatarUrl,
-        email: m.user.email,
-      });
+      const email = m.user.email?.toLowerCase().trim() || m.user.id;
+      if (email !== "demo@trackly.dev" && !email.includes("demo@")) {
+        if (!userMap.has(email)) {
+          userMap.set(email, {
+            id: m.user.id,
+            name: m.user.name || m.user.email || "Teammate",
+            avatarUrl: m.user.avatarUrl,
+            email: m.user.email,
+          });
+        }
+      }
     });
 
     return Array.from(userMap.values());
@@ -128,12 +143,21 @@ export const getAllUsers = cache(
         },
         orderBy: { name: "asc" },
       });
-      return users.map((u) => ({
-        id: u.id,
-        name: u.name || u.email || "Teammate",
-        avatarUrl: u.avatarUrl,
-        email: u.email,
-      }));
+      const userMap = new Map<string, UserOption>();
+      users.forEach((u) => {
+        const email = u.email?.toLowerCase().trim() || u.id;
+        if (email !== "demo@trackly.dev" && !email.includes("demo@")) {
+          if (!userMap.has(email)) {
+            userMap.set(email, {
+              id: u.id,
+              name: u.name || u.email || "Teammate",
+              avatarUrl: u.avatarUrl,
+              email: u.email,
+            });
+          }
+        }
+      });
+      return Array.from(userMap.values());
     } catch (e) {
       console.error("Failed to fetch users:", e);
       return [];
