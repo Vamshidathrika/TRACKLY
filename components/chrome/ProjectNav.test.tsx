@@ -22,6 +22,6 @@ it("renders project header, items, active board, disabled timeline", () => {
   );
   expect(screen.getByText("Trackly Core")).toBeInTheDocument();
   expect(screen.getByText("Board").closest("a")).toHaveClass("bg-selected");
-  expect(screen.getByText("Timeline")).toHaveClass("cursor-not-allowed");
+  expect(screen.getByText("Timeline").parentElement).toHaveClass("cursor-not-allowed");
   expect(screen.getByRole("button", { name: "Star project" })).toBeInTheDocument();
 });
