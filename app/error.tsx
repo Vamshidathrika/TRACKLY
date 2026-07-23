@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 export default function AppError({
   error,
@@ -10,7 +11,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  if (error.digest?.startsWith("NEXT_REDIRECT")) {
+  if (isRedirectError(error) || error.digest?.startsWith("NEXT_REDIRECT")) {
     throw error;
   }
 

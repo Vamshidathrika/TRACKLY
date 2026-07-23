@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
-// Last line of defence: catches errors thrown in the root layout itself, where
-// app/error.tsx cannot render. Must ship its own <html>/<body>.
 export default function GlobalError({
   error,
   reset,
@@ -11,7 +10,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  if (error.digest?.startsWith("NEXT_REDIRECT")) {
+  if (isRedirectError(error) || error.digest?.startsWith("NEXT_REDIRECT")) {
     throw error;
   }
 
@@ -51,21 +50,38 @@ export default function GlobalError({
             {error.message}
           </p>
         )}
-        <button
-          onClick={reset}
-          style={{
-            border: 0,
-            borderRadius: "4px",
-            background: "#0c66e4",
-            color: "#fff",
-            fontSize: "14px",
-            fontWeight: 600,
-            padding: "8px 16px",
-            cursor: "pointer",
-          }}
-        >
-          Reload
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            onClick={reset}
+            style={{
+              border: 0,
+              borderRadius: "4px",
+              background: "#0c66e4",
+              color: "#fff",
+              fontSize: "14px",
+              fontWeight: 600,
+              padding: "8px 16px",
+              cursor: "pointer",
+            }}
+          >
+            Reload
+          </button>
+          <a
+            href="/login"
+            style={{
+              borderRadius: "4px",
+              background: "#e9f2ff",
+              color: "#0c66e4",
+              fontSize: "14px",
+              fontWeight: 600,
+              padding: "8px 16px",
+              textDecoration: "none",
+              display: "inline-block",
+            }}
+          >
+            Sign In
+          </a>
+        </div>
       </body>
     </html>
   );
