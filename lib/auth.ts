@@ -60,14 +60,15 @@ export type AuthUser = {
 
 export const getAuthUser = cache(async (): Promise<AuthUser> => {
   const session = await auth();
+  const userSub = (session?.user as any)?.sub;
+  const userKey = session?.user?.id || session?.user?.email || userSub;
 
-  const userKey = session?.user?.id || session?.user?.email;
   if (userKey) {
     const cacheKey = `user:auth:${userKey.toLowerCase()}`;
     const cachedUser = await getCache<AuthUser>(cacheKey);
     if (cachedUser) return cachedUser;
 
-    const userId = session?.user?.id;
+    const userId = session?.user?.id || userSub;
     const userEmail = session?.user?.email;
 
     const dbUser = await prisma.user.findFirst({

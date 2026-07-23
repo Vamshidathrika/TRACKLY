@@ -20,7 +20,9 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as { id?: string }).id = token.userId as string;
+      if (session.user) {
+        (session.user as { id?: string }).id = (token.userId || token.sub) as string;
+      }
       return session;
     },
     authorized({ auth, request }) {

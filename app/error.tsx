@@ -35,16 +35,22 @@ export default function AppError({
           </p>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center flex-wrap gap-2">
         <button
           onClick={reset}
-          className="rounded-ds bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hovered"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hovered transition-colors shadow-xs"
         >
           Try again
         </button>
         <Link
+          href="/login"
+          className="rounded-lg bg-brand/10 border border-brand/30 text-brand px-4 py-2 text-sm font-semibold hover:bg-brand/20 transition-colors"
+        >
+          Sign In / Re-authenticate
+        </Link>
+        <Link
           href="/your-work"
-          className="rounded-ds border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-neutral-hovered"
+          className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-neutral-hovered transition-colors"
         >
           Back to Your work
         </Link>
