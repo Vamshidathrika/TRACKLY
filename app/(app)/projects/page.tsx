@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { getProjects } from "@/lib/projects";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
@@ -10,17 +9,23 @@ import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 export default async function ProjectsPage() {
   const user = await getAuthUser();
 
-  let membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  if (!membership) {
-    const site = await prisma.site.findFirst();
-    if (site) {
-      membership = await prisma.membership.create({
-        data: { userId: user.id, siteId: site.id, role: "ADMIN" },
-      });
-    }
-  }
+  const memberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    select: { siteId: true },
+  });
 
-  const projects = membership ? await getProjects(membership.siteId) : [];
+  const siteIds = memberships.map((m) => m.siteId);
+
+  const projects = siteIds.length > 0
+    ? await prisma.project.findMany({
+        where: { siteId: { in: siteIds } },
+        include: {
+          lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          _count: { select: { issues: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
 
   return (
     <main className="flex-1 px-10 py-6">
@@ -61,8 +66,8 @@ export default async function ProjectsPage() {
                   <Tag color={p.type === "SCRUM" ? "blue" : "gray"}>{p.type}</Tag>
                 </td>
                 <td className="flex items-center gap-2 py-2">
-                  <Avatar name={p.lead.name} src={p.lead.avatarUrl} size={24} />
-                  <span>{p.lead.name}</span>
+                  <Avatar name={p.lead.name ?? p.lead.email} src={p.lead.avatarUrl} size={24} />
+                  <span>{p.lead.name ?? p.lead.email}</span>
                 </td>
                 <td className="text-text-subtle">{p._count.issues}</td>
               </tr>

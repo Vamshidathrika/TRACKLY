@@ -33,13 +33,15 @@ export async function createProjectAction(
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   try {
-    await createProject({
+    const project = await createProject({
       siteId: membership.siteId,
       name: parsed.data.name,
       key: parsed.data.key,
       type: (parsed.data.type as ProjectType) ?? "KANBAN",
       leadId: user.id,
     });
+    const { delCache } = await import("@/lib/redis");
+    await delCache(`user:chrome:${user.id}`);
     revalidatePath("/projects");
     return { success: true };
   } catch (e) {
