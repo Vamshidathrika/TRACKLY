@@ -34,10 +34,11 @@ export function parseJQLToPrisma(jql: string): Record<string, any> {
     if (notEqualsMatch) {
       const [, field, val] = notEqualsMatch;
       const f = field.toLowerCase();
-      if (f === "status") where.status = { not: val.toUpperCase() as IssueStatus };
-      if (f === "type") where.type = { not: val.toUpperCase() as IssueType };
-      if (f === "priority") where.priority = { not: val.toUpperCase() as IssuePriority };
-      if (f === "project") where.project = { key: { not: val.toUpperCase() } };
+      const norm = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+      if (f === "status") where.status = { not: norm as IssueStatus };
+      if (f === "type") where.type = { not: norm as IssueType };
+      if (f === "priority") where.priority = { not: norm as IssuePriority };
+      if (f === "project") where.project = { key: { not: norm } };
       continue;
     }
 
@@ -46,11 +47,12 @@ export function parseJQLToPrisma(jql: string): Record<string, any> {
     if (equalsMatch) {
       const [, field, val] = equalsMatch;
       const f = field.toLowerCase();
-      if (f === "status") where.status = val.toUpperCase() as IssueStatus;
-      if (f === "type") where.type = val.toUpperCase() as IssueType;
-      if (f === "priority") where.priority = val.toUpperCase() as IssuePriority;
-      if (f === "project") where.project = { key: val.toUpperCase() };
-      if (f === "key") where.key = val.toUpperCase();
+      const norm = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+      if (f === "status") where.status = norm as IssueStatus;
+      if (f === "type") where.type = norm as IssueType;
+      if (f === "priority") where.priority = norm as IssuePriority;
+      if (f === "project") where.project = { key: norm };
+      if (f === "key") where.key = norm;
       continue;
     }
   }

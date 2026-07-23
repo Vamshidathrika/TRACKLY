@@ -15,7 +15,7 @@ export async function canUserChangeStatus(issueId: string, userId: string): Prom
     where: { userId, role: "ADMIN" },
   });
 
-  return !!membership || true; // Allow status changes in workspace
+  return !!membership; // Only Admin or Assignee can update status
 }
 
 export async function createIssue(input: {

@@ -97,13 +97,7 @@ export function ProjectNav({
         <Item href={`/projects/${projectKey}/backlog`} label="Backlog" icon={List} />
         <Item href={`/projects/${projectKey}/board`} label="Board" icon={Columns3} />
         <Item href={`/projects/${projectKey}/reports`} label="Reports" icon={BarChart3} />
-        <Item
-          href={`/projects/${projectKey}/timeline`}
-          label="Timeline"
-          icon={Calendar}
-          disabled
-          title="Coming soon"
-        />
+        <Item href={`/projects/${projectKey}/timeline`} label="Timeline" icon={Calendar} />
         <Item href={`/projects/${projectKey}/settings`} label="Settings" icon={Settings} />
       </nav>
     </aside>

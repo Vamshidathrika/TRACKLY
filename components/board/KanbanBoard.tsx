@@ -695,6 +695,7 @@ export function KanbanBoard({
                     onAssigneeChange={handleAssigneeChange}
                     availableUsers={boardUsers}
                     currentUserId={currentUserId}
+                    wipLimit={colStatus === "IN_PROGRESS" ? 5 : null}
                   />
 
                   <div className="px-1 mt-1">

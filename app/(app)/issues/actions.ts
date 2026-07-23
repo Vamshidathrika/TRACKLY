@@ -78,3 +78,97 @@ export async function fetchWorkspaceMembersAction() {
     orderBy: { name: "asc" },
   });
 }
+
+export async function createSubtaskAction(input: {
+  parentIssueId: string;
+  projectId: string;
+  summary: string;
+}) {
+  const user = await getAuthUser();
+  const subtask = await createIssue({
+    projectId: input.projectId,
+    summary: input.summary,
+    type: "SUBTASK",
+    parentId: input.parentIssueId,
+    reporterId: user.id,
+  });
+  revalidatePath("/projects");
+  return subtask;
+}
+
+export async function createIssueLinkAction(input: {
+  sourceIssueId: string;
+  targetIssueKey: string;
+  relation: "RELATES_TO" | "BLOCKS" | "IS_BLOCKED_BY" | "DUPLICATES";
+}) {
+  const target = await prisma.issue.findFirst({
+    where: { key: input.targetIssueKey.toUpperCase().trim() },
+    select: { id: true },
+  });
+  if (!target) throw new Error(`Target issue ${input.targetIssueKey} not found.`);
+
+  const link = await prisma.issueLink.create({
+    data: {
+      sourceIssueId: input.sourceIssueId,
+      targetIssueId: target.id,
+      relation: input.relation,
+    },
+  });
+  revalidatePath("/projects");
+  return link;
+}
+
+export async function deleteIssueLinkAction(linkId: string) {
+  await getAuthUser();
+  await prisma.issueLink.delete({ where: { id: linkId } });
+  revalidatePath("/projects");
+  return { success: true };
+}
+
+export async function logWorkAction(input: {
+  issueId: string;
+  hours: number;
+  description?: string;
+}) {
+  const user = await getAuthUser();
+  const log = await prisma.workLog.create({
+    data: {
+      issueId: input.issueId,
+      authorId: user.id,
+      hours: input.hours,
+      description: input.description,
+    },
+  });
+  revalidatePath("/projects");
+  return log;
+}
+
+export async function uploadAttachmentAction(input: {
+  issueId: string;
+  filename: string;
+  url: string;
+  mimeType: string;
+  sizeBytes: number;
+}) {
+  const user = await getAuthUser();
+  const attachment = await prisma.attachment.create({
+    data: {
+      issueId: input.issueId,
+      uploaderId: user.id,
+      filename: input.filename,
+      url: input.url,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+    },
+  });
+  revalidatePath("/projects");
+  return attachment;
+}
+
+export async function deleteAttachmentAction(attachmentId: string) {
+  await getAuthUser();
+  await prisma.attachment.delete({ where: { id: attachmentId } });
+  revalidatePath("/projects");
+  return { success: true };
+}
+

@@ -39,6 +39,11 @@ describe("jql engine", () => {
     expect(suggestions).toContain("type");
   });
 
+  it("parses status with spaces into normalized enum", () => {
+    const where = parseJQLToPrisma('status = "To Do"');
+    expect(where).toEqual({ status: "TO_DO" });
+  });
+
   it("provides value suggestions after status =", () => {
     const suggestions = getJQLSuggestions("status = ");
     expect(suggestions).toContain("IN_PROGRESS");
