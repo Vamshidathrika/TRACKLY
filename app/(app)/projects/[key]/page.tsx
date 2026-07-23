@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { getProjectByKey } from "@/lib/projects";
 import { getIssuesByProject } from "@/lib/issues";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { IssueTable } from "@/components/issues/IssueTable";
@@ -10,12 +9,14 @@ import { Button } from "@/components/ui/Button";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
+  const upperKey = key.toUpperCase();
   const user = await getAuthUser();
 
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
+  const project = await prisma.project.findFirst({
+    where: { key: upperKey },
+    select: { id: true, key: true, name: true, type: true, siteId: true },
+  });
 
-  const project = await getProjectByKey(siteId, key);
   if (!project) redirect("/projects");
 
   const issues = await getIssuesByProject(project.id);

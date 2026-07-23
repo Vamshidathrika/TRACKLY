@@ -46,12 +46,14 @@ export async function createIssueAction(
 
 export async function fetchUserProjectsAction() {
   const user = await getAuthUser();
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id;
-  if (!siteId) return [];
-
   return prisma.project.findMany({
-    where: { siteId },
+    where: {
+      site: {
+        memberships: {
+          some: { userId: user.id },
+        },
+      },
+    },
     select: { id: true, name: true, key: true },
     orderBy: { name: "asc" },
   });
