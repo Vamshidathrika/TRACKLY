@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "./prisma";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -129,7 +130,7 @@ export async function updateIssue(
   return updated;
 }
 
-export async function getIssuesByProject(projectId: string) {
+export const getIssuesByProject = cache(async (projectId: string) => {
   return prisma.issue.findMany({
     where: { projectId },
     include: {
@@ -138,7 +139,7 @@ export async function getIssuesByProject(projectId: string) {
     },
     orderBy: { createdAt: "desc" },
   });
-}
+});
 
 import { getCache, setCache, delCache } from "./redis";
 
@@ -146,14 +147,14 @@ export async function getIssueByKey(siteId: string, key: string) {
   const upperKey = key.toUpperCase();
   const cacheKey = `issue:${upperKey}`;
   const cached = await getCache<any>(cacheKey);
-  if (cached) return cached;
+  if (cached && cached.project?.siteId) return cached;
 
   const issue = await prisma.issue.findFirst({
     where: {
       OR: [{ key: upperKey }, { key }],
     },
     include: {
-      project: { select: { id: true, name: true, key: true } },
+      project: { select: { id: true, name: true, key: true, siteId: true } },
       reporter: { select: { id: true, name: true, avatarUrl: true } },
       assignee: { select: { id: true, name: true, avatarUrl: true } },
       watchers: { select: { userId: true } },

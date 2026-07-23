@@ -1,8 +1,28 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProjectNav } from "@/components/chrome/ProjectNav";
 import { RecentTracker } from "@/components/chrome/RecentTracker";
+
+const getCachedProject = cache(async (upperKey: string) => {
+  return prisma.project.findFirst({
+    where: { key: upperKey },
+    select: { id: true, key: true, name: true, siteId: true },
+  });
+});
+
+const getCachedMembership = cache(async (userId: string, siteId: string) => {
+  return prisma.membership.findFirst({
+    where: { userId, siteId },
+  });
+});
+
+const getCachedStar = cache(async (userId: string, projectId: string) => {
+  return prisma.star.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+  });
+});
 
 export default async function ProjectLayout({
   children,
@@ -17,18 +37,14 @@ export default async function ProjectLayout({
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  // 1. Find project globally by key across all workspace sites
-  const project = await prisma.project.findFirst({
-    where: { key: upperKey },
-    select: { id: true, key: true, name: true, siteId: true },
-  });
-
+  const project = await getCachedProject(upperKey);
   if (!project) redirect("/projects");
 
-  // 2. Collaborative Access: Ensure visiting user has a membership in project.siteId
-  const membership = await prisma.membership.findFirst({
-    where: { userId, siteId: project.siteId },
-  });
+  // Fetch membership & star concurrently
+  const [membership, star] = await Promise.all([
+    getCachedMembership(userId, project.siteId),
+    getCachedStar(userId, project.id),
+  ]);
 
   if (!membership) {
     await prisma.membership.create({
@@ -41,11 +57,6 @@ export default async function ProjectLayout({
     const { delCache } = await import("@/lib/redis");
     await delCache(`user:chrome:${userId}`);
   }
-
-  // 3. Check if project is starred
-  const star = await prisma.star.findUnique({
-    where: { userId_projectId: { userId, projectId: project.id } },
-  });
 
   return (
     <div className="flex h-full min-h-0 flex-1">

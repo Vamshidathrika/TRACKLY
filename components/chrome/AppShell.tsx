@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { TopBar, type ChromeUser } from "./TopBar";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { AICopilotDrawer } from "@/components/ai/AICopilotDrawer";
+import { NavigationProgress } from "@/components/nav/NavigationProgress";
 
 import { useShortcuts } from "@/lib/shortcuts";
 import { CommandPalette } from "./CommandPalette";
@@ -53,6 +54,9 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
 
   return (
     <div className="flex h-screen flex-col">
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <TopBar
         user={user}
         onToggleSidebar={toggleSidebar}
