@@ -53,7 +53,7 @@ export function MetricsRow({ metrics }: { metrics: SummaryMetrics }) {
     {
       label: "Created (7d)",
       value: metrics.created7d,
-      subtext: "New tickets opened",
+      subtext: "New tasks opened",
       icon: PlusCircle,
       color: "text-purple bg-purple/10 border-purple/20",
     },

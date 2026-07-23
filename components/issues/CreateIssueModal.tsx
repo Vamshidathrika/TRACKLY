@@ -105,7 +105,7 @@ export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border-default">
             <Dialog.Title className="text-[16px] font-bold text-default">
-              Create issue
+              Create task
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
@@ -119,9 +119,9 @@ export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
 
           <form action={action} className="flex flex-col gap-4 px-6 py-5">
 
-            {/* Issue Type — pill selector */}
+            {/* Task Type — pill selector */}
             <FieldInput>
-              <FieldLabel label="Issue type" required />
+              <FieldLabel label="Task type" required />
               <div className="flex flex-wrap gap-1.5">
                 {ISSUE_TYPES.map((t) => (
                   <button
@@ -249,7 +249,7 @@ export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
                 disabled={pending || projects.length === 0}
                 className="h-9 px-5 rounded-[8px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hovered active:scale-[0.97] transition-all disabled:opacity-50 shadow-sm"
               >
-                {pending ? "Creating…" : "Create issue"}
+                {pending ? "Creating…" : "Create task"}
               </button>
             </div>
           </form>

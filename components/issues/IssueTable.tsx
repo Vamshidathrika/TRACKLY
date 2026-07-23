@@ -144,7 +144,7 @@ export function IssueTable({
   if (activeIssues.length === 0) {
     return (
       <div className="mt-12 text-center text-sm text-text-subtle py-8">
-        No issues found. Use the &ldquo;Create&rdquo; button in the top navigation to add one!
+        No tasks found. Use the &ldquo;Create&rdquo; button in the top navigation to add one!
       </div>
     );
   }

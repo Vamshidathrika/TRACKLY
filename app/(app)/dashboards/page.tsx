@@ -146,7 +146,7 @@ export default async function DashboardsPage() {
           <CreateIssueModal
             trigger={
               <Button appearance="primary" className="shrink-0 flex items-center gap-1.5">
-                + Deploy Ticket
+                + Deploy Task
               </Button>
             }
           />

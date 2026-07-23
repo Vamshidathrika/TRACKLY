@@ -44,7 +44,7 @@ export function ProjectNav({
 
   const navItems = [
     { href: `/projects/${projectKey}/summary`, label: "Summary", icon: LayoutDashboard },
-    { href: `/projects/${projectKey}`, label: "Tickets List", icon: Folder, exact: true },
+    { href: `/projects/${projectKey}`, label: "Tasks List", icon: Folder, exact: true },
     { href: `/projects/${projectKey}/backlog`, label: "Backlog", icon: List },
     { href: `/projects/${projectKey}/board`, label: "Board", icon: Columns3 },
     { href: `/projects/${projectKey}/reports`, label: "Reports", icon: BarChart3 },
