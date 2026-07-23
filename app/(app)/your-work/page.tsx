@@ -4,8 +4,13 @@ import { YourWorkView } from "./YourWorkView";
 
 export default async function YourWorkPage() {
   const user = await getAuthUser();
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? "";
+  const memberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    include: { site: { include: { projects: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const siteIds = memberships.map((m) => m.siteId);
 
   const [assignedIssues, reportedIssues, userProjects] = await Promise.all([
     prisma.issue.findMany({
@@ -18,9 +23,9 @@ export default async function YourWorkPage() {
       include: { project: { select: { key: true, name: true } } },
       orderBy: { updatedAt: "desc" },
     }),
-    siteId
+    siteIds.length > 0
       ? prisma.project.findMany({
-          where: { siteId },
+          where: { siteId: { in: siteIds } },
           select: { id: true, key: true, name: true, _count: { select: { issues: true } } },
           orderBy: { createdAt: "desc" },
         })

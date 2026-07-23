@@ -16,7 +16,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const session = await auth();
   if (!session?.user) redirect(`/login?callbackUrl=/invite/${token}`);
   const result = await acceptInvite(token, (session.user as { id: string }).id);
-  if (result.ok) redirect("/your-work");
+  if (result.ok) {
+    if (result.projectKey) {
+      redirect(`/projects/${result.projectKey}`);
+    }
+    redirect("/your-work");
+  }
   return (
     <div className="flex flex-col gap-3 text-center">
       <p className="text-sm text-text">{messages[result.reason]}</p>

@@ -80,6 +80,27 @@ export const getAuthUser = cache(async (): Promise<AuthUser> => {
     });
 
     if (dbUser) {
+      const pendingInvite = await prisma.invite.findFirst({
+        where: {
+          email: dbUser.email.toLowerCase(),
+          acceptedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (pendingInvite) {
+        await prisma.$transaction([
+          prisma.membership.upsert({
+            where: { userId_siteId: { userId: dbUser.id, siteId: pendingInvite.siteId } },
+            create: { userId: dbUser.id, siteId: pendingInvite.siteId, role: pendingInvite.role },
+            update: {},
+          }),
+          prisma.invite.update({ where: { id: pendingInvite.id }, data: { acceptedAt: new Date() } }),
+        ]);
+        const { delCache } = await import("./redis");
+        await delCache(`user:chrome:${dbUser.id}`);
+      }
+
       const authUser: AuthUser = {
         id: dbUser.id,
         name: dbUser.name,

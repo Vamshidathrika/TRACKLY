@@ -19,13 +19,23 @@ export async function acceptInvite(token: string, userId: string) {
   if (!invite) return { ok: false as const, reason: "INVALID" as const };
   if (invite.acceptedAt) return { ok: false as const, reason: "USED" as const };
   if (invite.expiresAt < new Date()) return { ok: false as const, reason: "EXPIRED" as const };
+
+  const project = await prisma.project.findFirst({
+    where: { siteId: invite.siteId },
+    orderBy: { createdAt: "desc" },
+  });
+
   await prisma.$transaction([
     prisma.membership.upsert({
       where: { userId_siteId: { userId, siteId: invite.siteId } },
       create: { userId, siteId: invite.siteId, role: invite.role },
-      update: {},
+      update: { role: invite.role },
     }),
     prisma.invite.update({ where: { id: invite.id }, data: { acceptedAt: new Date() } }),
   ]);
-  return { ok: true as const };
+
+  const { delCache } = await import("./redis");
+  await delCache(`user:chrome:${userId}`);
+
+  return { ok: true as const, projectKey: project?.key, siteId: invite.siteId };
 }
