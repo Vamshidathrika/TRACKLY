@@ -10,6 +10,10 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  if (error.digest?.startsWith("NEXT_REDIRECT")) {
+    throw error;
+  }
+
   useEffect(() => {
     console.error("Unhandled application error:", error);
   }, [error]);
@@ -20,10 +24,17 @@ export default function AppError({
       <p className="max-w-md text-sm text-text-subtle">
         This page hit an unexpected error. Your data is safe — retrying usually fixes it.
       </p>
-      {/* The digest is the only handle on the server-side stack, so surface it. */}
-      {error.digest && (
-        <p className="font-mono text-[11px] text-text-subtle">Reference: {error.digest}</p>
-      )}
+      {/* Surface error digest & error message for diagnostic visibility */}
+      <div className="flex flex-col gap-1 max-w-lg w-full bg-neutral/50 p-3 rounded-lg border border-border text-left font-mono text-[11px]">
+        {error.digest && (
+          <p className="text-text-subtle">Reference: <span className="font-bold text-text">{error.digest}</span></p>
+        )}
+        {error.message && (
+          <p className="text-danger font-semibold break-words leading-relaxed">
+            {error.message}
+          </p>
+        )}
+      </div>
       <div className="flex items-center gap-2">
         <button
           onClick={reset}

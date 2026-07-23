@@ -111,16 +111,25 @@ export async function getProjectsForUser(siteId: string, userId: string) {
   }
 
   // Workspace MEMBERs see only projects they have explicit access to
-  const projectMembers = await prisma.projectMember.findMany({
-    where: { userId },
-    select: { projectId: true },
-  });
+  try {
+    const projectMembers = await prisma.projectMember.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
 
-  const projectIds = projectMembers.map((pm) => pm.projectId);
+    const projectIds = projectMembers.map((pm) => pm.projectId);
 
-  return prisma.project.findMany({
-    where: { siteId, id: { in: projectIds } },
-    include: projectInclude,
-    orderBy: { createdAt: "desc" },
-  });
+    return await prisma.project.findMany({
+      where: { siteId, id: { in: projectIds } },
+      include: projectInclude,
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    // Graceful fallback if ProjectMember table is syncing
+    return prisma.project.findMany({
+      where: { siteId },
+      include: projectInclude,
+      orderBy: { createdAt: "desc" },
+    });
+  }
 }

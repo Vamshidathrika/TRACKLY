@@ -11,6 +11,10 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  if (error.digest?.startsWith("NEXT_REDIRECT")) {
+    throw error;
+  }
+
   useEffect(() => {
     console.error("Fatal application error:", error);
   }, [error]);
@@ -40,6 +44,11 @@ export default function GlobalError({
         {error.digest && (
           <p style={{ fontFamily: "monospace", fontSize: "11px", color: "#626f86" }}>
             Reference: {error.digest}
+          </p>
+        )}
+        {error.message && (
+          <p style={{ fontFamily: "monospace", fontSize: "11px", color: "#de350b", maxWidth: "500px", wordBreak: "break-word" }}>
+            {error.message}
           </p>
         )}
         <button
