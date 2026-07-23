@@ -1,5 +1,3 @@
-import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
 import { getSavedFiltersAction, executeJQLQueryAction } from "@/app/(app)/filters/actions";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { JQLNavigator } from "@/components/search/JQLNavigator";
@@ -12,7 +10,6 @@ export default async function FilterSearchPage({
   searchParams: Promise<{ jql?: string }>;
 }) {
   const { jql } = await searchParams;
-  const user = await getAuthUser();
 
   const savedFilters = await getSavedFiltersAction();
   const initialJql = jql || "status = IN_PROGRESS OR status = TO_DO";
