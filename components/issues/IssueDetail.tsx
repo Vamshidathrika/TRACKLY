@@ -98,7 +98,7 @@ export function IssueDetail({
   issue: any;
   currentUserId: string;
   isAdmin?: boolean;
-  members?: { id: string; name: string; avatarUrl?: string | null }[];
+  members?: { id: string; name: string; email?: string | null; avatarUrl?: string | null }[];
   sprints?: { id: string; name: string; status: string }[];
   automationRules?: any[];
 }) {
