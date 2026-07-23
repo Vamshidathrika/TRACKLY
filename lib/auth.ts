@@ -48,6 +48,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
+import { cache } from "react";
+import { getCache, setCache } from "./redis";
+
 export type AuthUser = {
   id: string;
   name: string | null;
@@ -55,29 +58,39 @@ export type AuthUser = {
   image: string | null;
 };
 
-export async function getAuthUser(): Promise<AuthUser> {
+export const getAuthUser = cache(async (): Promise<AuthUser> => {
   const session = await auth();
 
-  if (session?.user?.id || session?.user?.email) {
+  const userKey = session?.user?.id || session?.user?.email;
+  if (userKey) {
+    const cacheKey = `user:auth:${userKey.toLowerCase()}`;
+    const cachedUser = await getCache<AuthUser>(cacheKey);
+    if (cachedUser) return cachedUser;
+
+    const userId = session?.user?.id;
+    const userEmail = session?.user?.email;
+
     const dbUser = await prisma.user.findFirst({
       where: {
         OR: [
-          ...(session.user.id ? [{ id: session.user.id }] : []),
-          ...(session.user.email ? [{ email: session.user.email.toLowerCase() }] : []),
+          ...(userId ? [{ id: userId }] : []),
+          ...(userEmail ? [{ email: userEmail.toLowerCase() }] : []),
         ],
       },
     });
 
     if (dbUser) {
-      return {
+      const authUser: AuthUser = {
         id: dbUser.id,
         name: dbUser.name,
         email: dbUser.email,
         image: dbUser.avatarUrl,
       };
+      await setCache(cacheKey, authUser, 600); // 10 minutes cache
+      return authUser;
     }
   }
 
   const { redirect } = await import("next/navigation");
   return redirect("/login") as never;
-}
+});

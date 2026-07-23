@@ -122,6 +122,10 @@ export async function updateIssue(
     });
   }
 
+  if (current?.key) {
+    await delCache(`issue:${current.key.toUpperCase()}`);
+  }
+
   return updated;
 }
 
@@ -136,8 +140,14 @@ export async function getIssuesByProject(projectId: string) {
   });
 }
 
+import { getCache, setCache, delCache } from "./redis";
+
 export async function getIssueByKey(siteId: string, key: string) {
   const upperKey = key.toUpperCase();
+  const cacheKey = `issue:${upperKey}`;
+  const cached = await getCache<any>(cacheKey);
+  if (cached) return cached;
+
   const issue = await prisma.issue.findFirst({
     where: {
       OR: [{ key: upperKey }, { key }],
@@ -178,15 +188,26 @@ export async function getIssueByKey(siteId: string, key: string) {
     },
   });
 
+  if (issue) {
+    await setCache(cacheKey, issue, 180); // 3 minutes cache
+  }
+
   return issue;
 }
 
 export async function addComment(input: { issueId: string; authorId: string; body: string }) {
-  return prisma.comment.create({
+  const comment = await prisma.comment.create({
     data: {
       issueId: input.issueId,
       authorId: input.authorId,
       body: input.body,
     },
+    include: { issue: { select: { key: true } } },
   });
+
+  if (comment.issue?.key) {
+    await delCache(`issue:${comment.issue.key.toUpperCase()}`);
+  }
+
+  return comment;
 }

@@ -159,16 +159,20 @@ export function IssueDetail({
     await updateIssueFieldAction(issue.id, "description", description.trim());
   };
 
-  const handleStatusChange = async (newStatus: IssueStatus) => {
+  const handleStatusChange = (newStatus: IssueStatus) => {
     setStatus(newStatus);
     showToast(`Status updated to ${newStatus.replace("_", " ")}`);
-    await updateIssueFieldAction(issue.id, "status", newStatus);
+    startTransition(async () => {
+      await updateIssueFieldAction(issue.id, "status", newStatus);
+    });
   };
 
-  const handlePriorityChange = async (newPriority: IssuePriority) => {
+  const handlePriorityChange = (newPriority: IssuePriority) => {
     setPriority(newPriority);
     showToast(`Priority updated to ${newPriority}`);
-    await updateIssueFieldAction(issue.id, "priority", newPriority);
+    startTransition(async () => {
+      await updateIssueFieldAction(issue.id, "priority", newPriority);
+    });
   };
 
   const handleShare = () => {

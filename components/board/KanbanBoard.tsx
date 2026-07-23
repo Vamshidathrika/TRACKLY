@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useTransition } from "react";
 import {
   Search,
   Filter,
@@ -88,6 +88,7 @@ export function KanbanBoard({
   projectId?: string;
   isStarred?: boolean;
 }) {
+  const [, startTransition] = useTransition();
   const [isStarred, setIsStarred] = useState(initialIsStarred);
   const [issues, setIssues] = useState<BoardIssue[]>(initialIssues);
   const [search, setSearch] = useState("");
@@ -224,14 +225,16 @@ export function KanbanBoard({
     }
   };
 
-  const handleStatusChange = async (issueId: string, newStatus: IssueStatus) => {
+  const handleStatusChange = (issueId: string, newStatus: IssueStatus) => {
     setIssues((prev) =>
       prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i))
     );
-    await updateIssueFieldAction(issueId, "status", newStatus);
+    startTransition(async () => {
+      await updateIssueFieldAction(issueId, "status", newStatus);
+    });
   };
 
-  const handleAssigneeChange = async (issueId: string, assigneeId: string | null) => {
+  const handleAssigneeChange = (issueId: string, assigneeId: string | null) => {
     const targetUser = boardUsers.find((u) => u.id === assigneeId);
     setIssues((prev) =>
       prev.map((i) =>
@@ -241,7 +244,9 @@ export function KanbanBoard({
       )
     );
     showToast(targetUser ? `Reassigned ticket to ${targetUser.name}` : "Set ticket to Unassigned");
-    await updateIssueFieldAction(issueId, "assigneeId", assigneeId ?? "");
+    startTransition(async () => {
+      await updateIssueFieldAction(issueId, "assigneeId", assigneeId ?? "");
+    });
   };
 
   const filteredIssues = issues.filter((i) => {

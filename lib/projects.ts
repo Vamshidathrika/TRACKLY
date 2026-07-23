@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import type { ProjectType } from "@prisma/client";
+import { getCache, setCache, delCache } from "./redis";
 
 export function generateProjectKey(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -22,7 +23,7 @@ export async function createProject(input: {
   });
   if (existing) throw new Error("KEY_TAKEN");
 
-  return prisma.project.create({
+  const project = await prisma.project.create({
     data: {
       siteId: input.siteId,
       name: input.name,
@@ -31,10 +32,17 @@ export async function createProject(input: {
       leadId: input.leadId,
     },
   });
+
+  await delCache(`site:projects:${input.siteId}`);
+  return project;
 }
 
 export async function getProjects(siteId: string) {
-  return prisma.project.findMany({
+  const cacheKey = `site:projects:${siteId}`;
+  const cached = await getCache<any[]>(cacheKey);
+  if (cached) return cached;
+
+  const projects = await prisma.project.findMany({
     where: { siteId },
     include: {
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
@@ -42,21 +50,34 @@ export async function getProjects(siteId: string) {
     },
     orderBy: { createdAt: "desc" },
   });
+
+  await setCache(cacheKey, projects, 300); // 5 minutes cache
+  return projects;
 }
 
 export async function getProjectByKey(siteId: string, key: string) {
-  const match = await prisma.project.findFirst({
-    where: { siteId, key: key.toUpperCase() },
-    include: {
-      lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
-    },
-  });
-  if (match) return match;
+  const upperKey = key.toUpperCase();
+  const cacheKey = `site:project:${siteId}:${upperKey}`;
+  const cached = await getCache<any>(cacheKey);
+  if (cached) return cached;
 
-  return prisma.project.findFirst({
-    where: { key: key.toUpperCase() },
+  let match = await prisma.project.findFirst({
+    where: { siteId, key: upperKey },
     include: {
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
   });
+  if (!match) {
+    match = await prisma.project.findFirst({
+      where: { key: upperKey },
+      include: {
+        lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    });
+  }
+
+  if (match) {
+    await setCache(cacheKey, match, 300); // 5 minutes cache
+  }
+  return match;
 }
