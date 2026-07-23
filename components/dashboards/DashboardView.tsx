@@ -19,6 +19,8 @@ import {
   TeamWorkloadWidget,
   EpicProgressWidget,
   PageFeedbackFooter,
+  AuditTelemetryFeedWidget,
+  type AuditLogItem,
 } from "./SummaryWidgets";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -240,43 +242,25 @@ export function DashboardView({
           )}
         </DashboardCard>
 
-        {/* Live Activity Telemetry Feed */}
-        <DashboardCard
-          title="Live Activity Telemetry Stream"
-          icon={Activity}
-          badge={<span className="text-[11px] font-mono text-success font-bold">LIVE AUDIT</span>}
-        >
-          {recentActivity.length === 0 ? (
-            <div className="py-6 text-center text-[12px] text-subtlest italic">No recent activity detected.</div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {recentActivity.map((act) => (
-                <div key={act.id} className="flex items-start justify-between py-2 border-b border-border-default/50 last:border-0 gap-3">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-[12px] font-medium text-default truncate">
-                      <strong className="text-brand">{act.author.name}</strong> updated{" "}
-                      <Link
-                        href={`/projects/${act.issue.project.key}/issues/${act.issue.key}`}
-                        className="font-mono text-[11px] font-bold text-subtle hover:underline"
-                      >
-                        {act.issue.key}
-                      </Link>
-                    </span>
-                    <span className="text-[11px] text-subtlest">
-                      <span className="font-semibold text-subtle">{act.field}</span>:{" "}
-                      <span className="line-through opacity-60">{act.oldValue || "—"}</span>
-                      {" → "}
-                      <span className="font-semibold">{act.newValue}</span>
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-subtlest shrink-0 font-mono">
-                    {formatTime(act.createdAt)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </DashboardCard>
+        {/* Live Activity & Audit Telemetry Feed (Who Created, Who Updated, Who Deleted) */}
+        <AuditTelemetryFeedWidget
+          items={recentActivity.map((act) => {
+            let type: "CREATED" | "UPDATED" | "DELETED" = "UPDATED";
+            if (act.field === "created") type = "CREATED";
+            if (act.field === "deleted") type = "DELETED";
+            return {
+              id: act.id,
+              authorName: act.author?.name || "User",
+              type,
+              ticketKey: act.issue?.key,
+              summary: type === "CREATED" ? act.newValue || "" : type === "DELETED" ? act.oldValue || "" : undefined,
+              field: type === "UPDATED" ? act.field : undefined,
+              oldValue: act.oldValue || undefined,
+              newValue: act.newValue || undefined,
+              timestamp: act.createdAt,
+            };
+          })}
+        />
       </div>
 
       {/* 5. Page Feedback Footer Widget */}

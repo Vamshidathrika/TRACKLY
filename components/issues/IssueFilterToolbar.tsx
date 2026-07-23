@@ -94,61 +94,63 @@ export function IssueFilterToolbar({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Teammates Profile Circles Header */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-text-subtle mr-1 hidden sm:inline">Teammates:</span>
+          {(displayedUsers.length > 0 || onToggleUnassigned) && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-text-subtle mr-1 hidden sm:inline">Teammates:</span>
 
-            {/* Unassigned Avatar Circle */}
-            {onToggleUnassigned && (
-              <button
-                onClick={onToggleUnassigned}
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border ${
-                  filterUnassigned
-                    ? "bg-slate-800 text-white border-slate-900 ring-2 ring-brand ring-offset-1 scale-110 shadow-md"
-                    : "bg-neutral text-text-subtle border-border hover:bg-neutral-hovered hover:scale-105"
-                }`}
-                title="Filter Unassigned Tickets"
-              >
-                <User size={14} />
-              </button>
-            )}
-
-            {/* Teammates Profile Circles */}
-            {displayedUsers.map((usr) => {
-              const isSelected = selectedUserId === usr.id;
-              const userColor = getUserColor(usr.name || usr.id);
-              return (
+              {/* Unassigned Avatar Circle */}
+              {onToggleUnassigned && (
                 <button
-                  key={usr.id}
-                  onClick={() => onSelectUser(isSelected ? null : usr.id)}
-                  className={`relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border shadow-xs ${userColor} ${
-                    isSelected
-                      ? "ring-2 ring-brand ring-offset-2 border-brand scale-110 z-10 shadow-md"
-                      : "hover:scale-105 hover:shadow-md opacity-90 hover:opacity-100"
+                  onClick={onToggleUnassigned}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border ${
+                    filterUnassigned
+                      ? "bg-slate-800 text-white border-slate-900 ring-2 ring-brand ring-offset-1 scale-110 shadow-md"
+                      : "bg-neutral text-text-subtle border-border hover:bg-neutral-hovered hover:scale-105"
                   }`}
-                  title={`Show tickets for ${usr.name}`}
+                  title="Filter Unassigned Tickets"
                 >
-                  {usr.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={usr.avatarUrl} alt={usr.name} className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    getInitials(usr.name)
-                  )}
-                  {isSelected && (
-                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-brand ring-1 ring-white" />
-                  )}
+                  <User size={14} />
                 </button>
-              );
-            })}
+              )}
 
-            {extraUserCount > 0 && (
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral text-xs font-bold text-text-subtle border border-border"
-                title={`${extraUserCount} more team members`}
-              >
-                +{extraUserCount}
-              </span>
-            )}
-          </div>
+              {/* Teammates Profile Circles */}
+              {displayedUsers.map((usr) => {
+                const isSelected = selectedUserId === usr.id;
+                const userColor = getUserColor(usr.name || usr.id);
+                return (
+                  <button
+                    key={usr.id}
+                    onClick={() => onSelectUser(isSelected ? null : usr.id)}
+                    className={`relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border shadow-xs ${userColor} ${
+                      isSelected
+                        ? "ring-2 ring-brand ring-offset-2 border-brand scale-110 z-10 shadow-md"
+                        : "hover:scale-105 hover:shadow-md opacity-90 hover:opacity-100"
+                    }`}
+                    title={`Show tickets for ${usr.name}`}
+                  >
+                    {usr.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={usr.avatarUrl} alt={usr.name} className="h-full w-full rounded-full object-cover" />
+                    ) : (
+                      getInitials(usr.name)
+                    )}
+                    {isSelected && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-brand ring-1 ring-white" />
+                    )}
+                  </button>
+                );
+              })}
+
+              {extraUserCount > 0 && (
+                <span
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral text-xs font-bold text-text-subtle border border-border"
+                  title={`${extraUserCount} more team members`}
+                >
+                  +{extraUserCount}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Active User Filter Badge if selected */}
           {selectedUserId && (

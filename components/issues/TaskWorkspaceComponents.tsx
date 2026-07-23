@@ -520,6 +520,7 @@ export function ActivitySection({
   estimatedHours = 8,
   currentUserId,
   onAddComment,
+  onDeleteComment,
   onLogWork,
   onDeleteWorkLog,
 }: {
@@ -530,6 +531,7 @@ export function ActivitySection({
   estimatedHours?: number;
   currentUserId?: string;
   onAddComment: (text: string) => void;
+  onDeleteComment?: (commentId: string) => void;
   onLogWork?: () => void;
   onDeleteWorkLog?: (workLogId: string) => void;
 }) {
@@ -631,17 +633,32 @@ export function ActivitySection({
           {/* Comments Feed */}
           <div className="flex flex-col gap-3 divide-y divide-border/60">
             {commentsList.map((c) => (
-              <div key={c.id} className="pt-3 flex items-start gap-3">
-                <Avatar name={c.author.name} src={c.author.avatarUrl} size={30} />
-                <div className="flex-1 text-xs">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-text">{c.author.name}</span>
-                    <span className="text-[11px] text-text-subtle">
-                      {typeof c.createdAt === "string" ? c.createdAt : new Date(c.createdAt).toLocaleString()}
-                    </span>
+              <div key={c.id} className="pt-3 flex items-start justify-between gap-3 group">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <Avatar name={c.author?.name || "User"} src={c.author?.avatarUrl} size={30} />
+                  <div className="flex-1 text-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-text">{c.author?.name || "User"}</span>
+                      <span className="text-[11px] text-text-subtle">
+                        {typeof c.createdAt === "string" ? c.createdAt : new Date(c.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-text whitespace-pre-wrap leading-relaxed">{c.body}</p>
                   </div>
-                  <p className="text-text whitespace-pre-wrap leading-relaxed">{c.body}</p>
                 </div>
+                {onDeleteComment && (c.authorId === currentUserId || c.author?.id === currentUserId) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCommentsList((prev) => prev.filter((item) => item.id !== c.id));
+                      onDeleteComment(c.id);
+                    }}
+                    title="Delete comment"
+                    className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-1"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "./prisma";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
+import { getCache, setCache, delCache } from "./redis";
 
 export async function canUserChangeStatus(issueId: string, userId: string): Promise<boolean> {
   const issue = await prisma.issue.findUnique({
@@ -46,7 +47,7 @@ export async function createIssue(input: {
       data: { issueCounter: number },
     });
 
-    return tx.issue.create({
+    const newIssue = await tx.issue.create({
       data: {
         projectId: input.projectId,
         number,
@@ -64,6 +65,18 @@ export async function createIssue(input: {
         labels: input.labels ?? [],
       },
     });
+
+    // Record creation audit trail in issue history
+    await tx.issueHistory.create({
+      data: {
+        issueId: newIssue.id,
+        authorId: input.reporterId,
+        field: "created",
+        newValue: newIssue.summary,
+      },
+    });
+
+    return newIssue;
   });
 }
 
@@ -133,6 +146,35 @@ export async function updateIssue(
   return updated;
 }
 
+export async function deleteIssue(issueId: string, authorId: string) {
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    include: { project: true },
+  });
+  if (!issue) throw new Error("ISSUE_NOT_FOUND");
+
+  // Record deletion audit entry before cascading delete
+  await prisma.issueHistory.create({
+    data: {
+      issueId: issue.id,
+      authorId,
+      field: "deleted",
+      oldValue: issue.summary,
+      newValue: issue.key,
+    },
+  }).catch(() => {});
+
+  await prisma.issue.delete({
+    where: { id: issueId },
+  });
+
+  if (issue.key) {
+    await delCache(`issue:${issue.key.toUpperCase()}`);
+  }
+
+  return { success: true, projectKey: issue.project.key };
+}
+
 export const getIssuesByProject = cache(async (projectId: string) => {
   return prisma.issue.findMany({
     where: { projectId },
@@ -143,8 +185,6 @@ export const getIssuesByProject = cache(async (projectId: string) => {
     orderBy: { createdAt: "desc" },
   });
 });
-
-import { getCache, setCache, delCache } from "./redis";
 
 export async function getIssueByKey(siteId: string, key: string) {
   const upperKey = key.toUpperCase();
@@ -214,4 +254,22 @@ export async function addComment(input: { issueId: string; authorId: string; bod
   }
 
   return comment;
+}
+
+export async function deleteComment(commentId: string, _authorId?: string) {
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    include: { issue: { select: { key: true } } },
+  });
+  if (!comment) throw new Error("COMMENT_NOT_FOUND");
+
+  await prisma.comment.delete({
+    where: { id: commentId },
+  });
+
+  if (comment.issue?.key) {
+    await delCache(`issue:${comment.issue.key.toUpperCase()}`);
+  }
+
+  return { success: true };
 }

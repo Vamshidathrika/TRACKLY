@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
 import { getAuthUser } from "@/lib/auth";
-import { updateIssue, addComment } from "@/lib/issues";
+import { updateIssue, addComment, deleteIssue, deleteComment } from "@/lib/issues";
 import { extractMentions, createNotification, toggleWatcher } from "@/lib/notifications";
 import { evaluateAutomationTriggers } from "@/lib/automation";
 import { prisma } from "@/lib/prisma";
@@ -496,6 +496,32 @@ export async function toggleWatcherAction(issueId: string) {
     const isWatching = await toggleWatcher(issueId, user.id);
     revalidatePath("/projects");
     return { success: true, isWatching };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function deleteIssueAction(issueId: string) {
+  const user = await getAuthUser();
+  try {
+    const res = await deleteIssue(issueId, user.id);
+    revalidatePath(`/projects/${res.projectKey}`);
+    revalidatePath("/projects");
+    revalidatePath("/dashboards");
+    return res;
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function deleteCommentAction(commentId: string) {
+  const user = await getAuthUser();
+  try {
+    const res = await deleteComment(commentId, user.id);
+    revalidatePath("/projects");
+    return res;
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     throw e;

@@ -29,6 +29,7 @@ import {
   Check,
   X,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag as StatusTag } from "@/components/ui/Tag";
@@ -45,6 +46,8 @@ import { TimeLogModal } from "@/components/issues/TimeLogModal";
 import {
   updateIssueFieldAction,
   postCommentAction,
+  deleteCommentAction,
+  deleteIssueAction,
   logWorkAction,
   deleteWorkLogAction,
   toggleWatcherAction,
@@ -133,7 +136,32 @@ export function IssueDetail({
 
   // Modal / Toast States
   const [showTimeLog, setShowTimeLog] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleDeleteIssue = () => {
+    startTransition(async () => {
+      const res = await deleteIssueAction(issue.id);
+      if (res && "error" in res && res.error) {
+        showToast(res.error);
+        return;
+      }
+      showToast(`Ticket ${issue.key} deleted`);
+      router.push(`/projects/${issue.project?.key || ""}`);
+    });
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    startTransition(async () => {
+      const res = await deleteCommentAction(commentId);
+      if (res && "error" in res && res.error) {
+        showToast(res.error);
+        return;
+      }
+      showToast("Comment deleted");
+      router.refresh();
+    });
+  };
 
   // Work log is server-owned: derive everything from the issue payload so the
   // numbers stay correct after router.refresh() revalidates the page.
@@ -516,6 +544,7 @@ export function IssueDetail({
             estimatedHours={estimatedHours}
             currentUserId={currentUserId}
             onAddComment={handleAddComment}
+            onDeleteComment={handleDeleteComment}
             onLogWork={() => setShowTimeLog(true)}
             onDeleteWorkLog={handleDeleteWorkLog}
           />
@@ -853,9 +882,61 @@ export function IssueDetail({
                 </div>
               )}
             </div>
+
+            {/* Danger Zone: Delete Ticket */}
+            <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/20 p-4 flex flex-col gap-2 shadow-xs">
+              <span className="text-xs font-bold text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                <Trash2 size={14} /> Danger Zone
+              </span>
+              <p className="text-[11px] text-red-600/80 dark:text-red-300/80 leading-snug">
+                Permanently delete ticket {issue.key} and its comments, subtasks, and work logs.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full mt-1 py-1.5 px-3 rounded-md bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                <Trash2 size={13} /> Delete Ticket
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Delete Ticket Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-text">Delete Ticket {issue.key}?</h3>
+                <p className="text-xs text-text-subtle">This action is permanent and cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-neutral/40 border border-border/60 text-xs text-text font-mono">
+              &quot;{title}&quot;
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <Button appearance="subtle" onClick={() => setShowDeleteModal(false)} className="text-xs">
+                Cancel
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={handleDeleteIssue}
+                disabled={isPending}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+              >
+                {isPending ? "Deleting..." : "Yes, Delete Ticket"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

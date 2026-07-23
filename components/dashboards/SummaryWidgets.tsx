@@ -18,6 +18,7 @@ import {
   ExternalLink,
   User,
   ArrowRight,
+  Activity,
 } from "lucide-react";
 import { DashboardCard } from "./DashboardCard";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
@@ -524,5 +525,94 @@ export function PageFeedbackFooter() {
         <span>Trackly Telemetry v2.0</span>
       </div>
     </footer>
+  );
+}
+
+// --- 8. AUDIT TELEMETRY FEED WIDGET (WHO CREATED, WHO UPDATED, WHO DELETED) ---
+export type AuditLogItem = {
+  id: string;
+  authorName: string;
+  authorAvatar?: string | null;
+  type: "CREATED" | "UPDATED" | "DELETED";
+  ticketKey?: string;
+  summary?: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp: string | Date;
+};
+
+export function AuditTelemetryFeedWidget({ items }: { items: AuditLogItem[] }) {
+  return (
+    <DashboardCard
+      title="Live Audit Notes & Activity Summary"
+      icon={Activity}
+      badge={<span className="text-[11px] font-mono text-subtle">Who Created • Updated • Deleted</span>}
+    >
+      <div className="flex flex-col gap-2.5 max-h-80 overflow-y-auto pr-1">
+        {items.length === 0 ? (
+          <p className="text-xs text-subtle italic py-3 text-center">No recent audit activity recorded.</p>
+        ) : (
+          items.map((item) => {
+            const isCreated = item.type === "CREATED";
+            const isDeleted = item.type === "DELETED";
+
+            return (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-2.5 rounded-lg border border-border-default bg-neutral/30 text-xs gap-3"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Avatar name={item.authorName} src={item.authorAvatar} size={24} />
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                    <span className="font-bold text-default">{item.authorName}</span>
+
+                    {isCreated && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-success/15 text-success border border-success/20">
+                        CREATED
+                      </span>
+                    )}
+                    {!isCreated && !isDeleted && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand/15 text-brand border border-brand/20">
+                        UPDATED
+                      </span>
+                    )}
+                    {isDeleted && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-danger/15 text-danger border border-danger/20">
+                        DELETED
+                      </span>
+                    )}
+
+                    {item.ticketKey && (
+                      <span className="font-mono font-bold text-brand">{item.ticketKey}</span>
+                    )}
+
+                    {isCreated && item.summary && (
+                      <span className="text-subtle truncate">&quot;{item.summary}&quot;</span>
+                    )}
+
+                    {!isCreated && !isDeleted && item.field && (
+                      <span className="text-subtle">
+                        changed <strong className="text-default">{item.field}</strong>
+                        {item.oldValue && <> from <code className="bg-neutral px-1 rounded text-default">{item.oldValue}</code></>}
+                        {item.newValue && <> to <code className="bg-brand/10 text-brand px-1 rounded font-bold">{item.newValue}</code></>}
+                      </span>
+                    )}
+
+                    {isDeleted && (
+                      <span className="text-subtle truncate">&quot;{item.summary || item.ticketKey}&quot;</span>
+                    )}
+                  </div>
+                </div>
+
+                <span className="text-[10px] font-mono text-subtlest shrink-0">
+                  {typeof item.timestamp === "string" ? item.timestamp : new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </DashboardCard>
   );
 }
