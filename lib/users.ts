@@ -34,7 +34,14 @@ export const getUsersForSite = cache(async (siteId: string): Promise<UserOption[
     const userMap = new Map<string, UserOption>();
     memberships.forEach((m) => {
       const email = m.user.email?.toLowerCase().trim() || m.user.id;
-      if (email !== "demo@trackly.dev" && !email.includes("demo@")) {
+      const name = m.user.name?.toLowerCase().trim() || "";
+
+      // Strict filter: purge any demo user account
+      if (
+        email !== "demo@trackly.dev" &&
+        !email.includes("demo") &&
+        !name.includes("demo")
+      ) {
         if (!userMap.has(email)) {
           userMap.set(email, {
             id: m.user.id,
@@ -103,7 +110,13 @@ export const getUsersForAuthUser = cache(async (userId: string): Promise<UserOpt
     const userMap = new Map<string, UserOption>();
     siteMemberships.forEach((m) => {
       const email = m.user.email?.toLowerCase().trim() || m.user.id;
-      if (email !== "demo@trackly.dev" && !email.includes("demo@")) {
+      const name = m.user.name?.toLowerCase().trim() || "";
+
+      if (
+        email !== "demo@trackly.dev" &&
+        !email.includes("demo") &&
+        !name.includes("demo")
+      ) {
         if (!userMap.has(email)) {
           userMap.set(email, {
             id: m.user.id,
@@ -146,7 +159,13 @@ export const getAllUsers = cache(
       const userMap = new Map<string, UserOption>();
       users.forEach((u) => {
         const email = u.email?.toLowerCase().trim() || u.id;
-        if (email !== "demo@trackly.dev" && !email.includes("demo@")) {
+        const name = u.name?.toLowerCase().trim() || "";
+
+        if (
+          email !== "demo@trackly.dev" &&
+          !email.includes("demo") &&
+          !name.includes("demo")
+        ) {
           if (!userMap.has(email)) {
             userMap.set(email, {
               id: u.id,

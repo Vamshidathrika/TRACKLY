@@ -59,7 +59,7 @@ export default async function ProjectLayout({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1">
+    <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden">
       <ProjectNav
         projectKey={project.key}
         projectName={project.name}
