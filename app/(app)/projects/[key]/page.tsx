@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getIssuesByProject } from "@/lib/issues";
 import { getUsersForSite } from "@/lib/users";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
@@ -9,20 +9,23 @@ import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ key: string }> }) {
+  const { userId, siteId } = await requireMembership();
   const { key } = await params;
   const upperKey = key.toUpperCase();
-  await getAuthUser();
 
   const project = await prisma.project.findFirst({
-    where: { key: upperKey },
+    where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, type: true, siteId: true },
   });
 
   if (!project) redirect("/projects");
 
+  const access = await checkProjectAccess(userId, project.id, siteId);
+  if (!access) redirect("/your-work");
+
   const [issues, siteUsers] = await Promise.all([
-    getIssuesByProject(project.id),
-    getUsersForSite(project.siteId),
+    getIssuesByProject(project.id).catch(() => []),
+    getUsersForSite(project.siteId).catch(() => []),
   ]);
 
   return (
@@ -33,11 +36,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl font-semibold text-text">{project.name}</h1>
           <p className="text-xs text-text-subtle">Key: {project.key} • Type: {project.type}</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary">Create issue</Button>} />
+        <CreateIssueModal trigger={<Button appearance="primary">Create task</Button>} />
       </div>
 
       <IssueListContainer
-        title="Issues"
+        title="Tasks"
         issues={issues.map((i) => ({ ...i, projectKey: project.key }))}
         projectKey={project.key}
         availableUsers={siteUsers}

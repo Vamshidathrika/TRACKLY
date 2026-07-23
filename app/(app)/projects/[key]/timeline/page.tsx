@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getIssuesByProject } from "@/lib/issues";
 import { prisma } from "@/lib/prisma";
 import { TimelineView } from "@/components/board/SpaceViews";
@@ -10,24 +10,23 @@ export default async function TimelinePage({
 }: {
   params: Promise<{ key: string }>;
 }) {
+  const { userId, siteId } = await requireMembership();
   const { key } = await params;
-  const user = await getAuthUser();
 
   const project = await prisma.project.findFirst({
     where: {
       key: key.toUpperCase(),
-      site: {
-        memberships: {
-          some: { userId: user.id },
-        },
-      },
+      siteId,
     },
     select: { id: true, key: true, name: true },
   });
 
   if (!project) notFound();
 
-  const rawIssues = await getIssuesByProject(project.id);
+  const access = await checkProjectAccess(userId, project.id, siteId);
+  if (!access) notFound();
+
+  const rawIssues = await getIssuesByProject(project.id).catch(() => []);
   const issues: BoardIssue[] = rawIssues.map((i) => ({
     id: i.id,
     key: i.key,
@@ -46,7 +45,7 @@ export default async function TimelinePage({
     <div className="p-6">
       <div className="mb-4">
         <h1 className="text-xl font-bold text-default">{project.name} Timeline</h1>
-        <p className="text-xs text-subtles">Visual schedule and timeline for project issues</p>
+        <p className="text-xs text-subtles">Visual schedule and timeline for project tasks</p>
       </div>
       <TimelineView issues={issues} />
     </div>

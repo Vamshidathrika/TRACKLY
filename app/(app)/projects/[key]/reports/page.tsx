@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getBurndownData, getVelocityData, getProjectMetrics } from "@/lib/reports";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
@@ -9,42 +9,38 @@ import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
 
 export default async function ReportsPage({ params }: { params: Promise<{ key: string }> }) {
+  const { userId, siteId } = await requireMembership();
   const { key } = await params;
   const upperKey = key.toUpperCase();
-  const user = await getAuthUser();
 
   const project = await prisma.project.findFirst({
-    where: { key: upperKey },
+    where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
   if (!project) redirect("/projects");
 
-  // Collaborative Access check
-  const membership = await prisma.membership.findFirst({
-    where: { userId: user.id, siteId: project.siteId },
-  });
+  const access = await checkProjectAccess(userId, project.id, siteId);
+  if (!access) redirect("/your-work");
 
-  if (!membership) {
-    await prisma.membership.create({
-      data: { userId: user.id, siteId: project.siteId, role: "MEMBER" },
-    });
-    const { delCache } = await import("@/lib/redis");
-    await delCache(`user:chrome:${user.id}`);
-  }
-
-  const sprints = await getSprintsByProject(project.id);
+  const sprints = await getSprintsByProject(project.id).catch(() => []);
   const activeSprint = sprints.find((s) => s.status === "ACTIVE") || sprints[0];
 
   const [burndown, velocity, metrics] = await Promise.all([
-    getBurndownData(activeSprint?.id ?? ""),
-    getVelocityData(project.id),
-    getProjectMetrics(project.id),
+    getBurndownData(activeSprint?.id ?? "").catch(() => ({
+      sprintName: activeSprint?.name ?? "Sprint",
+      totalPoints: 0,
+      pointsDone: 0,
+      pointsRemaining: 0,
+      timeline: [],
+    })),
+    getVelocityData(project.id).catch(() => []),
+    getProjectMetrics(project.id).catch(() => ({ statusCounts: {}, typeCounts: {}, priorityCounts: {} })),
   ]);
 
   const cumulativeData = Object.entries(metrics.statusCounts).map(([status, count]) => ({
     status,
-    count,
+    count: count as number,
   }));
 
   return (
@@ -55,7 +51,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ key: s
           <h1 className="text-2xl font-semibold text-text">{project.name} Reports</h1>
           <p className="text-xs text-text-subtle">Agile metrics & performance insights • {project.key}</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary">Create issue</Button>} />
+        <CreateIssueModal trigger={<Button appearance="primary">Create task</Button>} />
       </div>
 
       <ReportsView burndown={burndown} velocity={velocity} cumulative={cumulativeData} />
