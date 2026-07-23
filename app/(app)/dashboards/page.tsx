@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { DashboardView } from "@/components/dashboards/DashboardView";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ShieldCheck, Activity, Terminal } from "lucide-react";
 
 export default async function DashboardsPage() {
-  const user = await getAuthUser();
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
+  const { userId, siteId } = await requireMembership();
 
   // 1. Fetch all projects in site
   const projects = await prisma.project.findMany({
@@ -87,7 +85,7 @@ export default async function DashboardsPage() {
 
   // 3. User's Assigned Tasks
   const assignedIssues = allIssues
-    .filter((i) => i.assigneeId === user.id)
+    .filter((i) => i.assigneeId === userId)
     .slice(0, 6)
     .map((i) => ({
       id: i.id,

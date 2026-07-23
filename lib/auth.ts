@@ -97,6 +97,15 @@ export const getAuthUser = cache(async (): Promise<AuthUser> => {
           }),
           prisma.invite.update({ where: { id: pendingInvite.id }, data: { acceptedAt: new Date() } }),
         ]);
+
+        // Grant per-project access based on invite type
+        const { grantProjectAccess, grantAllProjectAccess } = await import("./tenant");
+        if (pendingInvite.projectId) {
+          await grantProjectAccess(pendingInvite.projectId, dbUser.id);
+        } else {
+          await grantAllProjectAccess(pendingInvite.siteId, dbUser.id);
+        }
+
         const { delCache } = await import("./redis");
         await delCache(`user:chrome:${dbUser.id}`);
       }

@@ -551,7 +551,7 @@ export function AutomationModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 }
 
 // 8. Modals: Invite Modal
-export function InviteModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function InviteModal({ isOpen, onClose, projectId }: { isOpen: boolean; onClose: () => void; projectId?: string }) {
   const [email, setEmail] = useState("");
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -568,6 +568,7 @@ export function InviteModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
     const formData = new FormData();
     formData.set("email", email.trim());
+    if (projectId) formData.set("projectId", projectId);
 
     const { inviteMemberAction } = await import("@/app/(app)/settings/members/actions");
     const res = await inviteMemberAction({}, formData);

@@ -5,9 +5,20 @@ vi.mock("./prisma", () => ({
     invite: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     membership: { upsert: vi.fn() },
     project: { findFirst: vi.fn() },
+    projectMember: { upsert: vi.fn(), createMany: vi.fn().mockResolvedValue({ count: 0 }) },
     $transaction: vi.fn(async (ops: unknown[]) => ops),
   },
 }));
+
+vi.mock("./tenant", () => ({
+  grantProjectAccess: vi.fn().mockResolvedValue({}),
+  grantAllProjectAccess: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("./redis", () => ({
+  delCache: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { prisma } from "./prisma";
 import { createInvite, acceptInvite } from "./invites";
 
@@ -21,6 +32,12 @@ describe("createInvite", () => {
     const days = (new Date(inv.expiresAt).getTime() - Date.now()) / 86400000;
     expect(days).toBeGreaterThan(6.9);
     expect(days).toBeLessThan(7.1);
+  });
+
+  it("creates project-specific invite when projectId provided", async () => {
+    (prisma.invite.create as any).mockImplementation(async ({ data }: any) => data);
+    const inv = await createInvite({ siteId: "s1", email: "x@y.z", role: "MEMBER", projectId: "p1" });
+    expect(inv.projectId).toBe("p1");
   });
 });
 
@@ -37,13 +54,17 @@ describe("acceptInvite", () => {
     (prisma.invite.findUnique as any).mockResolvedValue({ expiresAt: new Date(Date.now() + 1000), acceptedAt: new Date() });
     expect(await acceptInvite("t", "u1")).toEqual({ ok: false, reason: "USED" });
   });
-  it("creates membership and marks accepted on success", async () => {
+  it("creates membership and grants project access on success", async () => {
     (prisma.invite.findUnique as any).mockResolvedValue({
-      id: "i1", siteId: "s1", role: "MEMBER", expiresAt: new Date(Date.now() + 1000), acceptedAt: null,
+      id: "i1", siteId: "s1", role: "MEMBER", projectId: null, project: null,
+      expiresAt: new Date(Date.now() + 1000), acceptedAt: null,
     });
     (prisma.project.findFirst as any).mockResolvedValue({ key: "TRK" });
-    expect(await acceptInvite("t", "u1")).toEqual({ ok: true, projectKey: "TRK", siteId: "s1" });
+    const { grantAllProjectAccess } = await import("./tenant");
+    const result = await acceptInvite("t", "u1");
+    expect(result).toEqual({ ok: true, projectKey: "TRK", siteId: "s1" });
     expect(prisma.membership.upsert).toHaveBeenCalled();
     expect(prisma.invite.update).toHaveBeenCalled();
+    expect(grantAllProjectAccess).toHaveBeenCalledWith("s1", "u1");
   });
 });

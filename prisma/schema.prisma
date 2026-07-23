@@ -65,21 +65,28 @@ enum AutomationAction {
   ADD_COMMENT
 }
 
+enum ProjectRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
 model User {
-  id                     String         @id @default(cuid())
-  email                  String         @unique
+  id                     String          @id @default(cuid())
+  email                  String          @unique
   name                   String
   passwordHash           String?
   avatarUrl              String?
-  createdAt              DateTime       @default(now())
+  createdAt              DateTime        @default(now())
   memberships            Membership[]
-  ledProjects            Project[]      @relation("ProjectLead")
-  reportedIssues         Issue[]        @relation("ReportedIssues")
-  assignedIssues         Issue[]        @relation("AssignedIssues")
+  projectMemberships     ProjectMember[]
+  ledProjects            Project[]       @relation("ProjectLead")
+  reportedIssues         Issue[]         @relation("ReportedIssues")
+  assignedIssues         Issue[]         @relation("AssignedIssues")
   comments               Comment[]
   historyEntries         IssueHistory[]
-  notifications          Notification[] @relation("UserNotifications")
-  triggeredNotifications Notification[] @relation("ActorNotifications")
+  notifications          Notification[]  @relation("UserNotifications")
+  triggeredNotifications Notification[]  @relation("ActorNotifications")
   watchedIssues          Watcher[]
   savedFilters           SavedFilter[]
   stars                  Star[]
@@ -115,10 +122,12 @@ model Invite {
   email      String
   token      String    @unique
   role       Role      @default(MEMBER)
+  projectId  String?
   expiresAt  DateTime
   acceptedAt DateTime?
   createdAt  DateTime  @default(now())
   site       Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Project {
@@ -138,8 +147,22 @@ model Project {
   automationRules AutomationRule[]
   customFields    CustomField[]
   stars           Star[]
+  members         ProjectMember[]
+  invites         Invite[]
 
   @@unique([siteId, key])
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }
 
 model Sprint {

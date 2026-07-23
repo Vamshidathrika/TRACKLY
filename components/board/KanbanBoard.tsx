@@ -358,7 +358,7 @@ export function KanbanBoard({
       )}
 
       {/* Modals & Drawers */}
-      <InviteModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} />
+      <InviteModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} projectId={projectId} />
       <AutomationModal isOpen={showAutomationModal} onClose={() => setShowAutomationModal(false)} />
       <AddViewModal
         isOpen={showAddViewModal}

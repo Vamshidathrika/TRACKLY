@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
@@ -7,9 +7,7 @@ import { Map, Calendar, Target, CheckCircle2, Clock, Layers, ArrowRight } from "
 import Link from "next/link";
 
 export default async function PlansPage() {
-  const user = await getAuthUser();
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
+  const { userId, siteId } = await requireMembership();
 
   const projects = await prisma.project.findMany({
     where: { siteId },

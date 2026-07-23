@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./prisma", () => ({
   prisma: {
     project: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+    projectMember: { create: vi.fn().mockResolvedValue({ id: "pm1" }) },
   },
 }));
 import { prisma } from "./prisma";

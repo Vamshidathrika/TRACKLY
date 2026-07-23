@@ -1,31 +1,14 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
+import { getProjectsForUser } from "@/lib/projects";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 
 export default async function ProjectsPage() {
-  const user = await getAuthUser();
-
-  const memberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    select: { siteId: true },
-  });
-
-  const siteIds = memberships.map((m) => m.siteId);
-
-  const projects = siteIds.length > 0
-    ? await prisma.project.findMany({
-        where: { siteId: { in: siteIds } },
-        include: {
-          lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
-          _count: { select: { issues: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
+  const { userId, siteId } = await requireMembership();
+  const projects = await getProjectsForUser(siteId, userId);
 
   return (
     <main className="flex-1 px-10 py-6">

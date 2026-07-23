@@ -4,11 +4,10 @@ import { revalidatePath } from "next/cache";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseJQLToPrisma } from "@/lib/jql";
+import { requireMembership } from "@/lib/tenant";
 
 export async function executeJQLQueryAction(jql: string) {
-  const user = await getAuthUser();
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id;
+  const { userId, siteId } = await requireMembership();
   if (!siteId) return [];
 
   const whereClause = parseJQLToPrisma(jql);

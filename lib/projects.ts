@@ -33,6 +33,15 @@ export async function createProject(input: {
     },
   });
 
+  // Auto-grant project ADMIN access to the creator
+  await prisma.projectMember.create({
+    data: {
+      projectId: project.id,
+      userId: input.leadId,
+      role: "ADMIN",
+    },
+  });
+
   await delCache(`site:projects:${input.siteId}`);
   return project;
 }
@@ -61,23 +70,57 @@ export async function getProjectByKey(siteId: string, key: string) {
   const cached = await getCache<any>(cacheKey);
   if (cached) return cached;
 
-  let match = await prisma.project.findFirst({
+  // Strictly scoped to user's workspace — never cross-tenant
+  const match = await prisma.project.findFirst({
     where: { siteId, key: upperKey },
     include: {
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
   });
-  if (!match) {
-    match = await prisma.project.findFirst({
-      where: { key: upperKey },
-      include: {
-        lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
-      },
+
+  if (match) {
+    await setCache(cacheKey, match, 300);
+  }
+  return match;
+}
+
+/**
+ * Returns projects visible to a specific user within their workspace.
+ * - Workspace ADMINs see ALL projects
+ * - Workspace MEMBERs see only projects they have ProjectMember access to
+ */
+export async function getProjectsForUser(siteId: string, userId: string) {
+  const membership = await prisma.membership.findUnique({
+    where: { userId_siteId: { userId, siteId } },
+  });
+
+  if (!membership) return [];
+
+  const projectInclude = {
+    lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+    _count: { select: { issues: true } },
+  } as const;
+
+  // Workspace ADMINs see all projects
+  if (membership.role === "ADMIN") {
+    return prisma.project.findMany({
+      where: { siteId },
+      include: projectInclude,
+      orderBy: { createdAt: "desc" },
     });
   }
 
-  if (match) {
-    await setCache(cacheKey, match, 300); // 5 minutes cache
-  }
-  return match;
+  // Workspace MEMBERs see only projects they have explicit access to
+  const projectMembers = await prisma.projectMember.findMany({
+    where: { userId },
+    select: { projectId: true },
+  });
+
+  const projectIds = projectMembers.map((pm) => pm.projectId);
+
+  return prisma.project.findMany({
+    where: { siteId, id: { in: projectIds } },
+    include: projectInclude,
+    orderBy: { createdAt: "desc" },
+  });
 }

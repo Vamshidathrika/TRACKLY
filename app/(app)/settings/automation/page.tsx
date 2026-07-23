@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { getAutomationRules } from "@/lib/automation";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { AutomationView } from "@/components/automation/AutomationView";
@@ -7,11 +7,9 @@ import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
 
 export default async function AutomationSettingsPage() {
-  const user = await getAuthUser();
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-  const siteId = membership?.siteId ?? (await prisma.site.findFirst())?.id ?? "";
+  const { siteId } = await requireMembership();
 
-  const project = (siteId ? await prisma.project.findFirst({ where: { siteId } }) : null) ?? (await prisma.project.findFirst());
+  const project = await prisma.project.findFirst({ where: { siteId } });
 
   const rules = project ? await getAutomationRules(project.id) : [];
 
