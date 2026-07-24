@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { createProjectAction } from "@/app/(app)/projects/actions";
 import { generateProjectKey } from "@/lib/projects";
 
-export function CreateProjectModal() {
+export function CreateProjectModal({ trigger }: { trigger?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
@@ -31,7 +31,7 @@ export function CreateProjectModal() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button appearance="primary">Create project</Button>
+        {trigger || <Button appearance="primary">Create project</Button>}
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs" />

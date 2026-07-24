@@ -19,11 +19,30 @@ export default async function ProjectsPage() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="text-sm font-medium">No projects yet.</p>
-          <p className="text-sm text-text-subtle">
-            Click &ldquo;Create project&rdquo; above to get started with your first board or sprint project.
+        <div className="mt-12 flex flex-col items-center text-center max-w-lg mx-auto rounded-xl border border-dashed border-border p-10 bg-surface shadow-xs">
+          <div className="w-14 h-14 rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M8 7v7" />
+              <path d="M12 7v4" />
+              <path d="M16 7v9" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-text">No board found in your workspace</h2>
+          <p className="mt-2 mb-6 text-sm text-text-subtle leading-relaxed">
+            To start tracking tasks, managing sprints, and organizing your team work, create your first board to continue.
           </p>
+          <CreateProjectModal
+            trigger={
+              <button className="h-11 px-6 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-hovered transition-all shadow-sm flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+                Create Board to Continue
+              </button>
+            }
+          />
         </div>
       ) : (
         <table className="mt-6 w-full max-w-4xl text-sm">
