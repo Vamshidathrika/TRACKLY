@@ -1008,6 +1008,20 @@ export function SprintModal({
     initialData?.endDate ? new Date(initialData.endDate).toISOString().split("T")[0] : defaultEndStr
   );
 
+  useEffect(() => {
+    if (isOpen) {
+      setName(initialData?.name || `Sprint ${defaultSprintNumber}`);
+      setGoal(initialData?.goal || "");
+      setDurationWeeks(2);
+      setStartDate(
+        initialData?.startDate ? new Date(initialData.startDate).toISOString().split("T")[0] : todayStr
+      );
+      setEndDate(
+        initialData?.endDate ? new Date(initialData.endDate).toISOString().split("T")[0] : defaultEndStr
+      );
+    }
+  }, [isOpen, initialData, defaultSprintNumber, todayStr, defaultEndStr]);
+
   if (!isOpen) return null;
 
   const handleDurationChange = (weeks: number) => {

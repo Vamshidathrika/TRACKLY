@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Zap, Play, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
@@ -26,6 +27,7 @@ export function AutomationView({
   projectId: string;
   rules: AutomationRuleItem[];
 }) {
+  const router = useRouter();
   const [rules, setRules] = useState<AutomationRuleItem[]>(initialRules);
   const [showBuilder, setShowBuilder] = useState(false);
   const [name, setName] = useState("");
@@ -34,13 +36,24 @@ export function AutomationView({
   const [targetValue, setTargetValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!showBuilder) {
+      setName("");
+      setEventTrigger("STATUS_CHANGED");
+      setAction("ADD_COMMENT");
+      setTargetValue("");
+    }
+  }, [showBuilder]);
+
   const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !targetValue.trim()) return;
 
     setIsSubmitting(true);
     await createAutomationRuleAction(projectId, name, eventTrigger, action, targetValue);
-    window.location.reload();
+    setIsSubmitting(false);
+    setShowBuilder(false);
+    router.refresh();
   };
 
   const handleToggle = async (ruleId: string) => {

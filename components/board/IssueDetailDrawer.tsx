@@ -54,6 +54,9 @@ export function IssueDetailDrawer({
       setSummary(issue.summary);
       setDescription(issue.description || "");
       setPoints(issue.storyPoints ?? "");
+      setIsEditingSummary(false);
+      setIsEditingDescription(false);
+      setCommentInput("");
     }
   }, [issue]);
 

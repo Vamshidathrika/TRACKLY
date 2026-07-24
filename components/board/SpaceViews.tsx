@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Clock,
@@ -276,6 +277,7 @@ export function FormsView({
   const [priority, setPriority] = useState<IssuePriority>("MEDIUM");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const router = useRouter();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!summary.trim() || !projectId) return;
@@ -294,6 +296,7 @@ export function FormsView({
       setSubmittedKey(res.issue.key);
       setSummary("");
       setDescription("");
+      router.refresh();
     }
   };
 
@@ -514,8 +517,42 @@ export function CodeView() {
 }
 
 // 7. Modals: Automation Modal
-export function AutomationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function AutomationModal({
+  isOpen,
+  onClose,
+  projectId,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId?: string;
+  onSuccess?: () => void;
+}) {
+  const router = useRouter();
+  const [rules, setRules] = useState([
+    { title: "Auto-assign to reporter on creation", desc: "Sets issue assignee to author if left unassigned", active: true },
+    { title: "Transition to DONE when PR is merged", desc: "Triggered by GitHub PR webhook", active: true },
+    { title: "Notify team lead on high priority bugs", desc: "Sends instant notification upon highest priority tag", active: false },
+  ]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setRules([
+        { title: "Auto-assign to reporter on creation", desc: "Sets issue assignee to author if left unassigned", active: true },
+        { title: "Transition to DONE when PR is merged", desc: "Triggered by GitHub PR webhook", active: true },
+        { title: "Notify team lead on high priority bugs", desc: "Sends instant notification upon highest priority tag", active: false },
+      ]);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleSave = () => {
+    onSuccess?.();
+    router.refresh();
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-lg rounded-lg border border-border bg-surface p-6 shadow-xl relative">
@@ -527,23 +564,28 @@ export function AutomationModal({ isOpen, onClose }: { isOpen: boolean; onClose:
           <h3 className="text-base font-bold text-text">Project Automation Rules</h3>
         </div>
         <div className="flex flex-col gap-3 mb-5 text-xs">
-          {[
-            { title: "Auto-assign to reporter on creation", desc: "Sets issue assignee to author if left unassigned", active: true },
-            { title: "Transition to DONE when PR is merged", desc: "Triggered by GitHub PR webhook", active: true },
-            { title: "Notify team lead on high priority bugs", desc: "Sends instant notification upon highest priority tag", active: false },
-          ].map((rule, idx) => (
+          {rules.map((rule, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 rounded-md border border-border bg-neutral/30">
               <div>
                 <p className="font-bold text-text">{rule.title}</p>
                 <p className="text-[11px] text-text-subtle">{rule.desc}</p>
               </div>
-              <input type="checkbox" defaultChecked={rule.active} className="h-4 w-4 accent-brand cursor-pointer" />
+              <input
+                type="checkbox"
+                checked={rule.active}
+                onChange={(e) => {
+                  const updated = [...rules];
+                  updated[idx].active = e.target.checked;
+                  setRules(updated);
+                }}
+                className="h-4 w-4 accent-brand cursor-pointer"
+              />
             </div>
           ))}
         </div>
         <div className="flex justify-end gap-2">
           <Button appearance="subtle" onClick={onClose} className="text-xs">Close</Button>
-          <Button appearance="primary" onClick={onClose} className="bg-brand text-white text-xs font-bold">Save Rules</Button>
+          <Button appearance="primary" onClick={handleSave} className="bg-brand text-white text-xs font-bold">Save Rules</Button>
         </div>
       </div>
     </div>
@@ -551,11 +593,35 @@ export function AutomationModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 }
 
 // 8. Modals: Invite Modal
-export function InviteModal({ isOpen, onClose, projectId }: { isOpen: boolean; onClose: () => void; projectId?: string }) {
+export function InviteModal({
+  isOpen,
+  onClose,
+  projectId,
+  defaultRole = "MEMBER",
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId?: string;
+  defaultRole?: string;
+  onSuccess?: () => void;
+}) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState(defaultRole);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setEmail("");
+      setRole(defaultRole);
+      setInviteUrl(null);
+      setIsSubmitting(false);
+      setErrorMsg(null);
+    }
+  }, [isOpen, defaultRole]);
 
   if (!isOpen) return null;
 
@@ -568,6 +634,7 @@ export function InviteModal({ isOpen, onClose, projectId }: { isOpen: boolean; o
 
     const formData = new FormData();
     formData.set("email", email.trim());
+    formData.set("role", role);
     if (projectId) formData.set("projectId", projectId);
 
     const { inviteMemberAction } = await import("@/app/(app)/settings/members/actions");
@@ -578,6 +645,8 @@ export function InviteModal({ isOpen, onClose, projectId }: { isOpen: boolean; o
       setErrorMsg(res.error);
     } else if (res?.link) {
       setInviteUrl(res.link);
+      onSuccess?.();
+      router.refresh();
     }
   };
 
@@ -648,7 +717,11 @@ export function InviteModal({ isOpen, onClose, projectId }: { isOpen: boolean; o
             </div>
             <div>
               <label className="block font-semibold text-default mb-1">Role</label>
-              <select className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 outline-none text-[12px] cursor-pointer">
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full h-9 rounded-[8px] border border-border-default bg-surface px-3 outline-none text-[12px] cursor-pointer"
+              >
                 <option value="MEMBER">Member</option>
                 <option value="ADMIN">Admin</option>
               </select>
@@ -679,6 +752,12 @@ export function InviteModal({ isOpen, onClose, projectId }: { isOpen: boolean; o
 // 9. Modals: Add View Modal
 export function AddViewModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: () => void; onAdd: (name: string) => void }) {
   const [viewName, setViewName] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setViewName("");
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
   return (
@@ -733,6 +812,13 @@ export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClos
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setInput("");
+      setIsThinking(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

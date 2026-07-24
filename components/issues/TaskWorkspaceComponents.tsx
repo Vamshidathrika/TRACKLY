@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -376,6 +376,14 @@ export function LinkedWorkItems({
   const [linkKey, setLinkKey] = useState("");
   const [relation, setRelation] = useState("RELATES_TO");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showAddModal) {
+      setLinkKey("");
+      setRelation("RELATES_TO");
+      setError(null);
+    }
+  }, [showAddModal]);
 
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();

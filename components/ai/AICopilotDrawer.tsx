@@ -19,7 +19,15 @@ const SUGGESTIONS = [
   'comment on DEMO-3 "Ready for peer review"',
 ];
 
-export function AICopilotDrawer() {
+export function AICopilotDrawer({
+  defaultProjectId,
+  defaultIssueKey,
+  onSuccess,
+}: {
+  defaultProjectId?: string;
+  defaultIssueKey?: string;
+  onSuccess?: () => void;
+} = {}) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -31,6 +39,13 @@ export function AICopilotDrawer() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setInput("");
+      setIsLoading(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -53,6 +68,7 @@ export function AICopilotDrawer() {
       ]);
       if (res.success) {
         // Fast soft router refresh without full page reload
+        onSuccess?.();
         router.refresh();
       }
     } catch (e) {

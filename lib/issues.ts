@@ -31,6 +31,7 @@ export async function createIssue(input: {
   assigneeId?: string;
   parentId?: string;
   sprintId?: string;
+  dueDate?: Date;
   labels?: string[];
 }) {
   return prisma.$transaction(async (tx) => {
@@ -62,6 +63,7 @@ export async function createIssue(input: {
         assigneeId: input.assigneeId,
         parentId: input.parentId,
         sprintId: input.sprintId,
+        dueDate: input.dueDate,
         labels: input.labels ?? [],
       },
     });
