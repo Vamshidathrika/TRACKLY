@@ -101,8 +101,20 @@ export function ReleaseHub({
       </div>
 
       {/* Version Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {releases.map((rel) => {
+      {releases.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 rounded-2xl border border-dashed border-border-default bg-surface text-center gap-3">
+          <Package className="h-10 w-10 text-subtle" />
+          <div>
+            <h3 className="font-bold text-default text-base">No Release Versions Yet</h3>
+            <p className="text-xs text-subtle mt-1">Create your first version tag (e.g. v1.0.0) to track progress and generate release notes.</p>
+          </div>
+          <Button onClick={() => setShowCreateModal(true)} className="text-xs mt-2">
+            Create Version
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {releases.map((rel) => {
           const pct = rel.totalIssues > 0 ? Math.round((rel.completedIssues / rel.totalIssues) * 100) : 0;
           return (
             <div
@@ -185,6 +197,7 @@ export function ReleaseHub({
           );
         })}
       </div>
+      )}
 
       {/* Create Version Modal */}
       {showCreateModal && (

@@ -23,10 +23,10 @@ export type IssueListItem = {
 };
 
 const statusColors: Record<IssueStatus, string> = {
-  TO_DO: "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200",
-  IN_PROGRESS: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-  IN_REVIEW: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
-  DONE: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+  TO_DO: "bg-neutral text-subtle border-border-default hover:bg-neutral-hovered",
+  IN_PROGRESS: "bg-brand/15 text-brand border-brand/30 hover:bg-brand/25",
+  IN_REVIEW: "bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/25",
+  DONE: "bg-success/15 text-success border-success/30 hover:bg-success/25",
 };
 
 const statusLabels: Record<IssueStatus, string> = {
