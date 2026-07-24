@@ -237,6 +237,48 @@ export function KanbanBoard({
     };
   }, [filteredIssues]);
 
+  const swimlanes = useMemo(() => {
+    if (groupBy === "None") return [];
+
+    if (groupBy === "Assignee") {
+      const map = new Map<string, { id: string; name: string; avatarUrl?: string | null; issues: BoardIssue[] }>();
+
+      map.set("unassigned", { id: "unassigned", name: "Unassigned", issues: [] });
+      boardUsers.forEach((u) => {
+        map.set(u.id, { id: u.id, name: u.name, avatarUrl: u.avatarUrl, issues: [] });
+      });
+
+      filteredIssues.forEach((i) => {
+        const key = i.assignee?.id || "unassigned";
+        if (!map.has(key)) {
+          map.set(key, { id: key, name: i.assignee?.name || "Unassigned", avatarUrl: i.assignee?.avatarUrl, issues: [] });
+        }
+        map.get(key)!.issues.push(i);
+      });
+
+      return Array.from(map.values()).filter((group) => group.issues.length > 0 || group.id !== "unassigned");
+    }
+
+    if (groupBy === "Priority") {
+      const priorities: ("HIGHEST" | "HIGH" | "MEDIUM" | "LOW" | "LOWEST")[] = ["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"];
+      return priorities
+        .map((p) => ({
+          id: p,
+          name: `${p} Priority`,
+          issues: filteredIssues.filter((i) => i.priority === p),
+        }))
+        .filter((group) => group.issues.length > 0);
+    }
+
+    return [];
+  }, [groupBy, filteredIssues, boardUsers]);
+
+  const [collapsedSwimlanes, setCollapsedSwimlanes] = useState<Record<string, boolean>>({});
+
+  const toggleSwimlane = (id: string) => {
+    setCollapsedSwimlanes((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const mainTabs = ["Board", "Summary", "Timeline", "Calendar", "Dev", "Code"];
 
   return (
@@ -306,57 +348,147 @@ export function KanbanBoard({
 
           {/* Kanban Columns Grid OR List View */}
           {viewMode === "board" ? (
-            <div className="flex-1 overflow-x-auto overflow-y-hidden py-4">
-              <div className="flex gap-4 h-full min-w-max pb-2">
-                <BoardColumn
-                  status="TO_DO"
-                  issues={issuesByStatus.TO_DO}
-                  onStatusChange={handleStatusChange}
-                  onAssigneeChange={handleAssigneeChange}
-                  onSelectIssue={setSelectedIssue}
-                  availableUsers={boardUsers}
-                  currentUserId={currentUserId}
-                  projectId={projectId}
-                  projectKey={projectKey}
-                  onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
-                />
-                <BoardColumn
-                  status="IN_PROGRESS"
-                  issues={issuesByStatus.IN_PROGRESS}
-                  onStatusChange={handleStatusChange}
-                  onAssigneeChange={handleAssigneeChange}
-                  onSelectIssue={setSelectedIssue}
-                  availableUsers={boardUsers}
-                  currentUserId={currentUserId}
-                  projectId={projectId}
-                  projectKey={projectKey}
-                  onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
-                />
-                <BoardColumn
-                  status="IN_REVIEW"
-                  issues={issuesByStatus.IN_REVIEW}
-                  onStatusChange={handleStatusChange}
-                  onAssigneeChange={handleAssigneeChange}
-                  onSelectIssue={setSelectedIssue}
-                  availableUsers={boardUsers}
-                  currentUserId={currentUserId}
-                  projectId={projectId}
-                  projectKey={projectKey}
-                  onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
-                />
-                <BoardColumn
-                  status="DONE"
-                  issues={issuesByStatus.DONE}
-                  onStatusChange={handleStatusChange}
-                  onAssigneeChange={handleAssigneeChange}
-                  onSelectIssue={setSelectedIssue}
-                  availableUsers={boardUsers}
-                  currentUserId={currentUserId}
-                  projectId={projectId}
-                  projectKey={projectKey}
-                  onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
-                />
-              </div>
+            <div className="flex-1 overflow-x-auto overflow-y-auto py-4">
+              {groupBy === "None" ? (
+                <div className="flex gap-4 h-full min-w-max pb-2">
+                  <BoardColumn
+                    status="TO_DO"
+                    issues={issuesByStatus.TO_DO}
+                    onStatusChange={handleStatusChange}
+                    onAssigneeChange={handleAssigneeChange}
+                    onSelectIssue={setSelectedIssue}
+                    availableUsers={boardUsers}
+                    currentUserId={currentUserId}
+                    projectId={projectId}
+                    projectKey={projectKey}
+                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                  />
+                  <BoardColumn
+                    status="IN_PROGRESS"
+                    issues={issuesByStatus.IN_PROGRESS}
+                    wipLimit={4}
+                    onStatusChange={handleStatusChange}
+                    onAssigneeChange={handleAssigneeChange}
+                    onSelectIssue={setSelectedIssue}
+                    availableUsers={boardUsers}
+                    currentUserId={currentUserId}
+                    projectId={projectId}
+                    projectKey={projectKey}
+                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                  />
+                  <BoardColumn
+                    status="IN_REVIEW"
+                    issues={issuesByStatus.IN_REVIEW}
+                    wipLimit={3}
+                    onStatusChange={handleStatusChange}
+                    onAssigneeChange={handleAssigneeChange}
+                    onSelectIssue={setSelectedIssue}
+                    availableUsers={boardUsers}
+                    currentUserId={currentUserId}
+                    projectId={projectId}
+                    projectKey={projectKey}
+                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                  />
+                  <BoardColumn
+                    status="DONE"
+                    issues={issuesByStatus.DONE}
+                    onStatusChange={handleStatusChange}
+                    onAssigneeChange={handleAssigneeChange}
+                    onSelectIssue={setSelectedIssue}
+                    availableUsers={boardUsers}
+                    currentUserId={currentUserId}
+                    projectId={projectId}
+                    projectKey={projectKey}
+                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-6 min-w-max pb-4">
+                  {swimlanes.map((lane) => {
+                    const isCollapsed = collapsedSwimlanes[lane.id];
+                    const laneIssuesByStatus = {
+                      TO_DO: lane.issues.filter((i) => i.status === "TO_DO"),
+                      IN_PROGRESS: lane.issues.filter((i) => i.status === "IN_PROGRESS"),
+                      IN_REVIEW: lane.issues.filter((i) => i.status === "IN_REVIEW"),
+                      DONE: lane.issues.filter((i) => i.status === "DONE"),
+                    };
+                    const pts = lane.issues.reduce((acc, i) => acc + (i.storyPoints || 0), 0);
+
+                    return (
+                      <div key={lane.id} className="flex flex-col rounded-xl border border-border bg-neutral/30 p-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleSwimlane(lane.id)}
+                          className="flex items-center justify-between py-1 px-2 text-xs font-bold text-text hover:text-brand cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-text-subtle font-mono">{isCollapsed ? "▶" : "▼"}</span>
+                            <span>{lane.name}</span>
+                            <span className="rounded-full bg-brand/10 text-brand px-2 py-0.5 text-[10px]">
+                              {lane.issues.length} issues • {pts} pts
+                            </span>
+                          </div>
+                        </button>
+
+                        {!isCollapsed && (
+                          <div className="flex gap-4 mt-3">
+                            <BoardColumn
+                              status="TO_DO"
+                              issues={laneIssuesByStatus.TO_DO}
+                              onStatusChange={handleStatusChange}
+                              onAssigneeChange={handleAssigneeChange}
+                              onSelectIssue={setSelectedIssue}
+                              availableUsers={boardUsers}
+                              currentUserId={currentUserId}
+                              projectId={projectId}
+                              projectKey={projectKey}
+                              onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                            />
+                            <BoardColumn
+                              status="IN_PROGRESS"
+                              issues={laneIssuesByStatus.IN_PROGRESS}
+                              wipLimit={4}
+                              onStatusChange={handleStatusChange}
+                              onAssigneeChange={handleAssigneeChange}
+                              onSelectIssue={setSelectedIssue}
+                              availableUsers={boardUsers}
+                              currentUserId={currentUserId}
+                              projectId={projectId}
+                              projectKey={projectKey}
+                              onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                            />
+                            <BoardColumn
+                              status="IN_REVIEW"
+                              issues={laneIssuesByStatus.IN_REVIEW}
+                              wipLimit={3}
+                              onStatusChange={handleStatusChange}
+                              onAssigneeChange={handleAssigneeChange}
+                              onSelectIssue={setSelectedIssue}
+                              availableUsers={boardUsers}
+                              currentUserId={currentUserId}
+                              projectId={projectId}
+                              projectKey={projectKey}
+                              onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                            />
+                            <BoardColumn
+                              status="DONE"
+                              issues={laneIssuesByStatus.DONE}
+                              onStatusChange={handleStatusChange}
+                              onAssigneeChange={handleAssigneeChange}
+                              onSelectIssue={setSelectedIssue}
+                              availableUsers={boardUsers}
+                              currentUserId={currentUserId}
+                              projectId={projectId}
+                              projectKey={projectKey}
+                              onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto py-4">
