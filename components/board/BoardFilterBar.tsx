@@ -167,6 +167,7 @@ function BoardFilterBarComponent({
           <Layers size={13} />
           <span>Group:</span>
           <select
+            aria-label="Group by"
             value={groupBy}
             onChange={(e) => onGroupByChange(e.target.value as "None" | "Assignee" | "Priority")}
             className="h-8 px-2 bg-surface border border-border rounded-lg text-xs outline-none text-text font-semibold cursor-pointer"

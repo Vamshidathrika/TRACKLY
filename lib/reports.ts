@@ -37,7 +37,7 @@ export async function getVelocityData(projectId: string) {
   const sprints = await prisma.sprint.findMany({
     where: { projectId },
     include: { issues: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
     take: 5,
   });
 

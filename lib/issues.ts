@@ -255,29 +255,45 @@ export async function addComment(input: { issueId: string; authorId: string; bod
       authorId: input.authorId,
       body: input.body,
     },
-    include: { issue: { select: { key: true } } },
+    include: { issue: { select: { key: true, projectId: true } } },
   });
 
   if (comment.issue?.key) {
-    await delCache(`issue:${comment.issue.key.toUpperCase()}`);
+    const proj = await prisma.project.findUnique({
+      where: { id: comment.issue.projectId },
+      select: { siteId: true },
+    });
+    if (proj) {
+      await delCache(`issue:${proj.siteId}:${comment.issue.key.toUpperCase()}`);
+    }
   }
 
   return comment;
 }
 
-export async function deleteComment(commentId: string, _authorId?: string) {
+export async function deleteComment(commentId: string, authorId?: string) {
   const comment = await prisma.comment.findUnique({
     where: { id: commentId },
-    include: { issue: { select: { key: true } } },
+    include: { issue: { select: { key: true, projectId: true } } },
   });
   if (!comment) throw new Error("COMMENT_NOT_FOUND");
+
+  if (authorId && comment.authorId !== authorId) {
+    throw new Error("PERMISSION_DENIED_COMMENT_AUTHOR_ONLY");
+  }
 
   await prisma.comment.delete({
     where: { id: commentId },
   });
 
   if (comment.issue?.key) {
-    await delCache(`issue:${comment.issue.key.toUpperCase()}`);
+    const proj = await prisma.project.findUnique({
+      where: { id: comment.issue.projectId },
+      select: { siteId: true },
+    });
+    if (proj) {
+      await delCache(`issue:${proj.siteId}:${comment.issue.key.toUpperCase()}`);
+    }
   }
 
   return { success: true };

@@ -49,7 +49,10 @@ export async function updateMemberRole(membershipId: string, role: Role) {
 
 export async function removeWorkspaceMember(siteId: string, userId: string) {
   await prisma.projectMember.deleteMany({
-    where: { userId },
+    where: {
+      userId,
+      project: { siteId },
+    },
   });
   return prisma.membership.deleteMany({
     where: { siteId, userId },

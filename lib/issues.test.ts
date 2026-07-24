@@ -66,8 +66,10 @@ describe("issues lib", () => {
   it("deletes comment cleanly", async () => {
     (prisma.comment.findUnique as any).mockResolvedValue({
       id: "c1",
-      issue: { key: "TRK-1" },
+      authorId: "u1",
+      issue: { key: "TRK-1", projectId: "p1" },
     });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p1", siteId: "s1" });
     (prisma.comment.delete as any).mockResolvedValue({ id: "c1" });
 
     const res = await deleteComment("c1", "u1");
