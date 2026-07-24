@@ -9,9 +9,12 @@ import { ShieldCheck, Activity, Terminal } from "lucide-react";
 export default async function DashboardsPage() {
   const { userId, siteId } = await requireMembership();
 
-  // 1. Fetch all projects in site
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
+  // 1. Fetch all projects in user's workspace sites
   const projects = await prisma.project.findMany({
-    where: { siteId },
+    where: { siteId: { in: siteIds } },
     include: {
       sprints: {
         orderBy: { createdAt: "desc" },
