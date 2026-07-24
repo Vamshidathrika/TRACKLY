@@ -90,27 +90,31 @@ export async function getProjectByKey(siteId: string, key: string) {
  * - Workspace MEMBERs see only projects they have ProjectMember access to
  */
 export async function getProjectsForUser(siteId: string, userId: string) {
-  const membership = await prisma.membership.findUnique({
-    where: { userId_siteId: { userId, siteId } },
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    select: { siteId: true, role: true },
   });
 
-  if (!membership) return [];
+  if (memberships.length === 0) return [];
+
+  const siteIds = Array.from(new Set(memberships.map((m) => m.siteId).concat(siteId)));
+  const isAdmin = memberships.some((m) => m.role === "ADMIN");
 
   const projectInclude = {
     lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     _count: { select: { issues: true } },
   } as const;
 
-  // Workspace ADMINs see all projects
-  if (membership.role === "ADMIN") {
+  // Workspace ADMINs see all projects across their workspaces
+  if (isAdmin) {
     return prisma.project.findMany({
-      where: { siteId },
+      where: { siteId: { in: siteIds } },
       include: projectInclude,
       orderBy: { createdAt: "desc" },
     });
   }
 
-  // Workspace MEMBERs see only projects they have explicit access to
+  // Workspace MEMBERs see projects they have explicit access to or lead
   try {
     const projectMembers = await prisma.projectMember.findMany({
       where: { userId },
@@ -121,7 +125,7 @@ export async function getProjectsForUser(siteId: string, userId: string) {
 
     return await prisma.project.findMany({
       where: {
-        siteId,
+        siteId: { in: siteIds },
         OR: [
           { id: { in: projectIds } },
           { leadId: userId },
@@ -131,9 +135,8 @@ export async function getProjectsForUser(siteId: string, userId: string) {
       orderBy: { createdAt: "desc" },
     });
   } catch (err) {
-    // Graceful fallback if ProjectMember table is syncing
     return prisma.project.findMany({
-      where: { siteId },
+      where: { siteId: { in: siteIds } },
       include: projectInclude,
       orderBy: { createdAt: "desc" },
     });
