@@ -1,17 +1,9 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
-import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { ProjectNav } from "@/components/chrome/ProjectNav";
 import { RecentTracker } from "@/components/chrome/RecentTracker";
-
-const getCachedProject = cache(async (upperKey: string, siteId: string) => {
-  return prisma.project.findFirst({
-    where: { key: upperKey, siteId },
-    select: { id: true, key: true, name: true, siteId: true },
-  });
-});
+import { BoardNotFound } from "@/components/projects/BoardNotFound";
 
 const getCachedStar = cache(async (userId: string, projectId: string) => {
   return prisma.star.findUnique({
@@ -26,18 +18,34 @@ export default async function ProjectLayout({
   children: React.ReactNode;
   params: Promise<{ key: string }>;
 }) {
-  const { userId, siteId } = await requireMembership();
+  const { userId, siteId, role } = await requireMembership();
 
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  // Only look up projects within the user's own workspace — never cross-tenant
-  const project = await getCachedProject(upperKey, siteId);
-  if (!project) redirect("/projects");
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
 
-  // Check project-level access (ADMIN bypasses, MEMBER/VIEWER needs ProjectMember)
-  const access = await checkProjectAccess(userId, project.id, siteId);
-  if (!access) redirect("/your-work");
+  const project = await prisma.project.findFirst({
+    where: {
+      siteId: { in: siteIds },
+      OR: [
+        { key: upperKey },
+        { name: { equals: key, mode: "insensitive" } },
+        { id: key },
+      ],
+    },
+    select: { id: true, key: true, name: true, siteId: true },
+  });
+
+  if (!project) {
+    return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
+  }
+
+  const access = await checkProjectAccess(userId, project.id, project.siteId);
+  if (!access) {
+    return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
+  }
 
   const star = await getCachedStar(userId, project.id);
 
