@@ -10,10 +10,13 @@ export async function quickSearchAction(query: string) {
   const { userId, siteId } = await requireMembership();
   if (!siteId) return { issues: [], projects: [] };
 
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
   const [issues, projects] = await Promise.all([
     prisma.issue.findMany({
       where: {
-        project: { siteId },
+        project: { siteId: { in: siteIds } },
         OR: [
           { summary: { contains: q, mode: "insensitive" } },
           { key: { contains: q, mode: "insensitive" } },
@@ -24,7 +27,7 @@ export async function quickSearchAction(query: string) {
     }),
     prisma.project.findMany({
       where: {
-        siteId,
+        siteId: { in: siteIds },
         OR: [
           { name: { contains: q, mode: "insensitive" } },
           { key: { contains: q, mode: "insensitive" } },

@@ -99,36 +99,25 @@ export const requireAdmin = cache(async (): Promise<TenantContext> => {
  * Returns null if no access (does NOT redirect — let caller decide).
  */
 export const checkProjectAccess = cache(
-  async (userId: string, projectId: string, siteId: string): Promise<ProjectContext | null> => {
-    // Check workspace-level membership or auto-join as workspace member
-    let membership = await prisma.membership.findUnique({
-      where: { userId_siteId: { userId, siteId } },
-    });
-
-    if (!membership) {
-      membership = await prisma.membership.create({
-        data: { userId, siteId, role: "MEMBER" },
-      }).catch(() => null);
-    }
-
-    if (!membership) return null;
-
+  async (userId: string, projectId: string, _siteId?: string): Promise<ProjectContext | null> => {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: { id: true, key: true, name: true, siteId: true },
     });
 
-    if (!project || project.siteId !== siteId) return null;
+    if (!project) return null;
 
-    // Workspace ADMINs have full access to all projects
-    if (membership.role === "ADMIN") {
-      return {
-        projectId: project.id,
-        projectKey: project.key,
-        projectName: project.name,
-        siteId: project.siteId,
-        projectRole: "WORKSPACE_ADMIN",
-      };
+    const targetSiteId = project.siteId;
+
+    // Check workspace-level membership or auto-join as workspace member
+    let membership = await prisma.membership.findUnique({
+      where: { userId_siteId: { userId, siteId: targetSiteId } },
+    });
+
+    if (!membership) {
+      membership = await prisma.membership.create({
+        data: { userId, siteId: targetSiteId, role: "MEMBER" },
+      }).catch(() => null);
     }
 
     // Check per-project membership or grant workspace member access
@@ -148,7 +137,7 @@ export const checkProjectAccess = cache(
         projectKey: project.key,
         projectName: project.name,
         siteId: project.siteId,
-        projectRole: projectMember ? projectMember.role : "MEMBER",
+        projectRole: membership?.role === "ADMIN" ? "WORKSPACE_ADMIN" : (projectMember ? projectMember.role : "MEMBER"),
       };
     } catch (err) {
       return {

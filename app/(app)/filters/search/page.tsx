@@ -1,5 +1,6 @@
 import { getSavedFiltersAction, executeJQLQueryAction } from "@/app/(app)/filters/actions";
 import { getAllUsers } from "@/lib/users";
+import { requireMembership } from "@/lib/tenant";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { JQLNavigator } from "@/components/search/JQLNavigator";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -11,10 +12,11 @@ export default async function FilterSearchPage({
   searchParams: Promise<{ jql?: string }>;
 }) {
   const { jql } = await searchParams;
+  const { userId, siteId } = await requireMembership();
 
   const [savedFilters, allUsers] = await Promise.all([
     getSavedFiltersAction(),
-    getAllUsers(),
+    getAllUsers(siteId, userId),
   ]);
 
   const initialJql = jql || "status = IN_PROGRESS OR status = TO_DO";

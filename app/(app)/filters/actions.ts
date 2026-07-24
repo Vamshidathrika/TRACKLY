@@ -10,11 +10,14 @@ export async function executeJQLQueryAction(jql: string) {
   const { userId, siteId } = await requireMembership();
   if (!siteId) return [];
 
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
   const whereClause = parseJQLToPrisma(jql);
 
   return prisma.issue.findMany({
     where: {
-      project: { siteId },
+      project: { siteId: { in: siteIds } },
       ...whereClause,
     },
     include: {

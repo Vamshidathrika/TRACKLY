@@ -6,14 +6,14 @@ import { getCache, setCache, delCache } from "./redis";
 export async function canUserChangeStatus(issueId: string, userId: string): Promise<boolean> {
   const issue = await prisma.issue.findUnique({
     where: { id: issueId },
-    select: { assigneeId: true, projectId: true },
+    select: { assigneeId: true, projectId: true, project: { select: { siteId: true } } },
   });
 
   if (!issue) return false;
   if (!issue.assigneeId || issue.assigneeId === userId) return true; // Assignee or unassigned issue can update status
 
   const membership = await prisma.membership.findFirst({
-    where: { userId, role: "ADMIN" },
+    where: { userId, siteId: issue.project.siteId, role: "ADMIN" },
   });
 
   return !!membership; // Only Admin or Assignee can update status
@@ -190,13 +190,14 @@ export const getIssuesByProject = cache(async (projectId: string) => {
 
 export async function getIssueByKey(siteId: string, key: string) {
   const upperKey = key.toUpperCase();
-  const cacheKey = `issue:${upperKey}`;
+  const cacheKey = `issue:${siteId}:${upperKey}`;
   const cached = await getCache<any>(cacheKey);
-  if (cached && cached.project?.siteId) return cached;
+  if (cached && cached.project?.siteId === siteId) return cached;
 
   const issue = await prisma.issue.findFirst({
     where: {
       OR: [{ key: upperKey }, { key }],
+      project: { siteId },
     },
     include: {
       project: { select: { id: true, name: true, key: true, siteId: true } },

@@ -107,8 +107,18 @@ export async function createIssueLinkAction(input: {
   targetIssueKey: string;
   relation: "RELATES_TO" | "BLOCKS" | "IS_BLOCKED_BY" | "DUPLICATES";
 }) {
+  const user = await getAuthUser();
+  const userMemberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    select: { siteId: true },
+  });
+  const siteIds = userMemberships.map((m) => m.siteId);
+
   const target = await prisma.issue.findFirst({
-    where: { key: input.targetIssueKey.toUpperCase().trim() },
+    where: {
+      key: input.targetIssueKey.toUpperCase().trim(),
+      project: { siteId: { in: siteIds } },
+    },
     select: { id: true },
   });
   if (!target) throw new Error(`Target issue ${input.targetIssueKey} not found.`);

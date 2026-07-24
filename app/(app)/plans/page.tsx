@@ -9,8 +9,11 @@ import Link from "next/link";
 export default async function PlansPage() {
   const { userId, siteId } = await requireMembership();
 
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
   const projects = await prisma.project.findMany({
-    where: { siteId },
+    where: { siteId: { in: siteIds } },
     include: {
       sprints: {
         orderBy: { createdAt: "desc" },

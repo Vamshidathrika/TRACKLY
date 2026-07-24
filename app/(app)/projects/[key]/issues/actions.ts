@@ -355,7 +355,13 @@ export async function linkIssueAction(
   targetKey: string,
   relation: LinkRelation
 ) {
-  await getAuthUser();
+  const user = await getAuthUser();
+  const userMemberships = await prisma.membership.findMany({
+    where: { userId: user.id },
+    select: { siteId: true },
+  });
+  const siteIds = userMemberships.map((m) => m.siteId);
+
   try {
     const source = await prisma.issue.findUnique({
       where: { id: sourceIssueId },
@@ -364,7 +370,10 @@ export async function linkIssueAction(
     if (!source) return { error: "This ticket is not persisted yet, so links cannot be added." };
 
     const target = await prisma.issue.findFirst({
-      where: { key: targetKey.trim().toUpperCase() },
+      where: {
+        key: targetKey.trim().toUpperCase(),
+        project: { siteId: { in: siteIds } },
+      },
     });
     if (!target) return { error: `No ticket found with key ${targetKey.trim().toUpperCase()}` };
     if (target.id === source.id) return { error: "A ticket cannot be linked to itself" };

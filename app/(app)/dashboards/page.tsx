@@ -101,9 +101,9 @@ export default async function DashboardsPage() {
     }));
 
   // 4. Live Activity History
-  const recentActivity = siteId
+  const recentActivity = siteIds.length > 0
     ? await prisma.issueHistory.findMany({
-        where: { issue: { project: { siteId } } },
+        where: { issue: { project: { siteId: { in: siteIds } } } },
         include: {
           author: { select: { name: true } },
           issue: { select: { key: true, project: { select: { key: true } } } },
