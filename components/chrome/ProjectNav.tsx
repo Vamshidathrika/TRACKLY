@@ -12,6 +12,8 @@ import {
   Settings,
   Star,
   LayoutDashboard,
+  Package,
+  Sparkles,
 } from "lucide-react";
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 
@@ -20,23 +22,28 @@ export function ProjectNav({
   projectName,
   projectId,
   initiallyStarred,
+  isStarred,
 }: {
   projectKey: string;
   projectName: string;
-  projectId: string;
-  initiallyStarred: boolean;
+  projectId?: string;
+  initiallyStarred?: boolean;
+  isStarred?: boolean;
 }) {
   const pathname = usePathname();
-  const [starred, setStarred] = useState(initiallyStarred);
+  const [starred, setStarred] = useState(isStarred ?? initiallyStarred ?? false);
   const [isPending, startTransition] = useTransition();
 
   const handleStarClick = () => {
+    if (!projectId) return;
     setStarred((prev) => !prev);
     startTransition(async () => {
       try {
         const res = await toggleStarAction(projectId);
-        setStarred(res.starred);
-      } catch (err) {
+        if (typeof res?.starred === "boolean") {
+          setStarred(res.starred);
+        }
+      } catch {
         setStarred((prev) => !prev);
       }
     });
@@ -46,6 +53,8 @@ export function ProjectNav({
     { href: `/projects/${projectKey}/board`, label: "Board", icon: Columns3 },
     { href: `/projects/${projectKey}/backlog`, label: "Backlog", icon: List },
     { href: `/projects/${projectKey}/summary`, label: "Summary", icon: LayoutDashboard },
+    { href: `/projects/${projectKey}/releases`, label: "Releases", icon: Package },
+    { href: `/projects/${projectKey}/retro`, label: "Retro", icon: Sparkles },
     { href: `/projects/${projectKey}/reports`, label: "Reports", icon: BarChart3 },
     { href: `/projects/${projectKey}/timeline`, label: "Timeline", icon: Calendar },
     { href: `/projects/${projectKey}/settings`, label: "Settings", icon: Settings },
@@ -59,25 +68,25 @@ export function ProjectNav({
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-mono font-bold text-white uppercase select-none shadow-xs">
             {projectKey.slice(0, 2)}
           </div>
-          <div>
-            <h2 className="text-base font-bold text-default leading-tight tracking-tight">
-              {projectName}
-            </h2>
-            <p className="text-[11px] font-mono text-subtle leading-tight">
-              Key: {projectKey} • Software Project
-            </p>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-bold text-default leading-none">{projectName}</h1>
+              <button
+                type="button"
+                onClick={handleStarClick}
+                disabled={isPending}
+                className="text-subtle hover:text-amber-400 transition-colors"
+                title={starred ? "Unstar project" : "Star project"}
+              >
+                <Star
+                  size={14}
+                  className={starred ? "fill-amber-400 text-amber-400" : "text-subtlest"}
+                />
+              </button>
+            </div>
+            <span className="text-[11px] font-mono text-subtle">Software project</span>
           </div>
         </div>
-
-        <button
-          aria-label="Star project"
-          onClick={handleStarClick}
-          disabled={isPending}
-          className="rounded-lg border border-border-default bg-surface p-1.5 hover:bg-neutral-hovered text-default transition-all shadow-xs"
-          title={starred ? "Unstar project" : "Star project"}
-        >
-          <Star size={16} className={starred ? "fill-warning stroke-warning" : "text-subtlest"} />
-        </button>
       </div>
 
       {/* Bottom Horizontal Tab Navigation Bar */}
