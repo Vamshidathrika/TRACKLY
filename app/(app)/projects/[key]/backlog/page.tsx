@@ -15,15 +15,22 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
   const { userId, siteId } = await requireMembership();
 
   // 1. Resolve project strictly within user's workspace
-  const project = await prisma.project.findFirst({
+  let project = await prisma.project.findFirst({
     where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
+  if (!project) {
+    project = await prisma.project.findFirst({
+      where: { key: upperKey },
+      select: { id: true, key: true, name: true, siteId: true },
+    });
+  }
+
   if (!project) redirect("/projects");
 
   // 2. Check project-level access
-  const access = await checkProjectAccess(userId, project.id, siteId);
+  const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
   const [sprints, allIssues, siteUsers] = await Promise.all([

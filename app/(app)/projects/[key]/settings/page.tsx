@@ -12,14 +12,21 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  const project = await prisma.project.findFirst({
+  let project = await prisma.project.findFirst({
     where: { key: upperKey, siteId },
     include: { lead: { select: { id: true, name: true, email: true, avatarUrl: true } } },
   });
 
+  if (!project) {
+    project = await prisma.project.findFirst({
+      where: { key: upperKey },
+      include: { lead: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+    });
+  }
+
   if (!project) redirect("/projects");
 
-  const access = await checkProjectAccess(userId, project.id, siteId);
+  const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
   const customFields = await getCustomFields(project.id).catch(() => []);

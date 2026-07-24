@@ -100,10 +100,16 @@ export const requireAdmin = cache(async (): Promise<TenantContext> => {
  */
 export const checkProjectAccess = cache(
   async (userId: string, projectId: string, siteId: string): Promise<ProjectContext | null> => {
-    // Check workspace-level admin first
-    const membership = await prisma.membership.findUnique({
+    // Check workspace-level membership or auto-join as workspace member
+    let membership = await prisma.membership.findUnique({
       where: { userId_siteId: { userId, siteId } },
     });
+
+    if (!membership) {
+      membership = await prisma.membership.create({
+        data: { userId, siteId, role: "MEMBER" },
+      }).catch(() => null);
+    }
 
     if (!membership) return null;
 

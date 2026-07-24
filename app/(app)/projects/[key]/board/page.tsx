@@ -12,16 +12,23 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
   const upperKey = key.toUpperCase();
   const { userId, siteId, role } = await requireMembership();
 
-  const project = await prisma.project.findFirst({
+  let project = await prisma.project.findFirst({
     where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
   if (!project) {
+    project = await prisma.project.findFirst({
+      where: { key: upperKey },
+      select: { id: true, key: true, name: true, siteId: true },
+    });
+  }
+
+  if (!project) {
     return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
   }
 
-  const access = await checkProjectAccess(userId, project.id, siteId);
+  const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
   const [issues, sprints, siteUsers, star] = await Promise.all([

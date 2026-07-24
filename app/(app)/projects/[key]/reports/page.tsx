@@ -13,14 +13,21 @@ export default async function ReportsPage({ params }: { params: Promise<{ key: s
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  const project = await prisma.project.findFirst({
+  let project = await prisma.project.findFirst({
     where: { key: upperKey, siteId },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
+  if (!project) {
+    project = await prisma.project.findFirst({
+      where: { key: upperKey },
+      select: { id: true, key: true, name: true, siteId: true },
+    });
+  }
+
   if (!project) redirect("/projects");
 
-  const access = await checkProjectAccess(userId, project.id, siteId);
+  const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
   const sprints = await getSprintsByProject(project.id).catch(() => []);
