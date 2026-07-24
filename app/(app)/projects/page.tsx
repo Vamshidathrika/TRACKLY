@@ -7,7 +7,7 @@ import { Tag } from "@/components/ui/Tag";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 
 export default async function ProjectsPage() {
-  const { userId, siteId } = await requireMembership();
+  const { userId, siteId, role } = await requireMembership();
   const projects = await getProjectsForUser(siteId, userId);
 
   return (
@@ -15,7 +15,7 @@ export default async function ProjectsPage() {
       <Breadcrumbs items={[{ label: "Projects" }]} />
       <div className="mt-2 flex items-center justify-between">
         <h1 className="text-2xl font-medium">Projects</h1>
-        <CreateProjectModal />
+        {role === "ADMIN" && <CreateProjectModal />}
       </div>
 
       {projects.length === 0 ? (
@@ -28,21 +28,27 @@ export default async function ProjectsPage() {
               <path d="M16 7v9" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-text">No board found in your workspace</h2>
+          <h2 className="text-xl font-bold text-text">
+            {role === "ADMIN" ? "No board found in your workspace" : "No assigned boards yet"}
+          </h2>
           <p className="mt-2 mb-6 text-sm text-text-subtle leading-relaxed">
-            To start tracking tasks, managing sprints, and organizing your team work, create your first board to continue.
+            {role === "ADMIN"
+              ? "To start tracking tasks, managing sprints, and organizing your team work, create your first board to continue."
+              : "Ask your workspace admin for a board link to view issues and collaborate with your team."}
           </p>
-          <CreateProjectModal
-            trigger={
-              <button className="h-11 px-6 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-hovered transition-all shadow-sm flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14" />
-                  <path d="M12 5v14" />
-                </svg>
-                Create Board to Continue
-              </button>
-            }
-          />
+          {role === "ADMIN" && (
+            <CreateProjectModal
+              trigger={
+                <button className="h-11 px-6 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-hovered transition-all shadow-sm flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14" />
+                    <path d="M12 5v14" />
+                  </svg>
+                  Create Board to Continue
+                </button>
+              }
+            />
+          )}
         </div>
       ) : (
         <table className="mt-6 w-full max-w-4xl text-sm">

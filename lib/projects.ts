@@ -120,7 +120,13 @@ export async function getProjectsForUser(siteId: string, userId: string) {
     const projectIds = projectMembers.map((pm) => pm.projectId);
 
     return await prisma.project.findMany({
-      where: { siteId, id: { in: projectIds } },
+      where: {
+        siteId,
+        OR: [
+          { id: { in: projectIds } },
+          { leadId: userId },
+        ],
+      },
       include: projectInclude,
       orderBy: { createdAt: "desc" },
     });

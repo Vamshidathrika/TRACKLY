@@ -127,9 +127,15 @@ export const checkProjectAccess = cache(
 
     // Check per-project membership or grant workspace member access
     try {
-      const projectMember = await prisma.projectMember.findUnique({
+      let projectMember = await prisma.projectMember.findUnique({
         where: { projectId_userId: { projectId, userId } },
       });
+
+      if (!projectMember) {
+        projectMember = await prisma.projectMember.create({
+          data: { projectId, userId, role: "MEMBER" },
+        }).catch(() => null);
+      }
 
       return {
         projectId: project.id,
