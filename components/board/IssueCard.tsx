@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TypeIcon } from "@/components/ui/TypeIcon";
@@ -23,6 +23,7 @@ export type BoardIssue = {
   id: string;
   key: string;
   summary: string;
+  description?: string | null;
   type: IssueType;
   status: IssueStatus;
   priority: IssuePriority;
@@ -35,16 +36,18 @@ export type BoardIssue = {
   estimatedHours?: number;
 };
 
-export function IssueCard({
+function IssueCardComponent({
   issue,
   onStatusChange,
   onAssigneeChange,
+  onSelectIssue,
   availableUsers = [],
   canEditStatus = true,
 }: {
   issue: BoardIssue;
   onStatusChange: (issueId: string, newStatus: IssueStatus) => void;
   onAssigneeChange?: (issueId: string, assigneeId: string | null) => void;
+  onSelectIssue?: (issue: BoardIssue) => void;
   availableUsers?: BoardUserOption[];
   canEditStatus?: boolean;
 }) {
@@ -81,17 +84,24 @@ export function IssueCard({
       <div
         draggable={canEditStatus}
         onDragStart={handleDragStart}
-        className={`flex flex-col gap-2 rounded-ds border border-border bg-surface p-3 shadow-xs transition-all relative ${
-          canEditStatus ? "cursor-grab active:cursor-grabbing hover:shadow-md hover:border-brand/60" : "opacity-90"
+        onClick={(e) => {
+          // Don't trigger slide drawer if clicking dropdowns or buttons inside
+          const target = e.target as HTMLElement;
+          if (target.closest("select") || target.closest("button") || target.closest("a")) return;
+          onSelectIssue?.(issue);
+        }}
+        className={`flex flex-col gap-2 rounded-ds border border-border bg-surface p-3 shadow-xs transition-all relative group cursor-pointer ${
+          canEditStatus ? "hover:shadow-md hover:border-brand/60" : "opacity-90"
         }`}
       >
         <div className="flex items-center justify-between">
-          <Link
-            href={`/projects/${issue.projectKey}/issues/${issue.key}`}
-            className="font-mono text-xs font-semibold text-text-subtle hover:text-brand"
+          <button
+            type="button"
+            onClick={() => onSelectIssue?.(issue)}
+            className="font-mono text-xs font-semibold text-text-subtle group-hover:text-brand hover:underline"
           >
             {issue.key}
-          </Link>
+          </button>
 
           <select
             disabled={!canEditStatus}
@@ -99,7 +109,7 @@ export function IssueCard({
             onChange={(e) => onStatusChange(issue.id, e.target.value as IssueStatus)}
             title={canEditStatus ? "Change status" : "Status changes restricted to Assignee or Admin"}
             className={`h-6 rounded-ds border border-border bg-background px-1 text-[11px] font-semibold text-text-subtle outline-none focus:border-brand ${
-              !canEditStatus ? "cursor-not-allowed opacity-60" : ""
+              !canEditStatus ? "cursor-not-allowed opacity-60" : "cursor-pointer"
             }`}
           >
             <option value="TO_DO">TO DO</option>
@@ -109,16 +119,19 @@ export function IssueCard({
           </select>
         </div>
 
-        <Link
-          href={`/projects/${issue.projectKey}/issues/${issue.key}`}
-          className="text-sm font-medium text-text hover:underline line-clamp-2"
+        <p
+          onClick={() => onSelectIssue?.(issue)}
+          className="text-sm font-medium text-text group-hover:text-brand transition-colors line-clamp-2 cursor-pointer"
         >
           {issue.summary}
-        </Link>
+        </p>
 
         {/* Time Logged Progress Bar */}
         <div
-          onClick={() => setShowTimeModal(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTimeModal(true);
+          }}
           className="flex items-center gap-1.5 cursor-pointer text-[10px] text-text-subtle hover:text-brand transition-colors pt-1"
           title="Click to log time spent"
         >
@@ -147,7 +160,10 @@ export function IssueCard({
 
             {/* Quick Assign Avatar Trigger */}
             <button
-              onClick={() => setShowAssignDropdown((prev) => !prev)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAssignDropdown((prev) => !prev);
+              }}
               className="rounded-full hover:ring-2 hover:ring-brand/40 transition-all cursor-pointer"
               title={issue.assignee ? `Assigned to: ${issue.assignee.name} (Click to reassign)` : "Unassigned (Click to assign)"}
             >
@@ -161,7 +177,8 @@ export function IssueCard({
                   Assign To
                 </div>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onAssigneeChange?.(issue.id, null);
                     setShowAssignDropdown(false);
                   }}
@@ -173,7 +190,8 @@ export function IssueCard({
                 {availableUsers.map((user) => (
                   <button
                     key={user.id}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onAssigneeChange?.(issue.id, user.id);
                       setShowAssignDropdown(false);
                     }}
@@ -194,3 +212,15 @@ export function IssueCard({
   );
 }
 
+export const IssueCard = memo(IssueCardComponent, (prev, next) => {
+  return (
+    prev.issue.id === next.issue.id &&
+    prev.issue.summary === next.issue.summary &&
+    prev.issue.status === next.issue.status &&
+    prev.issue.priority === next.issue.priority &&
+    prev.issue.type === next.issue.type &&
+    prev.issue.storyPoints === next.issue.storyPoints &&
+    prev.issue.assignee?.id === next.issue.assignee?.id &&
+    prev.canEditStatus === next.canEditStatus
+  );
+});

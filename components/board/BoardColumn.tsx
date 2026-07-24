@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Plus } from "lucide-react";
 import { IssueCard, type BoardIssue, type BoardUserOption } from "./IssueCard";
 import { quickCreateIssueAction } from "@/app/(app)/projects/[key]/backlog/actions";
@@ -13,11 +13,12 @@ const columnTitles: Record<IssueStatus, string> = {
   DONE: "DONE",
 };
 
-export function BoardColumn({
+function BoardColumnComponent({
   status,
   issues,
   onStatusChange,
   onAssigneeChange,
+  onSelectIssue,
   availableUsers = [],
   currentUserId,
   isAdmin = true,
@@ -31,6 +32,7 @@ export function BoardColumn({
   issues: BoardIssue[];
   onStatusChange: (issueId: string, newStatus: IssueStatus) => void;
   onAssigneeChange?: (issueId: string, assigneeId: string | null) => void;
+  onSelectIssue?: (issue: BoardIssue) => void;
   availableUsers?: BoardUserOption[];
   currentUserId?: string;
   isAdmin?: boolean;
@@ -159,6 +161,7 @@ export function BoardColumn({
                 issue={issue}
                 onStatusChange={onStatusChange}
                 onAssigneeChange={onAssigneeChange}
+                onSelectIssue={onSelectIssue}
                 availableUsers={availableUsers}
                 canEditStatus={canEditStatus}
               />
@@ -214,3 +217,5 @@ export function BoardColumn({
     </div>
   );
 }
+
+export const BoardColumn = memo(BoardColumnComponent);

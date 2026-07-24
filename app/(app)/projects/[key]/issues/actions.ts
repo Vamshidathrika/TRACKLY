@@ -24,41 +24,42 @@ export async function updateIssueFieldAction(
     | "startDate"
     | "dueDate"
     | "labels",
-  value: string
+  value: string | number | null
 ) {
   const user = await getAuthUser();
 
   try {
     const data: Record<string, any> = {};
+    const strVal = value !== null ? String(value) : "";
     if (field === "status") data.status = value as IssueStatus;
     if (field === "priority") data.priority = value as IssuePriority;
     if (field === "type") data.type = value as IssueType;
-    if (field === "summary") data.summary = value;
-    if (field === "description") data.description = value;
-    if (field === "storyPoints") data.storyPoints = value ? parseFloat(value) : null;
-    if (field === "assigneeId") data.assigneeId = value || null;
-    if (field === "reporterId") data.reporterId = value || null;
-    if (field === "sprintId") data.sprintId = value || null;
-    if (field === "startDate") data.startDate = value ? new Date(value) : null;
-    if (field === "dueDate") data.dueDate = value ? new Date(value) : null;
+    if (field === "summary") data.summary = strVal;
+    if (field === "description") data.description = strVal;
+    if (field === "storyPoints") data.storyPoints = value !== null && value !== "" ? Number(value) : null;
+    if (field === "assigneeId") data.assigneeId = strVal || null;
+    if (field === "reporterId") data.reporterId = strVal || null;
+    if (field === "sprintId") data.sprintId = strVal || null;
+    if (field === "startDate") data.startDate = strVal ? new Date(strVal) : null;
+    if (field === "dueDate") data.dueDate = strVal ? new Date(strVal) : null;
     if (field === "labels") {
-      data.labels = value
+      data.labels = strVal
         .split(",")
-        .map((l) => l.trim())
+        .map((l: string) => l.trim())
         .filter(Boolean);
     }
 
     await updateIssue(issueId, user.id, data);
 
     // Notify watchers and trigger automation rules if status changed
-    if (field === "assigneeId" && value) {
+    if (field === "assigneeId" && strVal) {
       const issue = await prisma.issue.findUnique({
         where: { id: issueId },
         include: { project: true },
       });
-      if (issue && value !== user.id) {
+      if (issue && strVal !== user.id) {
         await createNotification({
-          userId: value,
+          userId: strVal,
           actorId: user.id,
           type: "ASSIGNMENT",
           title: `Assigned to ${issue.key}`,
