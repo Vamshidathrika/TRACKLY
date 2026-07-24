@@ -43,10 +43,9 @@ export function ProjectNav({
   };
 
   const navItems = [
-    { href: `/projects/${projectKey}/summary`, label: "Summary", icon: LayoutDashboard },
-    { href: `/projects/${projectKey}`, label: "Tasks List", icon: Folder, exact: true },
-    { href: `/projects/${projectKey}/backlog`, label: "Backlog", icon: List },
     { href: `/projects/${projectKey}/board`, label: "Board", icon: Columns3 },
+    { href: `/projects/${projectKey}/backlog`, label: "Backlog", icon: List },
+    { href: `/projects/${projectKey}/summary`, label: "Summary", icon: LayoutDashboard },
     { href: `/projects/${projectKey}/reports`, label: "Reports", icon: BarChart3 },
     { href: `/projects/${projectKey}/timeline`, label: "Timeline", icon: Calendar },
     { href: `/projects/${projectKey}/settings`, label: "Settings", icon: Settings },
@@ -84,9 +83,7 @@ export function ProjectNav({
       {/* Bottom Horizontal Tab Navigation Bar */}
       <nav className="flex items-center gap-1 overflow-x-auto pt-1 font-medium text-xs">
         {navItems.map((item) => {
-          const isActive = item.exact
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
 
           return (

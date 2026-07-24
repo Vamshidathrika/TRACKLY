@@ -7,8 +7,10 @@ import { ProjectSettingsView } from "@/components/projects/ProjectSettingsView";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
 
+import { BoardNotFound } from "@/components/projects/BoardNotFound";
+
 export default async function ProjectSettingsPage({ params }: { params: Promise<{ key: string }> }) {
-  const { userId, siteId } = await requireMembership();
+  const { userId, siteId, role } = await requireMembership();
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
@@ -27,7 +29,9 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
     include: { lead: { select: { id: true, name: true, email: true, avatarUrl: true } } },
   });
 
-  if (!project) redirect("/projects");
+  if (!project) {
+    return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
+  }
 
   const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");

@@ -9,18 +9,28 @@ export default async function ProjectSummaryPage({
 }: {
   params: Promise<{ key: string }>;
 }) {
-  const { userId, siteId } = await requireMembership();
+  const { userId, siteId, role } = await requireMembership();
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
   const project = await prisma.project.findFirst({
-    where: { key: upperKey, siteId },
+    where: {
+      siteId: { in: siteIds },
+      OR: [
+        { key: upperKey },
+        { name: { equals: key, mode: "insensitive" } },
+        { id: key },
+      ],
+    },
     select: { id: true, key: true, name: true, type: true, siteId: true },
   });
 
-  if (!project) redirect("/projects");
+  if (!project) redirect("/your-work");
 
-  const access = await checkProjectAccess(userId, project.id, siteId);
+  const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
   // Fetch issues & history for this project
