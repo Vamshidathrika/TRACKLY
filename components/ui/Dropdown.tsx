@@ -18,8 +18,12 @@ export function Dropdown({ trigger, items, align = "start" }:
           className="z-50 min-w-45 rounded-ds border border-border-default bg-surface-overlay py-1 shadow-[0_4px_8px_-2px_rgba(9,30,66,0.25)]">
           {items.map((item) => (
             <DM.Item key={item.label} onSelect={item.onSelect}
-              className="cursor-pointer px-4 py-1.5 text-sm text-default outline-none data-[highlighted]:bg-neutral">
-              {item.href ? <Link href={item.href} className="block">{item.label}</Link> : item.label}
+              className="cursor-pointer text-sm text-default outline-none data-[highlighted]:bg-neutral">
+              {item.href ? (
+                <Link href={item.href} className="block px-4 py-1.5">{item.label}</Link>
+              ) : (
+                <span className="block px-4 py-1.5">{item.label}</span>
+              )}
             </DM.Item>
           ))}
         </DM.Content>

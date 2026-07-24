@@ -142,7 +142,13 @@ export async function updateIssue(
   }
 
   if (current?.key) {
-    await delCache(`issue:${current.key.toUpperCase()}`);
+    const proj = await prisma.project.findUnique({
+      where: { id: current.projectId },
+      select: { siteId: true },
+    });
+    if (proj) {
+      await delCache(`issue:${proj.siteId}:${current.key.toUpperCase()}`);
+    }
   }
 
   return updated;

@@ -142,3 +142,30 @@ export async function getProjectsForUser(siteId: string, userId: string) {
     });
   }
 }
+
+/**
+ * Shared helper to resolve a project by key, case-insensitive name, or ID
+ * across all site memberships of a given user.
+ */
+export async function resolveProjectByKey(userId: string, siteId: string, rawKey: string) {
+  const userMemberships = await prisma.membership.findMany({
+    where: { userId },
+    select: { siteId: true },
+  });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+  const upperKey = rawKey.toUpperCase();
+
+  return prisma.project.findFirst({
+    where: {
+      siteId: { in: siteIds },
+      OR: [
+        { key: upperKey },
+        { name: { equals: rawKey, mode: "insensitive" } },
+        { id: rawKey },
+      ],
+    },
+    include: {
+      lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+    },
+  });
+}
