@@ -10,7 +10,7 @@ import { BoardNotFound } from "@/components/projects/BoardNotFound";
 export default async function BoardPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   const upperKey = key.toUpperCase();
-  const { userId, siteId } = await requireMembership();
+  const { userId, siteId, role } = await requireMembership();
 
   const project = await prisma.project.findFirst({
     where: { key: upperKey, siteId },
@@ -18,7 +18,7 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
   });
 
   if (!project) {
-    return <BoardNotFound projectKey={upperKey} />;
+    return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
   }
 
   const access = await checkProjectAccess(userId, project.id, siteId);

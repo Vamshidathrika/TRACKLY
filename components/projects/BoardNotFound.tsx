@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 
-export function BoardNotFound({ projectKey }: { projectKey?: string }) {
+export function BoardNotFound({ projectKey, isAdmin = true }: { projectKey?: string; isAdmin?: boolean }) {
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">
       <Breadcrumbs items={[{ label: "Projects", href: "/projects" }, { label: projectKey ? `Board ${projectKey}` : "Board Not Found" }]} />
@@ -21,20 +22,31 @@ export function BoardNotFound({ projectKey }: { projectKey?: string }) {
         </h1>
 
         <p className="mt-3 mb-8 text-sm text-text-subtle leading-relaxed">
-          The board you requested does not exist in your workspace or has been removed. Create a new board to start managing issues and tickets for your team.
+          {isAdmin
+            ? "The board you requested does not exist in your workspace or has been removed. Create a new board to start managing issues and tickets for your team."
+            : "The board you requested does not exist or you do not have access to it yet. Check with your workspace admin for a valid link."}
         </p>
 
-        <CreateProjectModal
-          trigger={
-            <button className="h-11 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-hovered transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-              </svg>
-              Create Board to Continue
-            </button>
-          }
-        />
+        {isAdmin ? (
+          <CreateProjectModal
+            trigger={
+              <button className="h-11 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-hovered transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+                Create Board to Continue
+              </button>
+            }
+          />
+        ) : (
+          <Link
+            href="/your-work"
+            className="h-11 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-hovered transition-all shadow-md flex items-center gap-2"
+          >
+            Return to Dashboard
+          </Link>
+        )}
       </div>
     </main>
   );
