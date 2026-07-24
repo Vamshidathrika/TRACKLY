@@ -122,7 +122,7 @@ export function KanbanBoard({
   const handleShare = () => {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
-      showToast("Board link copied to clipboard!");
+      showToast("Board link copied! Workspace members with project access can view this board.");
     }
   };
 
