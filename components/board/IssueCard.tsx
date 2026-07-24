@@ -30,10 +30,18 @@ export type BoardIssue = {
   storyPoints?: number | null;
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
   reporter?: { id: string; name: string; avatarUrl?: string | null } | null;
+  reporterId?: string | null;
   sprintId?: string | null;
+  dueDate?: Date | string | null;
+  startDate?: Date | string | null;
+  labels?: string[];
   projectKey: string;
   loggedHours?: number;
   estimatedHours?: number;
+  originalEstimate?: number | null;
+  comments?: any[];
+  history?: any[];
+  workLogs?: any[];
 };
 
 function IssueCardComponent({
@@ -55,7 +63,7 @@ function IssueCardComponent({
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [loggedHours, setLoggedHours] = useState(issue.loggedHours ?? 0);
-  const estimatedHours = issue.estimatedHours ?? 8;
+  const estimatedHours = issue.estimatedHours ?? issue.originalEstimate ?? 0;
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     if (!canEditStatus) return;
@@ -139,7 +147,7 @@ function IssueCardComponent({
           <span>{loggedHours > 0 ? `${loggedHours.toFixed(1)}h logged` : "Log time"}</span>
           <div className="flex-1 h-1.5 rounded-full bg-neutral overflow-hidden ml-1">
             <div
-              style={{ width: `${Math.min(100, Math.round((loggedHours / estimatedHours) * 100))}%` }}
+              style={{ width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%` }}
               className="h-full bg-brand"
             />
           </div>

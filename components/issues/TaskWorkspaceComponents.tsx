@@ -525,7 +525,7 @@ export function ActivitySection({
   history: initialHistory,
   workLogs = [],
   loggedHours = 0,
-  estimatedHours = 8,
+  estimatedHours = 0,
   currentUserId,
   onAddComment,
   onDeleteComment,
@@ -703,7 +703,9 @@ export function ActivitySection({
             </span>
             <span>
               Original Estimate:{" "}
-              <strong className="text-text font-bold">{estimatedHours.toFixed(1)} hours</strong>
+              <strong className="text-text font-bold">
+                {estimatedHours > 0 ? `${estimatedHours.toFixed(1)} hours` : "Not set"}
+              </strong>
             </span>
           </div>
 

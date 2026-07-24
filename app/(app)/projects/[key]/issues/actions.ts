@@ -18,6 +18,7 @@ export async function updateIssueFieldAction(
     | "summary"
     | "description"
     | "storyPoints"
+    | "originalEstimate"
     | "assigneeId"
     | "reporterId"
     | "sprintId"
@@ -37,6 +38,7 @@ export async function updateIssueFieldAction(
     if (field === "summary") data.summary = strVal;
     if (field === "description") data.description = strVal;
     if (field === "storyPoints") data.storyPoints = value !== null && value !== "" ? Number(value) : null;
+    if (field === "originalEstimate") data.originalEstimate = value !== null && value !== "" ? Number(value) : null;
     if (field === "assigneeId") data.assigneeId = strVal || null;
     if (field === "reporterId") data.reporterId = strVal || null;
     if (field === "sprintId") data.sprintId = strVal || null;

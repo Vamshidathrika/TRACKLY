@@ -229,8 +229,8 @@ export function CreateIssueModal({
               </FieldInput>
             </div>
 
-            {/* Due Date + Story Points */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Due Date, Story Points & Estimated Hours */}
+            <div className="grid grid-cols-3 gap-3">
               <FieldInput>
                 <FieldLabel label="Due date" />
                 <input
@@ -248,6 +248,18 @@ export function CreateIssueModal({
                   min="0"
                   step="1"
                   placeholder="e.g. 3"
+                  className={inputClass}
+                />
+              </FieldInput>
+
+              <FieldInput>
+                <FieldLabel label="Original estimate (h)" />
+                <input
+                  name="originalEstimate"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="e.g. 8"
                   className={inputClass}
                 />
               </FieldInput>

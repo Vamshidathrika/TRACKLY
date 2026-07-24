@@ -31,8 +31,9 @@ export function TimeLogModal({
   issueKey,
   issueSummary = "",
   currentLoggedHours = 0,
-  estimatedHours = 8,
+  estimatedHours = 0,
   onLogTime,
+  onUpdateEstimate,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -41,10 +42,12 @@ export function TimeLogModal({
   currentLoggedHours?: number;
   estimatedHours?: number;
   onLogTime: (hours: number, description: string, startedAt: string) => Promise<string | null>;
+  onUpdateEstimate?: (hours: number) => Promise<void>;
 }) {
   const [timeInput, setTimeInput] = useState("");
   const [worklogText, setWorklogText] = useState("");
   const [logDate, setLogDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [estimateInput, setEstimateInput] = useState<string>("");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,15 +57,17 @@ export function TimeLogModal({
       setTimeInput("");
       setWorklogText("");
       setLogDate(new Date().toISOString().split("T")[0]);
+      setEstimateInput(estimatedHours > 0 ? String(estimatedHours) : "");
       setSaved(false);
       setError(null);
       setIsSaving(false);
     }
-  }, [isOpen]);
+  }, [isOpen, estimatedHours]);
 
   if (!isOpen) return null;
 
   const parsedHours = parseTimeToHours(timeInput);
+  const currentEstimate = estimateInput !== "" ? parseFloat(estimateInput) || 0 : estimatedHours;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,20 +81,28 @@ export function TimeLogModal({
     setError(null);
     setIsSaving(true);
     const failure = await onLogTime(parsedHours, worklogText, logDate);
-    setIsSaving(false);
 
     if (failure) {
+      setIsSaving(false);
       setError(failure);
       return;
     }
 
+    if (onUpdateEstimate && estimateInput !== "" && parseFloat(estimateInput) !== estimatedHours) {
+      const parsedEst = parseFloat(estimateInput);
+      if (!isNaN(parsedEst) && parsedEst >= 0) {
+        await onUpdateEstimate(parsedEst);
+      }
+    }
+
+    setIsSaving(false);
     setSaved(true);
     setTimeout(onClose, 900);
   };
 
   const totalLogged = currentLoggedHours + parsedHours;
   const progressPercent =
-    estimatedHours > 0 ? Math.min(100, Math.round((totalLogged / estimatedHours) * 100)) : 0;
+    currentEstimate > 0 ? Math.min(100, Math.round((totalLogged / currentEstimate) * 100)) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
@@ -142,6 +155,19 @@ export function TimeLogModal({
             </div>
 
             <div>
+              <label className="block font-bold text-text mb-1">Estimated Time (hours)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={estimateInput}
+                onChange={(e) => setEstimateInput(e.target.value)}
+                placeholder="e.g. 8"
+                className="w-full h-9 rounded border border-border bg-surface px-3 outline-none focus:border-brand font-mono text-xs"
+              />
+            </div>
+
+            <div>
               <label className="block font-bold text-text mb-1">Work Description / Activity</label>
               <textarea
                 rows={2}
@@ -156,7 +182,7 @@ export function TimeLogModal({
             <div className="p-3 rounded-md bg-neutral border border-border flex flex-col gap-1.5">
               <div className="flex justify-between text-[11px] font-semibold text-text-subtle">
                 <span>Logged: {totalLogged.toFixed(1)}h</span>
-                <span>Estimated: {estimatedHours}h</span>
+                <span>Estimated: {currentEstimate > 0 ? `${currentEstimate.toFixed(1)}h` : "Not set"}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-border/60 overflow-hidden">
                 <div style={{ width: `${progressPercent}%` }} className="h-full bg-brand transition-all" />

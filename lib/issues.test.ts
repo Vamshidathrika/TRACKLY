@@ -75,4 +75,35 @@ describe("issues lib", () => {
     const res = await deleteComment("c1", "u1");
     expect(res.success).toBe(true);
   });
+
+  it("creates issue with custom original estimate", async () => {
+    const mockTxCreate = vi.fn().mockImplementation(({ data }) =>
+      Promise.resolve({ id: "i2", key: "TRK-2", number: 2, summary: "Estimated Task", originalEstimate: data.originalEstimate })
+    );
+
+    (prisma.$transaction as any).mockImplementation(async (fn: any) =>
+      fn({
+        project: {
+          findUnique: vi.fn().mockResolvedValue({ id: "p1", key: "TRK", issueCounter: 1 }),
+          update: vi.fn().mockResolvedValue({ id: "p1", issueCounter: 2 }),
+        },
+        issue: { create: mockTxCreate },
+        issueHistory: { create: vi.fn().mockResolvedValue({ id: "h2" }) },
+      })
+    );
+
+    const issue = await createIssue({
+      projectId: "p1",
+      summary: "Estimated Task",
+      reporterId: "u1",
+      originalEstimate: 12.5,
+    });
+
+    expect(issue.originalEstimate).toBe(12.5);
+    expect(mockTxCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ originalEstimate: 12.5 }),
+      })
+    );
+  });
 });

@@ -15,6 +15,7 @@ const createIssueSchema = z.object({
   status: z.enum(["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"]).optional(),
   sprintId: z.string().optional(),
   storyPoints: z.coerce.number().optional(),
+  originalEstimate: z.coerce.number().optional(),
   assigneeId: z.string().optional(),
   dueDate: z.string().optional(),
 });
@@ -38,6 +39,7 @@ export async function createIssueAction(
       status: (parsed.data.status as IssueStatus) ?? "TO_DO",
       sprintId: parsed.data.sprintId || undefined,
       storyPoints: parsed.data.storyPoints,
+      originalEstimate: parsed.data.originalEstimate,
       assigneeId: parsed.data.assigneeId || undefined,
       dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
       reporterId: user.id,

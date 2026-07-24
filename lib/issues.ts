@@ -27,6 +27,7 @@ export async function createIssue(input: {
   status?: IssueStatus;
   priority?: IssuePriority;
   storyPoints?: number;
+  originalEstimate?: number;
   reporterId: string;
   assigneeId?: string;
   parentId?: string;
@@ -59,6 +60,7 @@ export async function createIssue(input: {
         status: input.status ?? "TO_DO",
         priority: input.priority ?? "MEDIUM",
         storyPoints: input.storyPoints,
+        originalEstimate: input.originalEstimate,
         reporterId: input.reporterId,
         assigneeId: input.assigneeId,
         parentId: input.parentId,
@@ -92,6 +94,7 @@ export async function updateIssue(
     status?: IssueStatus;
     priority?: IssuePriority;
     storyPoints?: number | null;
+    originalEstimate?: number | null;
     assigneeId?: string | null;
     reporterId?: string | null;
     sprintId?: string | null;

@@ -119,6 +119,7 @@ export function IssueDetail({
   const [assigneeId, setAssigneeId] = useState<string>(issue.assigneeId || "");
   const [reporterId, setReporterId] = useState<string>(issue.reporterId || issue.reporter?.id || currentUserId || "");
   const [storyPoints, setStoryPoints] = useState<number | null>(issue.storyPoints ?? null);
+  const [originalEstimate, setOriginalEstimate] = useState<number | null>(issue.originalEstimate ?? null);
   const [sprintId, setSprintId] = useState<string>(issue.sprintId || "");
   const [startDate, setStartDate] = useState<string>(toDateInput(issue.startDate));
   const [dueDate, setDueDate] = useState<string>(toDateInput(issue.dueDate));
@@ -167,7 +168,7 @@ export function IssueDetail({
   // numbers stay correct after router.refresh() revalidates the page.
   const workLogs: any[] = issue.workLogs || [];
   const loggedHours = workLogs.reduce((sum, w) => sum + Number(w.hours || 0), 0);
-  const estimatedHours = issue.originalEstimate ?? (issue.storyPoints ? issue.storyPoints * 1.5 : 8);
+  const estimatedHours = originalEstimate ?? 0;
 
   // Quick Action Handlers
   const showToast = (msg: string) => {
@@ -265,6 +266,12 @@ export function IssueDetail({
     persistField("storyPoints", value, value ? `Story points set to ${value}` : "Story points cleared");
   };
 
+  const handleOriginalEstimateChange = (value: string) => {
+    const num = value !== "" ? Number(value) : null;
+    setOriginalEstimate(num);
+    persistField("originalEstimate", value, value ? `Original estimate set to ${value}h` : "Original estimate cleared");
+  };
+
   const handleSprintChange = (newSprintId: string) => {
     setSprintId(newSprintId);
     const name = sprints.find((s) => s.id === newSprintId)?.name;
@@ -356,6 +363,9 @@ export function IssueDetail({
           currentLoggedHours={loggedHours}
           estimatedHours={estimatedHours}
           onLogTime={handleLogWork}
+          onUpdateEstimate={async (h) => {
+            handleOriginalEstimateChange(String(h));
+          }}
         />
       )}
 
@@ -757,6 +767,25 @@ export function IssueDetail({
                       <option value={13}>13 pts</option>
                       <option value={21}>21 pts</option>
                     </select>
+                  </div>
+
+                  {/* Estimated Time */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-text-subtle font-medium flex items-center gap-1.5">
+                      <Clock size={13} /> Estimated Time
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={originalEstimate ?? ""}
+                        onChange={(e) => handleOriginalEstimateChange(e.target.value)}
+                        placeholder="0"
+                        className="h-7 w-16 rounded-[6px] border border-border-default bg-surface px-2 text-[12px] font-semibold font-mono text-default outline-none hover:bg-neutral focus:border-brand transition-colors text-right"
+                      />
+                      <span className="text-xs text-text-subtle font-semibold">h</span>
+                    </div>
                   </div>
 
                   {/* Time Tracking Progress Bar */}
