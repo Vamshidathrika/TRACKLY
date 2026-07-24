@@ -8,13 +8,31 @@ import { Button } from "@/components/ui/Button";
 
 export function LoginForm({
   googleEnabled = false,
+  errorParam,
 }: {
   googleEnabled?: boolean;
+  errorParam?: string;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [state, action, pending] = useActionState(loginAction, {});
+
+  const getOAuthErrorMessage = (code?: string) => {
+    if (!code) return null;
+    if (code === "OAuthCallback" || code === "Callback") {
+      return "Sign in with Google failed. Please try again.";
+    }
+    if (code === "AccessDenied") {
+      return "Access was denied during Google sign in.";
+    }
+    if (code === "Configuration") {
+      return "Google sign in is not properly configured on the server.";
+    }
+    return "Authentication failed. Please try again.";
+  };
+
+  const errorMessage = state.error || getOAuthErrorMessage(errorParam);
 
   return (
     <div className="flex flex-col gap-5">
@@ -111,9 +129,9 @@ export function LoginForm({
         </div>
 
         {/* Error */}
-        {state.error && (
+        {errorMessage && (
           <div className="flex items-center gap-2 rounded-[8px] bg-danger/8 border border-danger/20 px-3 py-2.5">
-            <span className="text-danger text-sm font-medium">{state.error}</span>
+            <span className="text-danger text-sm font-medium">{errorMessage}</span>
           </div>
         )}
 

@@ -27,23 +27,53 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
   ],
   callbacks: {
-    ...authConfig.callbacks,
     async signIn({ user, account }) {
       if (account?.provider !== "google" || !user.email) return true;
-      const existing = await prisma.user.findUnique({ where: { email: user.email.toLowerCase() } });
-      if (!existing) {
-        const { makeSlug } = await import("./slug");
-        await prisma.$transaction(async (tx) => {
-          const u = await tx.user.create({
-            data: { email: user.email!.toLowerCase(), name: user.name ?? user.email!, avatarUrl: user.image },
+      try {
+        const userEmail = user.email.toLowerCase();
+        const existing = await prisma.user.findUnique({ where: { email: userEmail } });
+        if (!existing) {
+          const { makeSlug } = await import("./slug");
+          await prisma.$transaction(async (tx) => {
+            const u = await tx.user.create({
+              data: { email: userEmail, name: user.name ?? user.email!, avatarUrl: user.image },
+            });
+            const site = await tx.site.create({
+              data: { name: `${u.name}'s site`, slug: makeSlug(u.name) },
+            });
+            await tx.membership.create({ data: { userId: u.id, siteId: site.id, role: "ADMIN" } });
           });
-          const site = await tx.site.create({
-            data: { name: `${u.name}'s site`, slug: makeSlug(u.name) },
-          });
-          await tx.membership.create({ data: { userId: u.id, siteId: site.id, role: "ADMIN" } });
-        });
+        }
+        return true;
+      } catch (err) {
+        console.error("[Google OAuth SignIn Callback Error]:", err);
+        return false;
       }
-      return true;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.userId = user.id;
+        if (user.email) {
+          try {
+            const dbUser = await prisma.user.findUnique({ where: { email: user.email.toLowerCase() } });
+            if (dbUser) {
+              token.userId = dbUser.id;
+            }
+          } catch (e) {
+            console.error("[JWT Callback dbUser Error]:", e);
+          }
+        }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as { id?: string }).id = (token.userId || token.sub) as string;
+      }
+      return session;
+    },
+    authorized({ auth, request }) {
+      return !!auth?.user || request.nextUrl.pathname === "/";
     },
   },
 });
