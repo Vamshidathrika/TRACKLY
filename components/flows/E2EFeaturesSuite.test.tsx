@@ -73,7 +73,7 @@ describe("E2E Core Features & Workflows Test Suite", () => {
       const saveBtn = screen.getByRole("button", { name: /Share & Save Filter/i });
       expect(saveBtn).not.toBeDisabled();
       fireEvent.click(saveBtn);
-      expect(screen.getByText("Save & Share Filter")).toBeInTheDocument();
+      expect(screen.getByText("Save & Share Filter View")).toBeInTheDocument();
     });
   });
 });
