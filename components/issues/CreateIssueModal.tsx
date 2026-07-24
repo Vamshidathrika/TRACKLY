@@ -73,7 +73,7 @@ const inputClass =
 const selectClass =
   "h-9 rounded-[8px] border border-border-default bg-surface px-3 text-[13px] text-default outline-none cursor-pointer hover:bg-neutral transition-all focus:border-brand";
 
-export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
+export function CreateIssueModal({ trigger, defaultProjectId }: { trigger?: React.ReactNode; defaultProjectId?: string }) {
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<{ id: string; name: string; key: string }[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; email: string }[]>([]);
@@ -145,7 +145,7 @@ export function CreateIssueModal({ trigger }: { trigger?: React.ReactNode }) {
             {/* Project */}
             <FieldInput>
               <FieldLabel label="Project" required />
-              <select name="projectId" required className={selectClass}>
+              <select name="projectId" defaultValue={defaultProjectId} required className={selectClass}>
                 {projects.length === 0 ? (
                   <option value="">No projects available — create one first</option>
                 ) : (

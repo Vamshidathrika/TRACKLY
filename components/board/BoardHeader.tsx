@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 type BoardHeaderProps = {
   projectName: string;
   projectKey: string;
+  projectId?: string;
   isStarred: boolean;
   onToggleStar: () => void;
   onShare: () => void;
@@ -21,6 +22,7 @@ type BoardHeaderProps = {
 function BoardHeaderComponent({
   projectName,
   projectKey,
+  projectId,
   isStarred,
   onToggleStar,
   onShare,
@@ -112,6 +114,7 @@ function BoardHeaderComponent({
         </div>
 
         <CreateIssueModal
+          defaultProjectId={projectId}
           trigger={
             <Button appearance="primary" className="h-9 px-4 rounded-lg bg-brand text-white hover:bg-brand-hovered font-semibold text-xs shadow-xs">
               Create issue
