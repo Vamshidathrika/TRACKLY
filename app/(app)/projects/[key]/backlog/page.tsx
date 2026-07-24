@@ -42,7 +42,7 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
           <h1 className="text-2xl font-semibold text-text">{project.name} backlog</h1>
           <p className="text-xs text-text-subtle">Sprint Planning • {project.key}</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary">Create issue</Button>} />
+        <CreateIssueModal defaultProjectId={project.id} trigger={<Button appearance="primary">Create issue</Button>} />
       </div>
 
       <BacklogView

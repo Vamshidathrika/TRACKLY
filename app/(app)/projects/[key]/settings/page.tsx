@@ -32,7 +32,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
           <h1 className="text-2xl font-semibold text-text">{project.name} Settings</h1>
           <p className="text-xs text-text-subtle">Manage project details, keys, and custom fields • {project.key}</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary">Create task</Button>} />
+        <CreateIssueModal defaultProjectId={project.id} trigger={<Button appearance="primary">Create task</Button>} />
       </div>
 
       <ProjectSettingsView

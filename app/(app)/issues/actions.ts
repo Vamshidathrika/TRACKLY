@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createIssue } from "@/lib/issues";
-import type { IssueType, IssuePriority } from "@prisma/client";
+import type { IssueType, IssuePriority, IssueStatus } from "@prisma/client";
 
 const createIssueSchema = z.object({
   projectId: z.string().min(1, "Project is required"),
@@ -12,8 +12,11 @@ const createIssueSchema = z.object({
   description: z.string().optional(),
   type: z.enum(["EPIC", "STORY", "TASK", "BUG", "SUBTASK"]).optional(),
   priority: z.enum(["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"]).optional(),
+  status: z.enum(["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"]).optional(),
+  sprintId: z.string().optional(),
   storyPoints: z.coerce.number().optional(),
   assigneeId: z.string().optional(),
+  dueDate: z.string().optional(),
 });
 
 export async function createIssueAction(
@@ -32,8 +35,11 @@ export async function createIssueAction(
       description: parsed.data.description,
       type: (parsed.data.type as IssueType) ?? "STORY",
       priority: (parsed.data.priority as IssuePriority) ?? "MEDIUM",
+      status: (parsed.data.status as IssueStatus) ?? "TO_DO",
+      sprintId: parsed.data.sprintId || undefined,
       storyPoints: parsed.data.storyPoints,
       assigneeId: parsed.data.assigneeId || undefined,
+      dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
       reporterId: user.id,
     });
     revalidatePath("/projects");

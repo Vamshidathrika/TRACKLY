@@ -9,7 +9,15 @@ import { Input } from "@/components/ui/Input";
 import { createProjectAction } from "@/app/(app)/projects/actions";
 import { generateProjectKey } from "@/lib/projects";
 
-export function CreateProjectModal({ trigger }: { trigger?: React.ReactNode }) {
+export function CreateProjectModal({
+  trigger,
+  defaultType = "KANBAN",
+  onSuccess,
+}: {
+  trigger?: React.ReactNode;
+  defaultType?: string;
+  onSuccess?: () => void;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -17,15 +25,24 @@ export function CreateProjectModal({ trigger }: { trigger?: React.ReactNode }) {
   const [state, action, pending] = useActionState(createProjectAction, {} as { error?: string; success?: boolean; projectKey?: string });
 
   useEffect(() => {
+    if (open) {
+      setName("");
+      setKey("");
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (state.success) {
       setOpen(false);
       setName("");
       setKey("");
+      onSuccess?.();
+      router.refresh();
       if (state.projectKey) {
         router.push(`/projects/${state.projectKey}/board`);
       }
     }
-  }, [state.success, state.projectKey, router]);
+  }, [state.success, state.projectKey, router, onSuccess]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

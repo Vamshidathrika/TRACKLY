@@ -51,7 +51,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ key: s
           <h1 className="text-2xl font-semibold text-text">{project.name} Reports</h1>
           <p className="text-xs text-text-subtle">Agile metrics & performance insights • {project.key}</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary">Create task</Button>} />
+        <CreateIssueModal defaultProjectId={project.id} trigger={<Button appearance="primary">Create task</Button>} />
       </div>
 
       <ReportsView burndown={burndown} velocity={velocity} cumulative={cumulativeData} />

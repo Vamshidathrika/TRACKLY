@@ -73,23 +73,47 @@ const inputClass =
 const selectClass =
   "h-9 rounded-[8px] border border-border-default bg-surface px-3 text-[13px] text-default outline-none cursor-pointer hover:bg-neutral transition-all focus:border-brand";
 
-export function CreateIssueModal({ trigger, defaultProjectId }: { trigger?: React.ReactNode; defaultProjectId?: string }) {
+import { useRouter } from "next/navigation";
+
+export function CreateIssueModal({
+  trigger,
+  defaultProjectId,
+  defaultStatus,
+  defaultSprintId,
+  defaultAssigneeId,
+  defaultType = "STORY",
+  onSuccess,
+}: {
+  trigger?: React.ReactNode;
+  defaultProjectId?: string;
+  defaultStatus?: string;
+  defaultSprintId?: string;
+  defaultAssigneeId?: string;
+  defaultType?: string;
+  onSuccess?: () => void;
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<{ id: string; name: string; key: string }[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; email: string }[]>([]);
-  const [selectedType, setSelectedType] = useState("STORY");
+  const [selectedType, setSelectedType] = useState(defaultType);
   const [state, action, pending] = useActionState(createIssueAction, {} as { error?: string; success?: boolean });
 
   useEffect(() => {
     if (open) {
+      setSelectedType(defaultType);
       fetchUserProjectsAction().then(setProjects);
       fetchWorkspaceMembersAction().then(setMembers);
     }
-  }, [open]);
+  }, [open, defaultType]);
 
   useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+    if (state.success) {
+      setOpen(false);
+      onSuccess?.();
+      router.refresh();
+    }
+  }, [state.success, onSuccess, router]);
 
   const selectedTypeMeta = ISSUE_TYPES.find((t) => t.value === selectedType) ?? ISSUE_TYPES[0];
 
@@ -118,6 +142,8 @@ export function CreateIssueModal({ trigger, defaultProjectId }: { trigger?: Reac
           </div>
 
           <form action={action} className="flex flex-col gap-4 px-6 py-5">
+            {defaultStatus && <input type="hidden" name="status" value={defaultStatus} />}
+            {defaultSprintId && <input type="hidden" name="sprintId" value={defaultSprintId} />}
 
             {/* Task Type — pill selector */}
             <FieldInput>
@@ -185,7 +211,7 @@ export function CreateIssueModal({ trigger, defaultProjectId }: { trigger?: Reac
             <div className="grid grid-cols-2 gap-3">
               <FieldInput>
                 <FieldLabel label="Assignee" />
-                <select name="assigneeId" defaultValue="" className={selectClass}>
+                <select name="assigneeId" defaultValue={defaultAssigneeId || ""} className={selectClass}>
                   <option value="">Unassigned</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>{m.name || m.email}</option>

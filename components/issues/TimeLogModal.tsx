@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -48,6 +48,17 @@ export function TimeLogModal({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeInput("");
+      setWorklogText("");
+      setLogDate(new Date().toISOString().split("T")[0]);
+      setSaved(false);
+      setError(null);
+      setIsSaving(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
