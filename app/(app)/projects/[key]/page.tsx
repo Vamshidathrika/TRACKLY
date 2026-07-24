@@ -8,17 +8,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  let project = await prisma.project.findFirst({
-    where: { key: upperKey, siteId },
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
+  const project = await prisma.project.findFirst({
+    where: { key: upperKey, siteId: { in: siteIds } },
     select: { id: true, key: true, name: true, type: true, siteId: true },
   });
-
-  if (!project) {
-    project = await prisma.project.findFirst({
-      where: { key: upperKey },
-      select: { id: true, key: true, name: true, type: true, siteId: true },
-    });
-  }
 
   if (!project) {
     return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;

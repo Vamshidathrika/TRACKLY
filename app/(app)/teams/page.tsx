@@ -5,12 +5,13 @@ import { TeamHub, type MemberItem } from "@/components/teams/TeamHub";
 export default async function TeamsPage() {
   const user = await getAuthUser();
 
-  const userMembership = await prisma.membership.findFirst({
+  const userMemberships = await prisma.membership.findMany({
     where: { userId: user.id },
     select: { siteId: true },
   });
+  const siteIds = userMemberships.map((m) => m.siteId);
 
-  if (!userMembership) {
+  if (siteIds.length === 0) {
     return (
       <TeamHub
         initialMembers={[
@@ -30,11 +31,12 @@ export default async function TeamsPage() {
   }
 
   const siteMemberships = await prisma.membership.findMany({
-    where: { siteId: userMembership.siteId },
+    where: { siteId: { in: siteIds } },
     include: {
       user: {
         include: {
           assignedIssues: {
+            where: { project: { siteId: { in: siteIds } } },
             select: { id: true, status: true, storyPoints: true },
           },
         },

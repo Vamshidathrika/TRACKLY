@@ -14,18 +14,13 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
   const upperKey = key.toUpperCase();
   const { userId, siteId } = await requireMembership();
 
-  // 1. Resolve project strictly within user's workspace
-  let project = await prisma.project.findFirst({
-    where: { key: upperKey, siteId },
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
+  const project = await prisma.project.findFirst({
+    where: { key: upperKey, siteId: { in: siteIds } },
     select: { id: true, key: true, name: true, siteId: true },
   });
-
-  if (!project) {
-    project = await prisma.project.findFirst({
-      where: { key: upperKey },
-      select: { id: true, key: true, name: true, siteId: true },
-    });
-  }
 
   if (!project) redirect("/projects");
 

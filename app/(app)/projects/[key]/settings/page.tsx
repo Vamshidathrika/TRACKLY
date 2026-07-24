@@ -12,17 +12,13 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  let project = await prisma.project.findFirst({
-    where: { key: upperKey, siteId },
+  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
+  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+
+  const project = await prisma.project.findFirst({
+    where: { key: upperKey, siteId: { in: siteIds } },
     include: { lead: { select: { id: true, name: true, email: true, avatarUrl: true } } },
   });
-
-  if (!project) {
-    project = await prisma.project.findFirst({
-      where: { key: upperKey },
-      include: { lead: { select: { id: true, name: true, email: true, avatarUrl: true } } },
-    });
-  }
 
   if (!project) redirect("/projects");
 
