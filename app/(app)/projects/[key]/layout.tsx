@@ -30,7 +30,7 @@ export default async function ProjectLayout({
 
   const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) {
-    return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
+    return <BoardNotFound projectKey={key.toUpperCase()} isAdmin={role === "ADMIN"} />;
   }
 
   const star = await getCachedStar(userId, project.id);
