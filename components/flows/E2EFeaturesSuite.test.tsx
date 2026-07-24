@@ -59,6 +59,7 @@ describe("E2E Core Features & Workflows Test Suite", () => {
     it("renders JQL search navigator and save filter controls", () => {
       render(
         <JQLNavigator
+          initialJql='priority = "HIGH"'
           savedFilters={[
             { id: "f1", name: "My High Priority Bugs", jql: 'priority = "HIGH"', visibility: "WORKSPACE" },
           ]}
@@ -69,7 +70,9 @@ describe("E2E Core Features & Workflows Test Suite", () => {
       expect(screen.getByText("My High Priority Bugs")).toBeInTheDocument();
 
       // Open Save Filter Modal
-      fireEvent.click(screen.getByRole("button", { name: /Share & Save Filter/i }));
+      const saveBtn = screen.getByRole("button", { name: /Share & Save Filter/i });
+      expect(saveBtn).not.toBeDisabled();
+      fireEvent.click(saveBtn);
       expect(screen.getByText("Save & Share Filter")).toBeInTheDocument();
     });
   });
