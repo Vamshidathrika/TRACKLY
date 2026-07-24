@@ -90,8 +90,8 @@ export function NavItem({
 
 function ProjectItem({ proj, collapsed }: { proj: Proj; collapsed: boolean }) {
   const pathname = usePathname();
-  const href = `/projects/${proj.key}`;
-  const active = pathname.startsWith(href);
+  const href = `/projects/${proj.key}/board`;
+  const active = pathname.startsWith(`/projects/${proj.key}`);
   const color = getProjectColor(proj.key);
   const initial = proj.name[0]?.toUpperCase() ?? "P";
 

@@ -17,7 +17,14 @@ export default async function ReportsPage({ params }: { params: Promise<{ key: s
   const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
 
   const project = await prisma.project.findFirst({
-    where: { key: upperKey, siteId: { in: siteIds } },
+    where: {
+      siteId: { in: siteIds },
+      OR: [
+        { key: upperKey },
+        { name: { equals: key, mode: "insensitive" } },
+        { id: key },
+      ],
+    },
     select: { id: true, key: true, name: true, siteId: true },
   });
 
