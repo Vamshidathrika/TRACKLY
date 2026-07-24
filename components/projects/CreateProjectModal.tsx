@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -9,18 +10,22 @@ import { createProjectAction } from "@/app/(app)/projects/actions";
 import { generateProjectKey } from "@/lib/projects";
 
 export function CreateProjectModal({ trigger }: { trigger?: React.ReactNode }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
-  const [state, action, pending] = useActionState(createProjectAction, {} as { error?: string; success?: boolean });
+  const [state, action, pending] = useActionState(createProjectAction, {} as { error?: string; success?: boolean; projectKey?: string });
 
   useEffect(() => {
     if (state.success) {
       setOpen(false);
       setName("");
       setKey("");
+      if (state.projectKey) {
+        router.push(`/projects/${state.projectKey}/board`);
+      }
     }
-  }, [state.success]);
+  }, [state.success, state.projectKey, router]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

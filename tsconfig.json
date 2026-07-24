@@ -40,7 +40,6 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules",
-    "omniroute"
+    "node_modules"
   ]
 }

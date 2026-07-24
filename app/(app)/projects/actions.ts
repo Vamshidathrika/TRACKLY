@@ -12,7 +12,7 @@ const projectSchema = z.object({
 });
 
 export async function createProjectAction(
-  _prev: { error?: string; success?: boolean },
+  _prev: { error?: string; success?: boolean; projectKey?: string },
   formData: FormData
 ) {
   const { userId, siteId } = await requireMembership();
@@ -31,7 +31,7 @@ export async function createProjectAction(
     const { delCache } = await import("@/lib/redis");
     await delCache(`user:chrome:${userId}`);
     revalidatePath("/projects");
-    return { success: true };
+    return { success: true, projectKey: project.key };
   } catch (e) {
     if (e instanceof Error && e.message === "KEY_TAKEN") {
       return { error: "A project with this key already exists" };

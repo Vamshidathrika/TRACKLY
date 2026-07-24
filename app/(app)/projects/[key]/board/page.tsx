@@ -5,6 +5,7 @@ import { getIssuesByProject } from "@/lib/issues";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getUsersForSite } from "@/lib/users";
 import { KanbanBoard } from "@/components/board/KanbanBoard";
+import { BoardNotFound } from "@/components/projects/BoardNotFound";
 
 export default async function BoardPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
@@ -16,7 +17,9 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
     select: { id: true, key: true, name: true, siteId: true },
   });
 
-  if (!project) redirect("/projects");
+  if (!project) {
+    return <BoardNotFound projectKey={upperKey} />;
+  }
 
   const access = await checkProjectAccess(userId, project.id, siteId);
   if (!access) redirect("/your-work");

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { BoardHeader } from "./BoardHeader";
 import { BoardFilterBar } from "./BoardFilterBar";
 import { BoardColumn } from "./BoardColumn";
-import { IssueDetailDrawer } from "./IssueDetailDrawer";
 import { IssueTable } from "@/components/issues/IssueTable";
 import { type BoardIssue } from "./IssueCard";
 import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
@@ -13,6 +12,7 @@ import { toggleStarAction } from "@/app/(app)/chrome-actions";
 import type { IssueStatus } from "@prisma/client";
 
 // Dynamically import heavy secondary views & modals to cut initial bundle size
+const IssueDetailDrawer = dynamic(() => import("./IssueDetailDrawer").then((m) => m.IssueDetailDrawer), { ssr: false });
 const SummaryView = dynamic(() => import("./SpaceViews").then((m) => m.SummaryView), { ssr: false });
 const TimelineView = dynamic(() => import("./SpaceViews").then((m) => m.TimelineView), { ssr: false });
 const CalendarView = dynamic(() => import("./SpaceViews").then((m) => m.CalendarView), { ssr: false });

@@ -1,16 +1,30 @@
 "use client";
+
+import dynamic from "next/dynamic";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { TopBar, type ChromeUser } from "./TopBar";
 import { GlobalSidebar } from "./GlobalSidebar";
-import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
-import { AICopilotDrawer } from "@/components/ai/AICopilotDrawer";
 import { NavigationProgress } from "@/components/nav/NavigationProgress";
-
 import { useShortcuts } from "@/lib/shortcuts";
-import { CommandPalette } from "./CommandPalette";
-import { ShortcutsHelp } from "./ShortcutsHelp";
 import { setThemeAction } from "@/app/(app)/chrome-actions";
 import { useRouter } from "next/navigation";
+
+const CreateIssueModal = dynamic(
+  () => import("@/components/issues/CreateIssueModal").then((m) => m.CreateIssueModal),
+  { ssr: false }
+);
+const AICopilotDrawer = dynamic(
+  () => import("@/components/ai/AICopilotDrawer").then((m) => m.AICopilotDrawer),
+  { ssr: false }
+);
+const CommandPalette = dynamic(
+  () => import("./CommandPalette").then((m) => m.CommandPalette),
+  { ssr: false }
+);
+const ShortcutsHelp = dynamic(
+  () => import("./ShortcutsHelp").then((m) => m.ShortcutsHelp),
+  { ssr: false }
+);
 
 type Proj = { id: string; key: string; name: string };
 

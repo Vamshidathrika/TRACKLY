@@ -8,7 +8,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     include: ["**/*.test.{ts,tsx}"],
-    exclude: ["**/node_modules/**", "**/omniroute/**"],
+    exclude: ["**/node_modules/**"],
     setupFiles: ["./test/setup.ts"],
   },
   resolve: { alias: { "@": path.resolve(__dirname) } },

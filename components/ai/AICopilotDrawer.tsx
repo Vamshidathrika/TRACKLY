@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, X, Send, Bot, User, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { submitCopilotCommandAction } from "@/app/(app)/ai/actions";
@@ -19,6 +20,7 @@ const SUGGESTIONS = [
 ];
 
 export function AICopilotDrawer() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -50,8 +52,8 @@ export function AICopilotDrawer() {
         { sender: "agent", text: res.message, success: res.success },
       ]);
       if (res.success) {
-        // Reload active page to capture state transitions immediately
-        setTimeout(() => window.location.reload(), 1500);
+        // Fast soft router refresh without full page reload
+        router.refresh();
       }
     } catch (e) {
       setMessages((prev) => [

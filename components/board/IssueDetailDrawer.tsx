@@ -25,29 +25,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { updateIssueFieldAction, deleteIssueAction } from "@/app/(app)/projects/[key]/issues/actions";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
 import type { IssueStatus, IssuePriority, IssueType } from "@prisma/client";
-
-const issueTypes: { value: IssueType; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: "STORY", label: "Story", icon: <Bookmark size={14} />, color: "text-emerald-500 bg-emerald-500/10" },
-  { value: "TASK", label: "Task", icon: <CheckSquare size={14} />, color: "text-blue-500 bg-blue-500/10" },
-  { value: "BUG", label: "Bug", icon: <Bug size={14} />, color: "text-rose-500 bg-rose-500/10" },
-  { value: "EPIC", label: "Epic", icon: <Zap size={14} />, color: "text-purple-500 bg-purple-500/10" },
-  { value: "SUBTASK", label: "Subtask", icon: <CheckCircle2 size={14} />, color: "text-sky-500 bg-sky-500/10" },
-];
-
-const priorityIcons: Record<IssuePriority, { icon: React.ReactNode; label: string; color: string }> = {
-  HIGHEST: { icon: <ArrowUp size={14} className="text-red-600 font-bold" />, label: "Highest", color: "text-red-600" },
-  HIGH: { icon: <ArrowUp size={14} className="text-amber-500" />, label: "High", color: "text-amber-500" },
-  MEDIUM: { icon: <Minus size={14} className="text-yellow-500" />, label: "Medium", color: "text-yellow-500" },
-  LOW: { icon: <ArrowDown size={14} className="text-blue-500" />, label: "Low", color: "text-blue-500" },
-  LOWEST: { icon: <ArrowDown size={14} className="text-slate-400" />, label: "Lowest", color: "text-slate-400" },
-};
-
-const statuses: { value: IssueStatus; label: string; bg: string; text: string }[] = [
-  { value: "TO_DO", label: "TO DO", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
-  { value: "IN_PROGRESS", label: "IN PROGRESS", bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-700 dark:text-blue-300" },
-  { value: "IN_REVIEW", label: "IN REVIEW", bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-700 dark:text-amber-300" },
-  { value: "DONE", label: "DONE", bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-700 dark:text-emerald-300" },
-];
+import { ISSUE_TYPES as issueTypes, PRIORITY_CONFIG as priorityIcons, ISSUE_STATUSES as statuses } from "@/lib/issues-config";
 
 export function IssueDetailDrawer({
   issue,
@@ -151,7 +129,7 @@ export function IssueDetailDrawer({
       const updated = { ...issue, storyPoints: num };
       onUpdateIssue(updated);
       startTransition(async () => {
-        await updateIssueFieldAction(issue.id, "storyPoints", num ?? 0);
+        await updateIssueFieldAction(issue.id, "storyPoints", num);
       });
     }
   };
