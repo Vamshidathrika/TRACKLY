@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Users, UserPlus, Shield, CheckCircle2, AlertTriangle, Search, Briefcase, Mail, BarChart2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Users, UserPlus, Shield, CheckCircle2, AlertTriangle, Search, Briefcase, Mail, BarChart2, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { Tag } from "@/components/ui/Tag";
 import { InviteModal } from "@/components/board/SpaceViews";
+import { updateMemberRoleByUserIdAction, removeMemberAction } from "@/app/(app)/settings/members/actions";
 
 export type MemberItem = {
   id: string;
@@ -19,10 +19,42 @@ export type MemberItem = {
 };
 
 export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
-  const [members] = useState<MemberItem[]>(initialMembers);
+  const [members, setMembers] = useState<MemberItem[]>(initialMembers);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleRoleChange = (memberId: string, newRole: "ADMIN" | "MEMBER") => {
+    setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m)));
+    startTransition(async () => {
+      const res = await updateMemberRoleByUserIdAction(memberId, newRole);
+      if (res?.error) {
+        showToast(`Error: ${res.error}`);
+      } else {
+        showToast("Member role updated successfully!");
+      }
+    });
+  };
+
+  const handleRemoveMember = (memberId: string, memberName: string) => {
+    if (!confirm(`Are you sure you want to remove ${memberName} from this workspace?`)) return;
+    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    startTransition(async () => {
+      const res = await removeMemberAction(memberId);
+      if (res?.error) {
+        showToast(`Error: ${res.error}`);
+      } else {
+        showToast(`${memberName} removed from workspace.`);
+      }
+    });
+  };
 
   const filteredMembers = members.filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase());
@@ -35,6 +67,12 @@ export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
   return (
     <div className="flex flex-col gap-6 p-6 animate-in fade-in duration-200">
       <InviteModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-text text-surface px-4 py-3 shadow-xl text-xs font-semibold animate-scale-in">
+          {toastMessage}
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-5">
@@ -134,9 +172,31 @@ export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
                       </p>
                     </div>
                   </div>
-                  <Tag color={member.role === "ADMIN" ? "purple" : "blue"}>
-                    {member.role}
-                  </Tag>
+
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={member.role}
+                      disabled={isPending}
+                      onChange={(e) => handleRoleChange(member.id, e.target.value as "ADMIN" | "MEMBER")}
+                      className={`h-7 rounded-md px-2 text-[11px] font-semibold border outline-none cursor-pointer transition-all ${
+                        member.role === "ADMIN"
+                          ? "bg-purple-50 text-purple-700 border-purple-200"
+                          : "bg-blue-50 text-blue-700 border-blue-200"
+                      }`}
+                    >
+                      <option value="MEMBER">MEMBER</option>
+                      <option value="ADMIN">ADMIN</option>
+                    </select>
+
+                    <button
+                      disabled={isPending}
+                      onClick={() => handleRemoveMember(member.id, member.name)}
+                      title="Remove member from workspace"
+                      className="p-1.5 rounded-md hover:bg-red-50 text-subtle hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Workload Capacity Bar */}
