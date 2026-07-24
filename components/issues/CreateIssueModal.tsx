@@ -81,7 +81,7 @@ export function CreateIssueModal({
   defaultStatus,
   defaultSprintId,
   defaultAssigneeId,
-  defaultType = "STORY",
+  defaultType,
   onSuccess,
 }: {
   trigger?: React.ReactNode;
@@ -96,12 +96,12 @@ export function CreateIssueModal({
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<{ id: string; name: string; key: string }[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; email: string }[]>([]);
-  const [selectedType, setSelectedType] = useState(defaultType);
+  const [selectedType, setSelectedType] = useState(defaultType || "STORY");
   const [state, action, pending] = useActionState(createIssueAction, {} as { error?: string; success?: boolean });
 
   useEffect(() => {
     if (open) {
-      setSelectedType(defaultType);
+      setSelectedType(defaultType || "STORY");
       fetchUserProjectsAction().then(setProjects);
       fetchWorkspaceMembersAction().then(setMembers);
     }
