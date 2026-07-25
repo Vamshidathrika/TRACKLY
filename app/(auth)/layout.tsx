@@ -33,49 +33,66 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             The next-generation project management software built for speed. Real-time boards, autonomous AI agents, and zero-latency workflows.
           </p>
 
-          {/* Interactive Live Sprint Progress Showcase Card */}
-          <div className="mt-8 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 p-5 shadow-2xl flex flex-col gap-3.5 transform transition-transform hover:scale-[1.02] duration-300">
+          {/* Platform Superpowers Showcase Card */}
+          <div className="mt-8 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 p-5 shadow-2xl flex flex-col gap-4 transform transition-transform hover:scale-[1.02] duration-300">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Active Sprint • SOU-Sprint 4</span>
+                <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-400 animate-ping" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">Trackly Engine • Superpowers</span>
               </div>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                78% Complete
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                Isolated Sandbox
               </span>
             </div>
 
-            {/* Sprint Completion Progress Bar */}
-            <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 rounded-full w-[78%] transition-all duration-1000" />
+            {/* Showcase Feature Pills */}
+            <div className="flex flex-col gap-2.5 text-xs">
+              <div className="flex items-center justify-between rounded-xl bg-white/10 p-3 border border-white/15">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🤖</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white">Autonomous AI Triage</span>
+                    <span className="text-[11px] text-white/70">Auto-prioritizes tickets & drafts spec</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/30 text-purple-200 border border-purple-400/30 uppercase shrink-0">
+                  AI ACTIVE
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl bg-white/10 p-3 border border-white/15">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">⚡</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white">Zero-Latency Sync</span>
+                    <span className="text-[11px] text-white/70">Sub-10ms optimistic drag-and-drop</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 uppercase shrink-0">
+                  &lt; 10ms
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl bg-white/10 p-3 border border-white/15">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🛡️</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white">Strict Multi-Tenant Privacy</span>
+                    <span className="text-[11px] text-white/70">Complete cryptographic tenant isolation</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/30 text-blue-200 border border-blue-400/30 uppercase shrink-0">
+                  SECURE
+                </span>
+              </div>
             </div>
 
-            {/* Task Preview Pills */}
-            <div className="flex flex-col gap-2 pt-1 text-xs">
-              <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-1.5 border border-white/10">
-                <span className="font-medium text-white/90 truncate">✓ OAuth2 PKCE Authentication Flow</span>
-                <span className="text-[10px] font-bold text-emerald-300 uppercase">DONE</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-1.5 border border-white/10">
-                <span className="font-medium text-white/90 truncate">⚡ 1-Click Release Notes Generator</span>
-                <span className="text-[10px] font-bold text-amber-300 uppercase">REVIEW</span>
-              </div>
-            </div>
-
-            {/* Active Team Member Avatars Stack */}
+            {/* Trust Assurance Footer */}
             <div className="flex items-center justify-between pt-1 text-[11px] text-white/70 font-medium">
-              <span>Live Team Presence</span>
-              <div className="flex items-center -space-x-2">
-                <div className="h-6 w-6 rounded-full bg-cyan-500 ring-2 ring-white/40 flex items-center justify-center font-bold text-[9px] text-white">
-                  AL
-                </div>
-                <div className="h-6 w-6 rounded-full bg-purple-500 ring-2 ring-white/40 flex items-center justify-center font-bold text-[9px] text-white">
-                  SA
-                </div>
-                <div className="h-6 w-6 rounded-full bg-emerald-500 ring-2 ring-white/40 flex items-center justify-center font-bold text-[9px] text-white">
-                  YOU
-                </div>
-              </div>
+              <span>Tenant Security Shield</span>
+              <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-400/20">
+                ✓ Zero Cross-Tenant Data Exposure
+              </span>
             </div>
           </div>
         </div>
@@ -85,7 +102,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           {[
             { icon: "⚡", title: "Instant Board Sync", desc: "Sub-10ms optimistic updates & drag operations" },
             { icon: "🤖", title: "Rovo AI Copilot", desc: "Autonomous ticket creator, triage & spec writer" },
-            { icon: "🛡️", title: "Enterprise Security", desc: "Workspace tenant isolation & CockroachDB" },
+            { icon: "🛡️", title: "Enterprise Security", desc: "Strict workspace tenant isolation & row-level privacy" },
           ].map((f) => (
             <div key={f.title} className="flex items-start gap-3">
               <span className="text-base mt-0.5">{f.icon}</span>
