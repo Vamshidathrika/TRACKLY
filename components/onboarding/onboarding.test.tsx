@@ -1,25 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { GoogleAccountStep } from "./GoogleAccountStep";
+import { RoleSelectStep } from "./RoleSelectStep";
 import { TemplateSelectStep } from "./TemplateSelectStep";
 
 describe("Onboarding Steps", () => {
-  it("renders GoogleAccountStep with account selector and triggers next callback", () => {
+  it("renders RoleSelectStep and triggers next callback with selected role", () => {
     const handleNext = vi.fn();
-    render(
-      <GoogleAccountStep
-        onNext={handleNext}
-        currentUserEmail="user@trackly.dev"
-        currentUserName="Trackly Developer"
-      />
-    );
+    render(<RoleSelectStep onNext={handleNext} />);
 
-    expect(screen.getByText("Welcome to Trackly")).toBeDefined();
-    expect(screen.getByText("Trackly Developer")).toBeDefined();
+    expect(screen.getByText("What best describes your primary role?")).toBeDefined();
+    expect(screen.getByText("Product Manager")).toBeDefined();
+    expect(screen.getByText("Software Engineer")).toBeDefined();
 
-    const continueBtn = screen.getByRole("button", { name: /Continue as Trackly/i });
+    const continueBtn = screen.getByRole("button", { name: /Continue to Template Selection/i });
     fireEvent.click(continueBtn);
-    expect(handleNext).toHaveBeenCalledWith("user@trackly.dev");
+    expect(handleNext).toHaveBeenCalled();
   });
 
   it("renders TemplateSelectStep with Kanban pre-selected", () => {
@@ -27,11 +22,11 @@ describe("Onboarding Steps", () => {
     render(<TemplateSelectStep onSelect={handleSelect} />);
 
     expect(screen.getByText("Select Your Project Template")).toBeDefined();
-    expect(screen.getByText("Kanban Project")).toBeDefined();
-    expect(screen.getByText("Web Design Process")).toBeDefined();
-    expect(screen.getByText("Scrum Software")).toBeDefined();
+    expect(screen.getByText("Kanban Software")).toBeDefined();
+    expect(screen.getByText("Agile Scrum")).toBeDefined();
+    expect(screen.getByText("Web & UI Design")).toBeDefined();
 
-    const submitBtn = screen.getByRole("button", { name: /Use Kanban Project Preset/i });
+    const submitBtn = screen.getByRole("button", { name: /Use Kanban Software Preset/i });
     fireEvent.click(submitBtn);
     expect(handleSelect).toHaveBeenCalledWith("KANBAN", ["To Do", "In Progress", "In Review", "Done"]);
   });

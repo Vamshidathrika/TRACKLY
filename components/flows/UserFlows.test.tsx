@@ -109,16 +109,16 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
 
       // Verify onboarding template header and options render
       expect(screen.getByText("Select Your Project Template")).toBeInTheDocument();
-      expect(screen.getByText("Kanban Project")).toBeInTheDocument();
-      expect(screen.getByText("Web Design Process")).toBeInTheDocument();
-      expect(screen.getByText("Scrum Software")).toBeInTheDocument();
+      expect(screen.getByText("Kanban Software")).toBeInTheDocument();
+      expect(screen.getByText("Web & UI Design")).toBeInTheDocument();
+      expect(screen.getByText("Agile Scrum")).toBeInTheDocument();
 
-      // Click on "Web Design Process" template card
-      const webDesignCard = screen.getByRole("button", { name: /Web Design Process/i });
-      await userEvent.click(webDesignCard);
+      // Click on "Select" button for "Web & UI Design" template card
+      const selectBtns = screen.getAllByRole("button", { name: /^Select$/i });
+      await userEvent.click(selectBtns[1]); // Index 1 is Web & UI Design (index 0 is Scrum)
 
       // Submit preset selection
-      const submitBtn = screen.getByRole("button", { name: /Use Web Design Process Preset/i });
+      const submitBtn = screen.getByRole("button", { name: /Use Web & UI Design Preset/i });
       await userEvent.click(submitBtn);
 
       expect(handleSelect).toHaveBeenCalledTimes(1);
@@ -135,7 +135,7 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       const handleSelect = vi.fn();
       render(<TemplateSelectStep onSelect={handleSelect} />);
 
-      const submitBtn = screen.getByRole("button", { name: /Use Kanban Project Preset/i });
+      const submitBtn = screen.getByRole("button", { name: /Use Kanban Software Preset/i });
       await userEvent.click(submitBtn);
 
       expect(handleSelect).toHaveBeenCalledWith("KANBAN", [
@@ -270,7 +270,7 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       const handleOnboardSelect = vi.fn();
       const { rerender } = render(<TemplateSelectStep onSelect={handleOnboardSelect} />);
 
-      const kanbanPresetBtn = screen.getByRole("button", { name: /Use Kanban Project Preset/i });
+      const kanbanPresetBtn = screen.getByRole("button", { name: /Use Kanban Software Preset/i });
       await userEvent.click(kanbanPresetBtn);
       expect(handleOnboardSelect).toHaveBeenCalledWith("KANBAN", ["To Do", "In Progress", "In Review", "Done"]);
 

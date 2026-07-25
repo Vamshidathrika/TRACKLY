@@ -3,21 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Rocket } from "lucide-react";
-import { GoogleAccountStep } from "./GoogleAccountStep";
-import { ProvisioningLoaderStep } from "./ProvisioningLoaderStep";
+import { RoleSelectStep, type RoleType } from "./RoleSelectStep";
 import { TemplateSelectStep, type TemplateType } from "./TemplateSelectStep";
 import { SpaceSetupStep } from "./SpaceSetupStep";
 import { InviteTeammatesStep } from "./InviteTeammatesStep";
+import { ProvisioningLoaderStep } from "./ProvisioningLoaderStep";
 import { provisionWorkspaceAction } from "@/app/onboarding/actions";
 
 const STEP_LABELS = [
-  "Account",
-  "Provisioning",
-  "Template",
-  "Space Setup",
-  "Workflow",
+  "Role Profile",
+  "Template Preset",
+  "Space & Workflow",
   "Teammates",
-  "Product Landing",
+  "Provisioning",
 ];
 
 export function OnboardingWizard({
@@ -32,33 +30,47 @@ export function OnboardingWizard({
   const [isPending, startTransition] = useTransition();
 
   // Wizard state
+  const [role, setRole] = useState<RoleType>("DEVELOPER");
   const [template, setTemplate] = useState<TemplateType>("KANBAN");
   const [stages, setStages] = useState<string[]>(["To Do", "In Progress", "In Review", "Done"]);
   const [spaceName, setSpaceName] = useState("Acme Rocket Launch");
   const [spaceKey, setSpaceKey] = useState("ROCKET");
+  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
 
-  const handleStep1Complete = () => {
-    setStep(2); // Go to Provisioning Loader
+  const handleStep1RoleComplete = (_role: RoleType, recommendedTmpl: string) => {
+    setRole(_role);
+    if (
+      recommendedTmpl === "KANBAN" ||
+      recommendedTmpl === "SCRUM" ||
+      recommendedTmpl === "WEB_DESIGN" ||
+      recommendedTmpl === "BUG_TRACKING" ||
+      recommendedTmpl === "OPERATIONS" ||
+      recommendedTmpl === "MARKETING"
+    ) {
+      setTemplate(recommendedTmpl as TemplateType);
+    }
+    setStep(2);
   };
 
-  const handleStep2Complete = () => {
-    setStep(3); // Go to Template Selection
-  };
-
-  const handleStep3Complete = (tmpl: TemplateType, defaultStages: string[]) => {
+  const handleStep2TemplateComplete = (tmpl: TemplateType, defaultStages: string[]) => {
     setTemplate(tmpl);
     setStages(defaultStages);
-    setStep(4); // Go to Space Setup
+    setStep(3);
   };
 
-  const handleStep4Complete = (name: string, key: string, stgs: string[]) => {
+  const handleStep3SpaceComplete = (name: string, key: string, stgs: string[]) => {
     setSpaceName(name);
     setSpaceKey(key);
     setStages(stgs);
-    setStep(6); // Go to Invite Teammates (Step 5 is combined in SpaceSetupStep)
+    setStep(4);
   };
 
-  const handleFinalSubmit = (inviteEmails: string[]) => {
+  const handleStep4InviteComplete = (emails: string[]) => {
+    setInviteEmails(emails);
+    setStep(5); // Go to Provisioning loader
+  };
+
+  const handleProvisioningComplete = () => {
     startTransition(async () => {
       try {
         const res = await provisionWorkspaceAction({
@@ -90,30 +102,30 @@ export function OnboardingWizard({
             <div className="h-8 w-8 rounded-lg bg-brand flex items-center justify-center text-white font-mono font-bold text-sm shadow-sm">
               T
             </div>
-            <span className="font-bold text-lg text-default tracking-tight">Trackly</span>
+            <span className="font-bold text-lg text-text tracking-tight">Trackly</span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-subtle">
+          <div className="flex items-center gap-2 text-xs font-mono text-text-subtle">
             <Sparkles size={14} className="text-brand" />
-            <span>Interactive Onboarding</span>
+            <span>Jira-Inspired Onboarding</span>
           </div>
         </div>
 
         {/* Step Indicator Bar */}
-        <div className="grid grid-cols-6 gap-2">
-          {[1, 2, 3, 4, 6, 7].map((stepNum, idx) => {
-            const label = STEP_LABELS[idx];
+        <div className="grid grid-cols-5 gap-2">
+          {STEP_LABELS.map((label, idx) => {
+            const stepNum = idx + 1;
             const isCurrent = step === stepNum;
             const isCompleted = step > stepNum;
             return (
-              <div key={stepNum} className="flex flex-col gap-1.5">
+              <div key={label} className="flex flex-col gap-1.5">
                 <div
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     isCompleted
                       ? "bg-brand"
                       : isCurrent
                       ? "bg-brand/80 animate-pulse ring-2 ring-brand/30"
-                      : "bg-neutral-hovered"
+                      : "bg-neutral"
                   }`}
                 />
                 <span
@@ -121,8 +133,8 @@ export function OnboardingWizard({
                     isCurrent
                       ? "text-brand"
                       : isCompleted
-                      ? "text-default"
-                      : "text-subtlest"
+                      ? "text-text"
+                      : "text-text-subtle"
                   }`}
                 >
                   {isCompleted ? `✓ ${label}` : label}
@@ -135,46 +147,40 @@ export function OnboardingWizard({
 
       {/* Main Active Step Body */}
       <main className="max-w-4xl mx-auto w-full my-auto py-8">
-        {step === 1 && (
-          <GoogleAccountStep
-            onNext={handleStep1Complete}
-            currentUserEmail={userEmail}
-            currentUserName={userName}
+        {step === 1 && <RoleSelectStep onNext={handleStep1RoleComplete} />}
+
+        {step === 2 && <TemplateSelectStep onSelect={handleStep2TemplateComplete} />}
+
+        {step === 3 && (
+          <SpaceSetupStep
+            initialStages={stages}
+            onNext={handleStep3SpaceComplete}
+            onBack={() => setStep(2)}
           />
         )}
 
-        {step === 2 && <ProvisioningLoaderStep onComplete={handleStep2Complete} />}
-
-        {step === 3 && <TemplateSelectStep onSelect={handleStep3Complete} />}
-
-        {(step === 4 || step === 5) && (
-          <SpaceSetupStep
-            initialStages={stages}
-            onNext={handleStep4Complete}
+        {step === 4 && (
+          <InviteTeammatesStep
+            projectName={spaceName}
+            onComplete={handleStep4InviteComplete}
             onBack={() => setStep(3)}
           />
         )}
 
-        {step === 6 && (
-          <InviteTeammatesStep
-            projectName={spaceName}
-            onComplete={handleFinalSubmit}
-            onBack={() => setStep(4)}
-          />
-        )}
+        {step === 5 && <ProvisioningLoaderStep onComplete={handleProvisioningComplete} />}
 
         {isPending && (
           <div className="fixed inset-0 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center z-50">
             <Rocket size={40} className="text-brand animate-bounce mb-3" />
-            <p className="font-bold text-default text-lg">Launching Your Space...</p>
-            <p className="text-xs text-subtle font-mono">Seeding initial checklist tasks & dashboard widgets</p>
+            <p className="font-bold text-text text-lg">Launching Your Workspace...</p>
+            <p className="text-xs text-text-subtle font-mono">Seeding initial checklist tasks & dashboard widgets</p>
           </div>
         )}
       </main>
 
       {/* Footer Disclaimer */}
-      <footer className="max-w-4xl mx-auto w-full text-center text-xs text-subtlest font-mono">
-        Trackly Onboarding Architecture • Jira-inspired Flow Engine
+      <footer className="max-w-4xl mx-auto w-full text-center text-xs text-text-subtle font-mono">
+        Trackly Enterprise Engine • Multi-Tenant Onboarding Framework
       </footer>
     </div>
   );
