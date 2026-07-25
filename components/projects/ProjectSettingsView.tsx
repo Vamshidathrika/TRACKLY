@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, Plus, Trash2, CheckCircle2, Sliders } from "lucide-react";
+import { Settings, Plus, Trash2, CheckCircle2, Sliders, Layers, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
 import {
@@ -17,6 +17,13 @@ export type CustomFieldItem = {
   required: boolean;
 };
 
+export type ComponentItem = {
+  id: string;
+  name: string;
+  description: string;
+  leadName: string;
+};
+
 export function ProjectSettingsView({
   project,
   customFields: initialCustomFields,
@@ -24,9 +31,10 @@ export function ProjectSettingsView({
   project: { id: string; name: string; key: string; lead: { name: string } };
   customFields: CustomFieldItem[];
 }) {
-  const [activeTab, setActiveTab] = useState<"general" | "custom_fields">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "custom_fields" | "components">("general");
   const [name, setName] = useState(project.name);
   const [key, setKey] = useState(project.key);
+  const [defaultAssignee, setDefaultAssignee] = useState<"UNASSIGNED" | "PROJECT_LEAD">("UNASSIGNED");
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
   const [generalSuccess, setGeneralSuccess] = useState(false);
 
@@ -35,6 +43,15 @@ export function ProjectSettingsView({
   const [fieldType, setFieldType] = useState("STRING");
   const [isRequired, setIsRequired] = useState(false);
   const [isAddingField, setIsAddingField] = useState(false);
+
+  // Components State
+  const [components, setComponents] = useState<ComponentItem[]>([
+    { id: "c1", name: "Frontend & UI", description: "Next.js pages, Tailwind styling, and React components", leadName: project.lead.name },
+    { id: "c2", name: "Backend & API", description: "Prisma models, API routes, and Server Actions", leadName: project.lead.name },
+    { id: "c3", name: "Integrations & Webhooks", description: "GitHub, Snyk, PostHog, and Opsgenie connectors", leadName: project.lead.name },
+  ]);
+  const [compName, setCompName] = useState("");
+  const [compDesc, setCompDesc] = useState("");
 
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,21 +80,40 @@ export function ProjectSettingsView({
     await deleteCustomFieldAction(fieldId);
   };
 
+  const handleCreateComponent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!compName.trim()) return;
+    const newComp: ComponentItem = {
+      id: `comp-${Date.now()}`,
+      name: compName.trim(),
+      description: compDesc.trim() || "No description provided",
+      leadName: project.lead.name,
+    };
+    setComponents((prev) => [...prev, newComp]);
+    setCompName("");
+    setCompDesc("");
+  };
+
+  const handleDeleteComponent = (id: string) => {
+    setComponents((prev) => prev.filter((c) => c.id !== id));
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       {/* Settings Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-2">
         {[
-          { id: "general", label: "General Settings", icon: Settings },
+          { id: "general", label: "General Details", icon: Settings },
+          { id: "components", label: "Components & Sub-systems", icon: Layers },
           { id: "custom_fields", label: "Custom Fields", icon: Sliders },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id as any)}
-            className={`flex items-center gap-2 rounded-ds px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
               activeTab === id
-                ? "bg-brand text-white"
-                : "border border-border-default bg-surface text-default hover:bg-neutral-hovered"
+                ? "bg-brand text-white shadow-2xs font-bold"
+                : "border border-border-default bg-surface text-default hover:bg-neutral"
             }`}
           >
             <Icon size={14} /> {label}
@@ -87,40 +123,54 @@ export function ProjectSettingsView({
 
       {/* GENERAL SETTINGS TAB */}
       {activeTab === "general" && (
-        <form onSubmit={handleSaveGeneral} className="flex flex-col gap-5 rounded-ds border border-border bg-surface p-6 shadow-xs">
-          <div className="border-b border-border pb-3">
-            <h3 className="text-base font-semibold text-text">Project Details</h3>
-            <p className="text-xs text-text-subtle">Manage project identity and details</p>
+        <form onSubmit={handleSaveGeneral} className="flex flex-col gap-5 rounded-xl border border-border-default bg-surface p-6 shadow-xs">
+          <div className="border-b border-border-default pb-3">
+            <h3 className="text-base font-bold text-default">Project Identity & Rules</h3>
+            <p className="text-xs text-subtle">Manage project keys, default assignment behavior, and project leadership</p>
           </div>
 
-          <div className="flex flex-col gap-1 max-w-md">
-            <label className="text-xs font-semibold text-text-subtle">Project Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-9 rounded-ds border border-border bg-surface px-3 text-sm outline-none focus:border-brand"
-            />
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-subtle">Project Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-9 rounded-lg border border-border-default bg-surface px-3 text-xs font-medium text-default outline-none focus:border-brand"
+              />
+            </div>
 
-          <div className="flex flex-col gap-1 max-w-md">
-            <label className="text-xs font-semibold text-text-subtle">Project Key</label>
-            <input
-              type="text"
-              value={key}
-              onChange={(e) => setKey(e.target.value.toUpperCase())}
-              className="h-9 rounded-ds border border-border bg-surface px-3 font-mono text-sm uppercase outline-none focus:border-brand"
-            />
-          </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-subtle">Project Key</label>
+              <input
+                type="text"
+                value={key}
+                onChange={(e) => setKey(e.target.value.toUpperCase())}
+                className="h-9 rounded-lg border border-border-default bg-surface px-3 font-mono text-xs font-bold uppercase outline-none focus:border-brand"
+              />
+            </div>
 
-          <div className="flex flex-col gap-1 max-w-md">
-            <label className="text-xs font-semibold text-text-subtle">Project Lead</label>
-            <input
-              type="text"
-              disabled
-              value={project.lead.name}
-              className="h-9 rounded-ds border border-border-default bg-neutral px-3 text-sm text-subtle cursor-not-allowed"
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-subtle">Project Lead</label>
+              <input
+                type="text"
+                disabled
+                value={project.lead.name}
+                className="h-9 rounded-lg border border-border-default bg-neutral px-3 text-xs font-medium text-subtle cursor-not-allowed"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-subtle">Default Assignee for New Issues</label>
+              <select
+                value={defaultAssignee}
+                onChange={(e) => setDefaultAssignee(e.target.value as any)}
+                className="h-9 rounded-lg border border-border-default bg-surface px-3 text-xs font-medium text-default outline-none focus:border-brand cursor-pointer"
+              >
+                <option value="UNASSIGNED">Unassigned (Leave empty for triage)</option>
+                <option value="PROJECT_LEAD">Project Lead ({project.lead.name})</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-2">
@@ -128,7 +178,7 @@ export function ProjectSettingsView({
               Save changes
             </Button>
             {generalSuccess && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-success">
+              <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
                 <CheckCircle2 size={14} /> Saved successfully!
               </span>
             )}
@@ -136,33 +186,108 @@ export function ProjectSettingsView({
         </form>
       )}
 
+      {/* COMPONENTS TAB */}
+      {activeTab === "components" && (
+        <div className="flex flex-col gap-6">
+          {/* Create Component Form */}
+          <form onSubmit={handleCreateComponent} className="flex flex-col gap-3 rounded-xl border border-brand/40 bg-brand/5 p-5 shadow-xs">
+            <h3 className="font-bold text-xs text-default flex items-center gap-1.5">
+              <Plus size={15} className="text-brand" /> Create Component / Sub-system
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-subtle">Component Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Auth System, Billing Module..."
+                  value={compName}
+                  onChange={(e) => setCompName(e.target.value)}
+                  className="h-8 rounded-lg border border-border-default bg-surface px-3 text-xs outline-none focus:border-brand"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-subtle">Description</label>
+                <input
+                  type="text"
+                  placeholder="Brief description of responsibilities..."
+                  value={compDesc}
+                  onChange={(e) => setCompDesc(e.target.value)}
+                  className="h-8 rounded-lg border border-border-default bg-surface px-3 text-xs outline-none focus:border-brand"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <Button appearance="primary" type="submit" disabled={!compName.trim()} className="h-8 text-xs">
+                Add Component
+              </Button>
+            </div>
+          </form>
+
+          {/* Component List */}
+          <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+            <div className="p-3 border-b border-border-default bg-neutral/40 flex items-center justify-between">
+              <span className="text-xs font-bold text-subtle">
+                Project Components ({components.length})
+              </span>
+            </div>
+
+            <div className="divide-y divide-border-default text-xs">
+              {components.map((c) => (
+                <div key={c.id} className="p-4 flex items-center justify-between gap-4 hover:bg-neutral/30 transition-colors">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-default">{c.name}</h4>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand px-2 py-0.5 rounded-full bg-brand/10">
+                        <UserCheck size={11} /> Lead: {c.leadName}
+                      </span>
+                    </div>
+                    <p className="text-subtle text-[11px]">{c.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteComponent(c.id)}
+                    className="p-1.5 rounded-lg text-subtlest hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                    title="Delete Component"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CUSTOM FIELDS TAB */}
       {activeTab === "custom_fields" && (
         <div className="flex flex-col gap-6">
           {/* Add Custom Field Form */}
-          <form onSubmit={handleAddCustomField} className="flex flex-col gap-4 rounded-ds border border-brand/40 bg-selected/30 p-5 shadow-xs">
-            <h3 className="font-semibold text-sm text-text flex items-center gap-1.5">
-              <Plus size={16} className="text-brand" /> Add Custom Field
+          <form onSubmit={handleAddCustomField} className="flex flex-col gap-4 rounded-xl border border-brand/40 bg-brand/5 p-5 shadow-xs">
+            <h3 className="font-bold text-xs text-default flex items-center gap-1.5">
+              <Plus size={15} className="text-brand" /> Add Custom Field
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-subtle">Field Name</label>
+                <label className="text-xs font-bold text-subtle">Field Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Environment, Customer ID"
                   value={fieldName}
                   onChange={(e) => setFieldName(e.target.value)}
-                  className="h-8 rounded-ds border border-border bg-surface px-2.5 text-xs outline-none focus:border-brand"
+                  className="h-8 rounded-lg border border-border-default bg-surface px-3 text-xs outline-none focus:border-brand"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-subtle">Field Type</label>
+                <label className="text-xs font-bold text-subtle">Field Type</label>
                 <select
                   value={fieldType}
                   onChange={(e) => setFieldType(e.target.value)}
-                  className="h-8 rounded-ds border border-border bg-surface px-2 text-xs outline-none focus:border-brand"
+                  className="h-8 rounded-lg border border-border-default bg-surface px-2 text-xs outline-none focus:border-brand cursor-pointer"
                 >
                   <option value="STRING">Text String</option>
                   <option value="NUMBER">Number</option>
@@ -171,12 +296,12 @@ export function ProjectSettingsView({
               </div>
 
               <div className="flex items-end mb-1">
-                <label className="flex items-center gap-2 text-xs font-semibold text-text cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-bold text-default cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isRequired}
                     onChange={(e) => setIsRequired(e.target.checked)}
-                    className="rounded border-border text-brand"
+                    className="rounded border-border-default text-brand"
                   />
                   Required Field
                 </label>
@@ -191,31 +316,31 @@ export function ProjectSettingsView({
           </form>
 
           {/* Custom Fields Table */}
-          <div className="rounded-ds border border-border bg-surface overflow-hidden shadow-xs">
-            <div className="p-3 border-b border-border bg-surface-sunken">
-              <span className="text-xs font-bold text-text-subtle">
+          <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+            <div className="p-3 border-b border-border-default bg-neutral/40">
+              <span className="text-xs font-bold text-subtle">
                 Project Custom Fields ({customFields.length})
               </span>
             </div>
 
             {customFields.length === 0 ? (
-              <div className="p-6 text-center text-xs text-text-subtle italic">
+              <div className="p-6 text-center text-xs text-subtle italic">
                 No custom fields defined for this project.
               </div>
             ) : (
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border text-text-subtle font-semibold">
+                  <tr className="border-b border-border-default text-subtle font-bold">
                     <th className="p-3">Name</th>
                     <th className="p-3">Type</th>
                     <th className="p-3">Required</th>
                     <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/60">
+                <tbody className="divide-y divide-border-default">
                   {customFields.map((field) => (
-                    <tr key={field.id} className="hover:bg-neutral">
-                      <td className="p-3 font-semibold text-text">{field.name}</td>
+                    <tr key={field.id} className="hover:bg-neutral/30">
+                      <td className="p-3 font-bold text-default">{field.name}</td>
                       <td className="p-3">
                         <Tag color="blue">{field.fieldType}</Tag>
                       </td>
@@ -229,7 +354,7 @@ export function ProjectSettingsView({
                       <td className="p-3 text-right">
                         <button
                           onClick={() => handleDeleteField(field.id)}
-                          className="rounded p-1 text-danger hover:bg-danger/10 transition-colors"
+                          className="rounded-lg p-1.5 text-subtlest hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                           title="Delete Field"
                         >
                           <Trash2 size={14} />

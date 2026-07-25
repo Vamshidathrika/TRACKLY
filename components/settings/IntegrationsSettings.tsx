@@ -468,6 +468,9 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
       {/* Webhook Notification Rules Dispatcher Builder */}
       <WebhookNotificationBuilder siteId={siteId} />
 
+      {/* Personal Access Tokens (PAT) Developer Security Center */}
+      <PersonalAccessTokensSection showToast={showToast} />
+
       {/* Workspace Project Board Mapping */}
       <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
         <h3 className="text-sm font-extrabold text-text flex items-center gap-2">
@@ -524,3 +527,149 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
     </div>
   );
 }
+
+function PersonalAccessTokensSection({ showToast }: { showToast: (msg: string) => void }) {
+  const [tokens, setTokens] = useState<
+    { id: string; name: string; token: string; createdAt: string; expiry: string; status: "Active" | "Revoked" }[]
+  >([
+    {
+      id: "pat-1",
+      name: "GitHub Actions CI Runner",
+      token: "trk_pat_live_9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c",
+      createdAt: "2026-07-20",
+      expiry: "90 Days",
+      status: "Active",
+    },
+  ]);
+  const [name, setName] = useState("");
+  const [expiry, setExpiry] = useState("90d");
+  const [newlyCreatedToken, setNewlyCreatedToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = () => {
+    if (!name.trim()) return;
+    const rawToken = `trk_pat_live_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`;
+    const newToken = {
+      id: `pat-${Date.now()}`,
+      name: name.trim(),
+      token: rawToken,
+      createdAt: new Date().toISOString().split("T")[0],
+      expiry: expiry === "30d" ? "30 Days" : expiry === "90d" ? "90 Days" : expiry === "1y" ? "1 Year" : "Never",
+      status: "Active" as const,
+    };
+    setTokens((prev) => [newToken, ...prev]);
+    setNewlyCreatedToken(rawToken);
+    setName("");
+    showToast("Personal Access Token generated successfully!");
+  };
+
+  const handleRevoke = (id: string) => {
+    setTokens((prev) => prev.map((t) => (t.id === id ? { ...t, status: "Revoked" } : t)));
+    showToast("Personal Access Token revoked.");
+  };
+
+  const handleCopy = (str: string) => {
+    navigator.clipboard.writeText(str);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    showToast("Token copied to clipboard!");
+  };
+
+  return (
+    <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold text-text flex items-center gap-2">
+            <Key className="text-amber-500" size={18} />
+            <span>Personal Access Tokens (PAT) & API Keys</span>
+          </h3>
+          <p className="text-xs text-text-subtle mt-0.5">
+            Authenticate scripts, CI/CD runners, and custom tools with workspace-scoped API tokens.
+          </p>
+        </div>
+      </div>
+
+      {/* Generator Form */}
+      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-neutral/30 border border-border">
+        <input
+          type="text"
+          placeholder="Token Description (e.g. Jenkins Deploy Bot)..."
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="flex-1 min-w-[220px] px-3 py-1.5 rounded-lg border border-border bg-surface text-xs text-text outline-none focus:border-brand"
+        />
+        <select
+          value={expiry}
+          onChange={(e) => setExpiry(e.target.value)}
+          className="px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text outline-none focus:border-brand cursor-pointer"
+        >
+          <option value="30d">Expires in 30 Days</option>
+          <option value="90d">Expires in 90 Days</option>
+          <option value="1y">Expires in 1 Year</option>
+          <option value="never">Never Expire</option>
+        </select>
+        <Button appearance="primary" onClick={handleGenerate} disabled={!name.trim()} className="text-xs">
+          <Key size={14} />
+          Generate Token
+        </Button>
+      </div>
+
+      {/* Newly Created Token Display */}
+      {newlyCreatedToken && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
+          <div className="min-w-0">
+            <span className="font-bold text-amber-600 dark:text-amber-400 block">
+              Save your token now — it won't be shown again!
+            </span>
+            <code className="font-mono text-[11px] text-text font-bold truncate block mt-0.5">
+              {newlyCreatedToken}
+            </code>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleCopy(newlyCreatedToken)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs cursor-pointer hover:bg-amber-600 transition-all shrink-0"
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            <span>{copied ? "Copied!" : "Copy Token"}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Active Tokens List */}
+      <div className="flex flex-col divide-y divide-border text-xs">
+        {tokens.map((t) => (
+          <div key={t.id} className="py-3 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-text">{t.name}</h4>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    t.status === "Active"
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      : "bg-neutral text-text-subtle border border-border"
+                  }`}
+                >
+                  {t.status}
+                </span>
+              </div>
+              <p className="font-mono text-[11px] text-text-subtle mt-0.5">
+                {t.token.slice(0, 16)}•••••••••••••••• · Created {t.createdAt} ({t.expiry})
+              </p>
+            </div>
+            {t.status === "Active" && (
+              <button
+                type="button"
+                onClick={() => handleRevoke(t.id)}
+                className="px-2.5 py-1 rounded-lg border border-border text-[11px] font-bold text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+              >
+                Revoke
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+

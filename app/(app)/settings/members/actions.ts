@@ -96,3 +96,22 @@ export async function revokeInviteAction(inviteId: string) {
     throw e;
   }
 }
+
+export async function resendInviteAction(inviteId: string) {
+  try {
+    const user = await getAuthUser();
+    const { siteName } = await requireAdmin();
+    const invite = await prisma.invite.findUnique({ where: { id: inviteId } });
+    if (!invite) return { error: "Invite not found" };
+
+    const baseUrl = process.env.AUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const fullInviteUrl = `${baseUrl}/invite/${invite.token}`;
+
+    const emailRes = await sendInviteEmail(invite.email, fullInviteUrl, user.name ?? user.email, siteName ?? "Trackly");
+    return { success: true, emailSent: emailRes.sent, link: fullInviteUrl };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
