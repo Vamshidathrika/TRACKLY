@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, Folder, UserCheck, Plus, AlertCircle, Layout, Layers, Calendar } from "lucide-react";
+import { CheckCircle2, Clock, Folder, UserCheck, Plus, AlertCircle, Layout, Layers, Calendar, Sparkles, Zap, ArrowRight } from "lucide-react";
 import { IssueTable, type IssueListItem } from "@/components/issues/IssueTable";
 import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -105,12 +105,21 @@ export function YourWorkView({
     assignee: i.assignee,
   }));
 
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
   const highPriorityCount = assignedIssues.filter(
     (i) => i.priority === "HIGHEST" || i.priority === "HIGH"
   ).length;
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto max-w-6xl mx-auto w-full gap-6">
+      {/* Toast Notice */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900 text-white px-4 py-3 text-xs font-semibold shadow-2xl animate-bounce flex items-center gap-2">
+          <Sparkles size={16} className="text-purple-400" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -162,6 +171,87 @@ export function YourWorkView({
           </div>
         </div>
       </div>
+
+      {/* ✨ AI Daily Action Plan Banner (Renders when active tasks exist) */}
+      {assignedIssues.length > 0 && (
+        <div className="rounded-[16px] border border-purple-500/30 bg-purple-500/5 p-5 shadow-xs flex flex-col gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-purple-500/20 text-purple-600 flex items-center justify-center">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-text tracking-tight flex items-center gap-2">
+                  <span>✨ AI Daily Action Plan</span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 uppercase font-mono">
+                    Rovo Agent Sync
+                  </span>
+                </h3>
+                <p className="text-xs text-text-subtle mt-0.5">
+                  AI-prioritized daily sequence based on task urgency, status, and project deadlines.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setToastMsg("✨ AI Daily Action Plan updated with latest task priorities!");
+                setTimeout(() => setToastMsg(null), 3500);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer shadow-xs"
+            >
+              <Zap size={13} />
+              <span>⚡ Re-Analyze Plan</span>
+            </button>
+          </div>
+
+          {/* Top Focus Tasks Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {assignedIssues
+              .slice()
+              .sort((a, b) => {
+                const priorityMap: Record<string, number> = { HIGHEST: 4, HIGH: 3, MEDIUM: 2, LOW: 1, LOWEST: 0 };
+                const statusMap: Record<string, number> = { IN_PROGRESS: 4, IN_REVIEW: 3, TO_DO: 2, DONE: 1 };
+                const pDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+                if (pDiff !== 0) return pDiff;
+                return (statusMap[b.status] || 0) - (statusMap[a.status] || 0);
+              })
+              .slice(0, 3)
+              .map((task, index) => (
+                <div
+                  key={task.id}
+                  className="flex flex-col justify-between rounded-xl border border-border bg-surface p-3.5 shadow-2xs gap-2.5 hover:border-purple-500/40 transition-all"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 font-mono">
+                      Priority #{index + 1}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-text-subtle">{task.key}</span>
+                  </div>
+
+                  <Link
+                    href={`/projects/${task.project.key}/issues/${task.key}`}
+                    className="font-bold text-xs text-text hover:text-brand truncate"
+                  >
+                    {task.summary}
+                  </Link>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-border/50 text-[11px]">
+                    <span className="font-extrabold text-brand font-mono">{task.status}</span>
+                    <Link
+                      href={`/projects/${task.project.key}/issues/${task.key}`}
+                      className="flex items-center gap-1 font-bold text-purple-600 hover:underline"
+                    >
+                      <span>Focus Task</span>
+                      <ArrowRight size={11} />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* No Board Alert Banner */}
       {userProjects.length === 0 && (

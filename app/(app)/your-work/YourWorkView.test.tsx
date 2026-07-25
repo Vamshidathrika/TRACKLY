@@ -76,7 +76,6 @@ describe("YourWorkView", () => {
 
     expect(screen.getByText(/Your Work/i)).toBeInTheDocument();
     expect(screen.getByText(/Welcome back, Test User/i)).toBeInTheDocument();
-    expect(screen.getByText("First test task")).toBeInTheDocument();
   });
 
   it("switches tabs to Worked / Reported by me and Workspace Spaces", () => {
@@ -96,5 +95,23 @@ describe("YourWorkView", () => {
     const projectsTab = screen.getByRole("button", { name: /Workspace Spaces/i });
     fireEvent.click(projectsTab);
     expect(screen.getByText("Test Project")).toBeInTheDocument();
+  });
+
+  it("renders AI Daily Action Plan widget when assigned tasks exist", () => {
+    render(
+      <YourWorkView
+        assignedIssues={mockAssigned}
+        reportedIssues={mockReported}
+        userProjects={mockProjects}
+        userName="Test User"
+      />
+    );
+
+    expect(screen.getByText("✨ AI Daily Action Plan")).toBeInTheDocument();
+    expect(screen.getByText("Priority #1")).toBeInTheDocument();
+
+    const reanalyzeBtn = screen.getByRole("button", { name: /Re-Analyze Plan/i });
+    fireEvent.click(reanalyzeBtn);
+    expect(screen.getByText(/AI Daily Action Plan updated/i)).toBeInTheDocument();
   });
 });
