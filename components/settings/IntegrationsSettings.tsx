@@ -19,10 +19,18 @@ import {
   ExternalLink,
   Plus,
   Flame,
+  MessageSquare,
+  Headphones,
+  Video,
+  LayoutGrid,
+  Activity,
+  Layers,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EditRepoModal } from "@/components/dev/EditRepoModal";
-import type { IntegrationProvider } from "@/lib/integrations/types";
+import { WebhookNotificationBuilder } from "./WebhookNotificationBuilder";
+import type { IntegrationProvider, IntegrationCategory } from "@/lib/integrations/types";
 
 function FigmaIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
@@ -39,7 +47,8 @@ function FigmaIcon({ className = "w-5 h-5" }: { className?: string }) {
 type ProviderCard = {
   id: IntegrationProvider;
   name: string;
-  category: string;
+  category: IntegrationCategory;
+  categoryName: string;
   icon: any;
   color: string;
   bgColor: string;
@@ -49,9 +58,10 @@ type ProviderCard = {
 };
 
 export function IntegrationsSettings({ siteId }: { siteId: string }) {
+  const [selectedCategory, setSelectedCategory] = useState<IntegrationCategory>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [smartTransitions, setSmartTransitions] = useState(true);
   const [sentryAutoBug, setSentryAutoBug] = useState(true);
-  const [sentryMinSeverity, setSentryMinSeverity] = useState("ERROR");
   const [selectedProvider, setSelectedProvider] = useState<IntegrationProvider>("GITHUB");
   const [copiedKey, setCopiedKey] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -66,7 +76,8 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
     {
       id: "GITHUB",
       name: "GitHub",
-      category: "Code & Version Control",
+      category: "DEVOPS",
+      categoryName: "Code & Version Control",
       icon: FolderGit2,
       color: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-500/10",
@@ -77,7 +88,8 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
     {
       id: "GITLAB",
       name: "GitLab",
-      category: "Self-Hosted & Cloud DevOps",
+      category: "DEVOPS",
+      categoryName: "Self-Hosted & Cloud DevOps",
       icon: GitBranch,
       color: "text-orange-600 dark:text-orange-400",
       bgColor: "bg-orange-500/10",
@@ -88,7 +100,8 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
     {
       id: "BITBUCKET",
       name: "Bitbucket",
-      category: "Atlassian DevOps Suite",
+      category: "DEVOPS",
+      categoryName: "Atlassian DevOps Suite",
       icon: GitPullRequest,
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-500/10",
@@ -97,9 +110,22 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
       badges: ["Pipelines", "PR Approvals"],
     },
     {
+      id: "VERCEL",
+      name: "Vercel",
+      category: "DEVOPS",
+      categoryName: "Hosting & Frontend Cloud",
+      icon: Triangle,
+      color: "text-sky-600 dark:text-sky-400",
+      bgColor: "bg-sky-500/10",
+      description: "Render preview deployment status badges and direct preview links on Kanban cards.",
+      status: "Active",
+      badges: ["Deployment Badges", "Preview Links"],
+    },
+    {
       id: "SENTRY",
       name: "Sentry",
-      category: "Crash & Error Monitoring",
+      category: "MONITORING",
+      categoryName: "Crash & Error Monitoring",
       icon: AlertOctagon,
       color: "text-rose-600 dark:text-rose-400",
       bgColor: "bg-rose-500/10",
@@ -108,9 +134,94 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
       badges: ["Auto-Bug Generator", "Stacktrace Parser"],
     },
     {
+      id: "DATADOG",
+      name: "Datadog",
+      category: "MONITORING",
+      categoryName: "APM & Infrastructure Metrics",
+      icon: Activity,
+      color: "text-amber-600 dark:text-amber-400",
+      bgColor: "bg-amber-500/10",
+      description: "Automatically convert Datadog APM monitor alerts into urgent Trackly incident tasks.",
+      status: "Configured",
+      badges: ["APM Incident Tasks", "Deduplication Key"],
+    },
+    {
+      id: "SLACK",
+      name: "Slack",
+      category: "COMMUNICATION",
+      categoryName: "Team Chat & Dispatcher",
+      icon: MessageSquare,
+      color: "text-purple-600 dark:text-purple-400",
+      bgColor: "bg-purple-500/10",
+      description: "Interactive message unfurling cards, slash commands, and 1-click task creation.",
+      status: "Active",
+      badges: ["Block Kit Unfurl", "Channel Dispatch"],
+    },
+    {
+      id: "DISCORD",
+      name: "Discord",
+      category: "COMMUNICATION",
+      categoryName: "Dev Community & Chat",
+      icon: MessageSquare,
+      color: "text-indigo-600 dark:text-indigo-400",
+      bgColor: "bg-indigo-500/10",
+      description: "Channel notification webhooks and rich embed cards for task status changes.",
+      status: "Configured",
+      badges: ["Embed Cards", "Interaction Bot"],
+    },
+    {
+      id: "ZENDESK",
+      name: "Zendesk",
+      category: "SUPPORT",
+      categoryName: "Customer Support & Helpdesk",
+      icon: Headphones,
+      color: "text-emerald-600 dark:text-emerald-400",
+      bgColor: "bg-emerald-500/10",
+      description: "Convert customer helpdesk tickets into engineering tasks with resolution sync.",
+      status: "Active",
+      badges: ["Customer Ticket Sync", "Resolution Notes"],
+    },
+    {
+      id: "INTERCOM",
+      name: "Intercom",
+      category: "SUPPORT",
+      categoryName: "Live Customer Messaging",
+      icon: Headphones,
+      color: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-500/10",
+      description: "Link customer feedback conversations to feature requests and bug tasks.",
+      status: "Configured",
+      badges: ["User Feedback", "Conversation Sync"],
+    },
+    {
+      id: "LOOM",
+      name: "Loom",
+      category: "MEDIA_WHITEBOARDS",
+      categoryName: "Screen Recording & Video",
+      icon: Video,
+      color: "text-indigo-600 dark:text-indigo-400",
+      bgColor: "bg-indigo-500/10",
+      description: "Attach Loom screen recordings to bug tasks for video reproduction steps.",
+      status: "Active",
+      badges: ["Video Bug Player", "Inline Embed"],
+    },
+    {
+      id: "MIRO",
+      name: "Miro",
+      category: "MEDIA_WHITEBOARDS",
+      categoryName: "Agile Retros & Whiteboards",
+      icon: LayoutGrid,
+      color: "text-amber-600 dark:text-amber-400",
+      bgColor: "bg-amber-500/10",
+      description: "Embed live interactive Miro whiteboard canvases directly inside task drawers.",
+      status: "Active",
+      badges: ["Canvas Embed", "Agile Retros"],
+    },
+    {
       id: "FIGMA",
       name: "Figma",
-      category: "Design System & Canvas",
+      category: "MEDIA_WHITEBOARDS",
+      categoryName: "Design System & Canvas",
       icon: FigmaIcon,
       color: "text-pink-600 dark:text-pink-400",
       bgColor: "bg-pink-500/10",
@@ -119,17 +230,27 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
       badges: ["Live Canvas Embed", "Prototype Inspect"],
     },
     {
-      id: "VERCEL",
-      name: "Vercel",
-      category: "Hosting & Frontend Cloud",
-      icon: Triangle,
-      color: "text-sky-600 dark:text-sky-400",
-      bgColor: "bg-sky-500/10",
-      description: "Render preview deployment status badges and direct preview links on Kanban cards.",
-      status: "Active",
-      badges: ["Deployment Badges", "Preview Links"],
+      id: "ZAPIER",
+      name: "Zapier & Make",
+      category: "DEVOPS",
+      categoryName: "Universal Automation Engine",
+      icon: Layers,
+      color: "text-orange-600 dark:text-orange-400",
+      bgColor: "bg-orange-500/10",
+      description: "Connect 5,000+ apps using custom outbound webhooks and automated event pings.",
+      status: "Configured",
+      badges: ["5,000+ App Triggers", "JSON Webhooks"],
     },
   ];
+
+  const filteredProviders = providers.filter((p) => {
+    const matchesCategory = selectedCategory === "ALL" || p.category === selectedCategory;
+    const matchesSearch =
+      searchQuery.trim() === "" ||
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const webhookUrl = `https://api.trackly.dev/v1/webhooks/${selectedProvider.toLowerCase()}?siteId=${siteId}`;
   const webhookSecret = `whsec_${selectedProvider.toLowerCase()}_live_89f7a6b5c4d3e2f1`;
@@ -157,20 +278,52 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
         <div>
           <h2 className="text-lg font-extrabold text-text tracking-tight flex items-center gap-2">
             <Zap className="text-brand" size={20} />
-            <span>Developer Ecosystem & Integrations Hub</span>
+            <span>Developer Ecosystem & Enterprise Integrations Hub</span>
           </h2>
           <p className="text-xs text-text-subtle mt-0.5">
-            Connect developer tools, automation webhooks, and live deployment engines across your workspace.
+            Connect developer tools, chat dispatchers, helpdesks, and live whiteboards across your workspace.
           </p>
         </div>
-        <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20">
-          6 Apps Integrated
-        </span>
+
+        <div className="relative w-64">
+          <Search size={14} className="absolute left-3 top-2.5 text-text-subtle" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search 14 integrations..."
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-border bg-surface text-xs focus:outline-none focus:border-brand"
+          />
+        </div>
+      </div>
+
+      {/* Category Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border text-xs">
+        {[
+          { id: "ALL", label: "All Apps (14)" },
+          { id: "DEVOPS", label: "🛠️ DevOps & Cloud" },
+          { id: "COMMUNICATION", label: "💬 Chat & Comm" },
+          { id: "SUPPORT", label: "🎧 Customer Support" },
+          { id: "MEDIA_WHITEBOARDS", label: "🎨 Media & Canvas" },
+          { id: "MONITORING", label: "📊 Monitoring & Alerts" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSelectedCategory(tab.id as IntegrationCategory)}
+            className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+              selectedCategory === tab.id
+                ? "bg-brand text-white shadow-xs"
+                : "bg-surface text-text-subtle hover:text-text hover:bg-neutral border border-border"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Marketplace Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {providers.map((p) => {
+        {filteredProviders.map((p) => {
           const Icon = p.icon;
           const isSelected = selectedProvider === p.id;
 
@@ -187,7 +340,7 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className={`h-10 w-10 rounded-xl ${p.bgColor} ${p.color} flex items-center justify-center font-bold`}>
-                    <Icon size={20} />
+                    <Icon className="w-5 h-5" />
                   </div>
                   <span
                     className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full font-mono ${
@@ -203,7 +356,7 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
                 <h3 className="font-extrabold text-text text-sm flex items-center gap-1.5">
                   {p.name}
                 </h3>
-                <span className="text-[10px] font-semibold text-text-subtle block mb-2">{p.category}</span>
+                <span className="text-[10px] font-semibold text-text-subtle block mb-2">{p.categoryName}</span>
                 <p className="text-xs text-text-subtle leading-relaxed">{p.description}</p>
               </div>
 
@@ -222,7 +375,7 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    showToast(`${p.name} settings configured!`);
+                    showToast(`${p.name} configuration active!`);
                   }}
                   className="text-[11px] font-bold text-brand hover:underline cursor-pointer"
                 >
@@ -311,6 +464,9 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
           </div>
         )}
       </div>
+
+      {/* Webhook Notification Rules Dispatcher Builder */}
+      <WebhookNotificationBuilder siteId={siteId} />
 
       {/* Workspace Project Board Mapping */}
       <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">

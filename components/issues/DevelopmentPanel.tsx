@@ -15,6 +15,9 @@ import {
   Triangle,
 } from "lucide-react";
 import { FigmaEmbedPanel } from "./FigmaEmbedPanel";
+import { LoomEmbedder } from "./LoomEmbedder";
+import { MiroEmbedPanel } from "./MiroEmbedPanel";
+import { ZendeskTicketsWidget } from "./ZendeskTicketsWidget";
 
 export type LinkedBranch = {
   id: string;
@@ -276,9 +279,12 @@ export function DevelopmentPanel({
         </div>
       </div>
 
-      {/* Embedded Figma Panel */}
-      <div className="pt-2">
+      {/* Embedded Figma & Media Specs */}
+      <div className="flex flex-col gap-4 pt-2">
         <FigmaEmbedPanel initialUrls={[]} />
+        <LoomEmbedder initialUrls={[]} />
+        <MiroEmbedPanel initialUrls={[]} />
+        <ZendeskTicketsWidget />
       </div>
     </div>
   );

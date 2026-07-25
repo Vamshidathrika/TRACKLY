@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 import { extractIssueKeys, resolveIssueByKey } from "../git/processor";
 import { createIssue } from "../issues";
-import type { NormalizedDevEvent, ParsedFigmaUrl } from "./types";
+import type { NormalizedDevEvent, ParsedFigmaUrl, ParsedLoomUrl, ParsedMiroUrl } from "./types";
 
 /**
  * 1. Figma URL Parser & Embed Generator
@@ -34,7 +34,61 @@ export function parseFigmaUrl(url: string): ParsedFigmaUrl | null {
 }
 
 /**
- * 2. GitLab Webhook Processor
+ * 2. Loom Video URL Parser & Embed Generator
+ */
+export function parseLoomUrl(url: string): ParsedLoomUrl | null {
+  if (!url || typeof url !== "string") return null;
+  try {
+    const trimmed = url.trim();
+    if (!trimmed.includes("loom.com/")) return null;
+
+    const parsed = new URL(trimmed);
+    const pathSegments = parsed.pathname.split("/").filter(Boolean);
+    if (pathSegments.length < 2) return null;
+
+    // Handles https://loom.com/share/VIDEO_ID or https://loom.com/embed/VIDEO_ID
+    const videoId = pathSegments[pathSegments.length - 1];
+    const embedUrl = `https://www.loom.com/embed/${videoId}?hide_owner=true&hide_share=true`;
+
+    return {
+      videoId,
+      embedUrl,
+      originalUrl: trimmed,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 3. Miro Whiteboard URL Parser & Embed Generator
+ */
+export function parseMiroUrl(url: string): ParsedMiroUrl | null {
+  if (!url || typeof url !== "string") return null;
+  try {
+    const trimmed = url.trim();
+    if (!trimmed.includes("miro.com/")) return null;
+
+    const parsed = new URL(trimmed);
+    const pathSegments = parsed.pathname.split("/").filter(Boolean);
+    const boardIdx = pathSegments.findIndex((s) => s === "board");
+    if (boardIdx === -1 || boardIdx + 1 >= pathSegments.length) return null;
+
+    const boardId = pathSegments[boardIdx + 1];
+    const embedUrl = `https://miro.com/app/live-embed/${boardId}/?embedAutoplay=true`;
+
+    return {
+      boardId,
+      embedUrl,
+      originalUrl: trimmed,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 4. GitLab Webhook Processor
  */
 export async function processGitLabWebhook(
   headers: Headers,
@@ -91,7 +145,7 @@ export async function processGitLabWebhook(
 }
 
 /**
- * 3. Bitbucket Webhook Processor
+ * 5. Bitbucket Webhook Processor
  */
 export async function processBitbucketWebhook(
   headers: Headers,
@@ -150,7 +204,7 @@ export async function processBitbucketWebhook(
 }
 
 /**
- * 4. Sentry Error Webhook Processor (Automated Bug Task Generator)
+ * 6. Sentry Error Webhook Processor
  */
 export async function processSentryWebhook(
   headers: Headers,
@@ -164,7 +218,6 @@ export async function processSentryWebhook(
   const permalink = issueData.permalink || "https://sentry.io";
   const env = issueData.environment || "production";
 
-  // Find target project if not provided
   let targetProjectId = projectId;
   if (!targetProjectId) {
     const firstProject = await prisma.project.findFirst({ where: { siteId } });
@@ -172,7 +225,6 @@ export async function processSentryWebhook(
     targetProjectId = firstProject.id;
   }
 
-  // Find bot or lead reporter ID
   const leadUser = await prisma.user.findFirst();
   if (!leadUser) return { success: false };
 
@@ -195,7 +247,81 @@ export async function processSentryWebhook(
 }
 
 /**
- * 5. Vercel Deployment Webhook Processor
+ * 7. Zendesk Customer Ticket Converter
+ */
+export async function processZendeskWebhook(
+  headers: Headers,
+  payload: any,
+  siteId = "demo-site",
+  projectId?: string
+): Promise<{ success: boolean; issueKey?: string }> {
+  const ticket = payload.ticket || payload;
+  const subject = ticket.subject || "Zendesk Customer Ticket";
+  const description = ticket.description || "No customer feedback details provided.";
+  const priority = (ticket.priority || "NORMAL").toUpperCase();
+  const ticketNumber = ticket.id || Date.now();
+
+  let targetProjectId = projectId;
+  if (!targetProjectId) {
+    const firstProject = await prisma.project.findFirst({ where: { siteId } });
+    if (!firstProject) return { success: false };
+    targetProjectId = firstProject.id;
+  }
+
+  const leadUser = await prisma.user.findFirst();
+  if (!leadUser) return { success: false };
+
+  const formattedDescription = `### 🎧 Linked Zendesk Customer Ticket #${ticketNumber}\n**Requester Email:** \`${ticket.requester?.email || "customer@acme.com"}\`\n**Zendesk Priority:** \`${priority}\`\n\n> ${description}\n\n[🔗 Open in Zendesk Agent Portal](https://support.zendesk.com/agent/tickets/${ticketNumber})`;
+
+  const issue = await createIssue({
+    projectId: targetProjectId,
+    summary: `[Zendesk #${ticketNumber}] ${subject.slice(0, 100)}`,
+    description: formattedDescription,
+    type: "BUG",
+    priority: priority === "URGENT" ? "HIGHEST" : priority === "HIGH" ? "HIGH" : "MEDIUM",
+    reporterId: leadUser.id,
+  });
+
+  return { success: true, issueKey: issue.key };
+}
+
+/**
+ * 8. Datadog APM Alert Processor
+ */
+export async function processDatadogWebhook(
+  headers: Headers,
+  payload: any,
+  siteId = "demo-site",
+  projectId?: string
+): Promise<{ success: boolean; issueKey?: string }> {
+  const alertTitle = payload.event_title || payload.title || "Datadog APM Incident";
+  const alertMsg = payload.event_msg || payload.body || "High latency/error rate spike detected.";
+  const alertStatus = (payload.alert_status || "ALERT").toUpperCase();
+
+  let targetProjectId = projectId;
+  if (!targetProjectId) {
+    const firstProject = await prisma.project.findFirst({ where: { siteId } });
+    if (!firstProject) return { success: false };
+    targetProjectId = firstProject.id;
+  }
+
+  const leadUser = await prisma.user.findFirst();
+  if (!leadUser) return { success: false };
+
+  const issue = await createIssue({
+    projectId: targetProjectId,
+    summary: `[Datadog Incident] ${alertTitle.slice(0, 100)}`,
+    description: `### 📊 Datadog APM Alert (${alertStatus})\n\n> ${alertMsg}\n\n[🔗 Open Datadog APM Dashboard](https://app.datadoghq.com)`,
+    type: "BUG",
+    priority: alertStatus === "ALERT" ? "HIGHEST" : "HIGH",
+    reporterId: leadUser.id,
+  });
+
+  return { success: true, issueKey: issue.key };
+}
+
+/**
+ * 9. Vercel Deployment Webhook Processor
  */
 export async function processVercelWebhook(
   headers: Headers,
@@ -214,7 +340,6 @@ export async function processVercelWebhook(
     for (const key of issueKeys) {
       const issue = await resolveIssueByKey(siteId, key);
       if (issue && url) {
-        // Log Vercel preview link in issue description if not already present
         if (!issue.description?.includes(url)) {
           await prisma.issue.update({
             where: { id: issue.id },
