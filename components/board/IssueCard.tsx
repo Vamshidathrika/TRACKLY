@@ -42,6 +42,19 @@ export type BoardIssue = {
   comments?: any[];
   history?: any[];
   workLogs?: any[];
+  subtasks?: { id: string; key: string; summary: string; status: IssueStatus }[];
+  attachments?: { id: string; filename: string; url: string; sizeBytes: number; mimeType: string }[];
+  linksOut?: { id: string; relation: string; targetIssue: { key: string; summary: string; status: IssueStatus } }[];
+  linksIn?: { id: string; relation: string; sourceIssue: { key: string; summary: string; status: IssueStatus } }[];
+  watchers?: { userId: string }[];
+  upvotes?: number;
+  isWatching?: boolean;
+  isVoted?: boolean;
+  devContext?: {
+    branches?: { name: string; url?: string }[];
+    pullRequests?: { number: number; title: string; status: "OPEN" | "MERGED" | "CLOSED"; url?: string }[];
+    commits?: { hash: string; message: string; url?: string }[];
+  };
 };
 
 function IssueCardComponent({

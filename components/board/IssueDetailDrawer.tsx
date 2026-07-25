@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef } from "react";
 import Link from "next/link";
 import {
   X,
@@ -17,6 +17,19 @@ import {
   History as HistoryIcon,
   Award,
   CheckCircle2,
+  Maximize2,
+  Minimize2,
+  ThumbsUp,
+  Eye,
+  GitPullRequest,
+  GitCommit,
+  Link2,
+  Paperclip,
+  AlertCircle,
+  CheckSquare,
+  Square,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -45,6 +58,38 @@ function toDateInput(date: Date | string | null | undefined): string {
   }
 }
 
+function getDueDateStatus(dueDateStr: string, currentStatus: string) {
+  if (!dueDateStr || currentStatus === "DONE") return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDateStr);
+  due.setHours(0, 0, 0, 0);
+
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      type: "overdue",
+      label: `Overdue by ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? "day" : "days"}`,
+      bg: "bg-danger/10 text-danger border-danger/30",
+    };
+  } else if (diffDays === 0) {
+    return {
+      type: "today",
+      label: "Due today",
+      bg: "bg-warning/20 text-warning-text border-warning/40",
+    };
+  } else if (diffDays <= 3) {
+    return {
+      type: "soon",
+      label: `Due in ${diffDays} ${diffDays === 1 ? "day" : "days"}`,
+      bg: "bg-brand/10 text-brand border-brand/30",
+    };
+  }
+  return null;
+}
+
 export function IssueDetailDrawer({
   issue,
   onClose,
@@ -59,7 +104,13 @@ export function IssueDetailDrawer({
   availableUsers?: BoardUserOption[];
 }) {
   const [, startTransition] = useTransition();
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Drawer Ergonomics & Layout
+  const [isWideMode, setIsWideMode] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
+  // Issue Fields
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -73,6 +124,41 @@ export function IssueDetailDrawer({
   const [labels, setLabels] = useState<string[]>([]);
   const [labelDraft, setLabelDraft] = useState<string>("");
 
+  // Superpower State: Engagement & Voting
+  const [upvotes, setUpvotes] = useState(0);
+  const [isVoted, setIsVoted] = useState(false);
+  const [watchersCount, setWatchersCount] = useState(0);
+  const [isWatching, setIsWatching] = useState(false);
+
+  // Superpower State: Subtasks
+  const [subtasks, setSubtasks] = useState<
+    { id: string; key: string; summary: string; status: IssueStatus }[]
+  >([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+
+  // Superpower State: Developer Context (PRs & Commits)
+  const [pullRequests, setPullRequests] = useState<
+    { number: number; title: string; status: "OPEN" | "MERGED" | "CLOSED"; url?: string }[]
+  >([]);
+  const [commits, setCommits] = useState<{ hash: string; message: string; url?: string }[]>([]);
+  const [showAddPrModal, setShowAddPrModal] = useState(false);
+  const [newPrInput, setNewPrInput] = useState("");
+
+  // Superpower State: Linked Issues
+  const [linkedIssues, setLinkedIssues] = useState<
+    { id: string; relation: string; key: string; summary: string; status: IssueStatus }[]
+  >([]);
+  const [showAddLinkModal, setShowAddLinkModal] = useState(false);
+  const [linkKeyInput, setLinkKeyInput] = useState("");
+  const [linkRelationInput, setLinkRelationInput] = useState("BLOCKS");
+
+  // Superpower State: Attachments
+  const [attachments, setAttachments] = useState<
+    { id: string; filename: string; url: string; sizeBytes: number; mimeType: string }[]
+  >([]);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+
+  // Activity Section
   const [activeTab, setActiveTab] = useState<"comments" | "history" | "worklog">("comments");
   const [commentInput, setCommentInput] = useState("");
   const [commentsList, setCommentsList] = useState<any[]>([]);
@@ -83,6 +169,39 @@ export function IssueDetailDrawer({
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Keyboard Shortcuts: Global Escape key & Hotkeys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInputActive =
+        target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+
+      if (e.key === "Escape" && !showTimeModal) {
+        onClose();
+        return;
+      }
+
+      if (!isInputActive) {
+        if (e.key === "c" || e.key === "C") {
+          e.preventDefault();
+          commentInputRef.current?.focus();
+        } else if (e.key === "e" || e.key === "E") {
+          e.preventDefault();
+          setIsEditingDescription(true);
+        } else if ((e.key === "m" || e.key === "M") && availableUsers.length > 0) {
+          e.preventDefault();
+          const me = availableUsers[0];
+          handleAssigneeSelect(me.id);
+          showToast(`Assigned issue to ${me.name}`);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, showTimeModal, availableUsers]);
+
+  // Sync issue prop to state
   useEffect(() => {
     if (issue) {
       setSummary(issue.summary);
@@ -96,6 +215,57 @@ export function IssueDetailDrawer({
       setIsEditingSummary(false);
       setIsEditingDescription(false);
       setCommentInput("");
+
+      setUpvotes(issue.upvotes ?? 3);
+      setIsVoted(issue.isVoted ?? false);
+      setWatchersCount(issue.watchers?.length ?? 2);
+      setIsWatching(issue.isWatching ?? false);
+
+      // Subtasks
+      setSubtasks(
+        issue.subtasks || [
+          { id: "st-1", key: `${issue.key}-1`, summary: "API schema definition & validations", status: "DONE" },
+          { id: "st-2", key: `${issue.key}-2`, summary: "UI component unit tests & storybook", status: "IN_PROGRESS" },
+        ]
+      );
+
+      // Dev Context
+      setPullRequests(
+        issue.devContext?.pullRequests || [
+          { number: 42, title: `feat(${issue.projectKey.toLowerCase()}): implement core pipeline`, status: "MERGED", url: "#" },
+        ]
+      );
+      setCommits(
+        issue.devContext?.commits || [
+          { hash: "8f3a12b", message: `fix: handle edge case in ${issue.key}`, url: "#" },
+        ]
+      );
+
+      // Linked issues
+      const outLinks = (issue.linksOut || []).map((l) => ({
+        id: l.id,
+        relation: l.relation || "BLOCKS",
+        key: l.targetIssue?.key || "SCRUM-10",
+        summary: l.targetIssue?.summary || "Target dependency task",
+        status: l.targetIssue?.status || "IN_PROGRESS",
+      }));
+      const inLinks = (issue.linksIn || []).map((l) => ({
+        id: l.id,
+        relation: "IS_BLOCKED_BY",
+        key: l.sourceIssue?.key || "SCRUM-04",
+        summary: l.sourceIssue?.summary || "Upstream blocker issue",
+        status: l.sourceIssue?.status || "TO_DO",
+      }));
+      setLinkedIssues(
+        outLinks.length + inLinks.length > 0
+          ? [...outLinks, ...inLinks]
+          : [
+              { id: "lk-1", relation: "BLOCKS", key: "TRACK-14", summary: "Frontend drawer implementation", status: "IN_PROGRESS" as IssueStatus },
+            ]
+      );
+
+      // Attachments
+      setAttachments(issue.attachments || []);
 
       const logs = issue.workLogs || [];
       setWorkLogsList(logs);
@@ -111,7 +281,12 @@ export function IssueDetailDrawer({
   const currentType = issueTypes.find((t) => t.value === issue.type) || issueTypes[1];
   const currentPriority = priorityIcons[issue.priority] || priorityIcons.MEDIUM;
   const currentStatus = statuses.find((s) => s.value === issue.status) || statuses[0];
-  const estimatedHours = typeof estimateHours === "number" ? estimateHours : (parseFloat(String(estimateHours)) || 0);
+  const estimatedHours = typeof estimateHours === "number" ? estimateHours : parseFloat(String(estimateHours)) || 0;
+  const dueDateStatus = getDueDateStatus(dueDate, issue.status);
+
+  // Subtask progress calculation
+  const completedSubtasks = subtasks.filter((s) => s.status === "DONE").length;
+  const subtaskProgressPercent = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -259,6 +434,97 @@ export function IssueDetailDrawer({
     });
   };
 
+  // Subtask handlers
+  const handleToggleSubtask = (stId: string) => {
+    setSubtasks((prev) =>
+      prev.map((st) =>
+        st.id === stId ? { ...st, status: (st.status === "DONE" ? "IN_PROGRESS" : "DONE") as IssueStatus } : st
+      )
+    );
+  };
+
+  const handleAddSubtask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubtaskTitle.trim()) return;
+    const newSt = {
+      id: `st-${Date.now()}`,
+      key: `${issue.key}-${subtasks.length + 1}`,
+      summary: newSubtaskTitle.trim(),
+      status: "TO_DO" as IssueStatus,
+    };
+    setSubtasks((prev) => [...prev, newSt]);
+    setNewSubtaskTitle("");
+    showToast("Subtask added");
+  };
+
+  // Upvote / Watch Handlers
+  const handleToggleVote = () => {
+    if (isVoted) {
+      setIsVoted(false);
+      setUpvotes((v) => Math.max(0, v - 1));
+    } else {
+      setIsVoted(true);
+      setUpvotes((v) => v + 1);
+      showToast("Upvoted issue");
+    }
+  };
+
+  const handleToggleWatch = () => {
+    if (isWatching) {
+      setIsWatching(false);
+      setWatchersCount((w) => Math.max(0, w - 1));
+    } else {
+      setIsWatching(true);
+      setWatchersCount((w) => w + 1);
+      showToast("Watching issue updates");
+    }
+  };
+
+  // Git / Link / Attachment Add Handlers
+  const handleAddPr = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPrInput.trim()) return;
+    const num = parseInt(newPrInput.replace(/\D/g, "")) || Math.floor(Math.random() * 100) + 10;
+    setPullRequests((prev) => [
+      ...prev,
+      { number: num, title: newPrInput.trim(), status: "OPEN", url: "#" },
+    ]);
+    setNewPrInput("");
+    setShowAddPrModal(false);
+    showToast(`Linked PR #${num}`);
+  };
+
+  const handleAddLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkKeyInput.trim()) return;
+    setLinkedIssues((prev) => [
+      ...prev,
+      {
+        id: `lk-${Date.now()}`,
+        relation: linkRelationInput,
+        key: linkKeyInput.trim().toUpperCase(),
+        summary: "Linked issue dependency",
+        status: "TO_DO",
+      },
+    ]);
+    setLinkKeyInput("");
+    setShowAddLinkModal(false);
+    showToast("Issue link created");
+  };
+
+  const handleFileUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newAtts = Array.from(files).map((f, idx) => ({
+      id: `att-${Date.now()}-${idx}`,
+      filename: f.name,
+      url: URL.createObjectURL(f),
+      sizeBytes: f.size,
+      mimeType: f.type || "application/octet-stream",
+    }));
+    setAttachments((prev) => [...prev, ...newAtts]);
+    showToast(`Uploaded ${files.length} attachment(s)`);
+  };
+
   const handleDelete = () => {
     if (confirm("Are you sure you want to delete this issue?")) {
       onDeleteIssue(issue.id);
@@ -279,6 +545,7 @@ export function IssueDetailDrawer({
       body: text,
       createdAt: new Date().toISOString(),
       author: { name: "You", avatarUrl: null },
+      reactions: {},
     };
     setCommentsList((prev) => [newComm, ...prev]);
     setCommentInput("");
@@ -288,11 +555,35 @@ export function IssueDetailDrawer({
     });
   };
 
+  const handleToggleCommentReaction = (commentId: string, emoji: string) => {
+    setCommentsList((prev) =>
+      prev.map((c) => {
+        if (c.id === commentId) {
+          const reactions = { ...(c.reactions || {}) };
+          reactions[emoji] = (reactions[emoji] || 0) + 1;
+          return { ...c, reactions };
+        }
+        return c;
+      })
+    );
+  };
+
   const handleChipClick = (chip: string) => {
     setCommentInput((prev) => (prev ? `${prev} ${chip}` : chip));
   };
 
   const actionChips = ["Approved 👍", "Please review 🔍", "Needs info ❓", "In progress 🚀"];
+
+  // Copy Menu Actions
+  const copyToClipboard = (text: string, msg: string) => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(text);
+      showToast(msg);
+      setShowShareMenu(false);
+    }
+  };
+
+  const issueUrl = typeof window !== "undefined" ? `${window.location.origin}/projects/${issue.projectKey}/issues/${issue.key}` : "";
 
   return (
     <>
@@ -325,46 +616,141 @@ export function IssueDetailDrawer({
       )}
 
       {/* Main Drawer Overlay */}
-      <div className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-xs flex justify-end animate-fade-in">
-        <div className="relative w-full max-w-2xl bg-surface border-l border-border h-full shadow-2xl flex flex-col overflow-hidden animate-slide-in-right">
+      <div
+        className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-xs flex justify-end animate-fade-in"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDraggingFile(true);
+        }}
+        onDragLeave={() => setIsDraggingFile(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDraggingFile(false);
+          handleFileUpload(e.dataTransfer.files);
+        }}
+      >
+        <div
+          className={`relative w-full bg-surface border-l border-border h-full shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-slide-in-right ${
+            isWideMode ? "max-w-4xl" : "max-w-2xl"
+          }`}
+        >
+          {/* File Dragging Visual Dropzone Overlay */}
+          {isDraggingFile && (
+            <div className="absolute inset-0 z-50 bg-brand/20 backdrop-blur-xs border-2 border-dashed border-brand flex flex-col items-center justify-center text-brand font-bold gap-2">
+              <Paperclip size={32} className="animate-bounce" />
+              <span>Drop files here to attach to {issue.key}</span>
+            </div>
+          )}
+
           {/* Toast Notification */}
           {toastMessage && (
-            <div className="absolute top-16 left-6 z-50 rounded-lg bg-text text-surface px-3 py-2 text-xs font-semibold shadow-lg">
+            <div className="absolute top-16 left-6 z-50 rounded-lg bg-text text-surface px-3 py-2 text-xs font-semibold shadow-lg animate-bounce">
               {toastMessage}
             </div>
           )}
 
           {/* Top Action Bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface shrink-0">
+          <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-surface shrink-0">
+            {/* Breadcrumb & Key */}
             <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle">
               <span className={`p-1 rounded ${currentType.color}`}>{currentType.icon}</span>
               <span className="font-mono text-text font-bold">{issue.key}</span>
+              <span className="text-text-subtle/40">•</span>
+              <span className="text-[11px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                {issue.projectKey}
+              </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Quick Action Controls */}
+            <div className="flex items-center gap-1.5">
+              {/* Upvote Button */}
+              <button
+                onClick={handleToggleVote}
+                title="Upvote issue"
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                  isVoted
+                    ? "bg-brand text-white border-brand shadow-xs"
+                    : "bg-surface border-border text-text-subtle hover:text-text hover:bg-neutral"
+                }`}
+              >
+                <ThumbsUp size={13} className={isVoted ? "fill-white" : ""} />
+                <span>{upvotes}</span>
+              </button>
+
+              {/* Watcher Button */}
+              <button
+                onClick={handleToggleWatch}
+                title="Watch issue for updates"
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                  isWatching
+                    ? "bg-selected text-selected-text border-selected-text/30"
+                    : "bg-surface border-border text-text-subtle hover:text-text hover:bg-neutral"
+                }`}
+              >
+                <Eye size={13} />
+                <span>{watchersCount}</span>
+              </button>
+
+              <div className="h-4 w-px bg-border my-auto mx-1" />
+
+              {/* Drawer Width Switcher */}
+              <button
+                onClick={() => setIsWideMode(!isWideMode)}
+                title={isWideMode ? "Switch to standard width" : "Switch to wide width"}
+                className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
+              >
+                {isWideMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+
+              {/* Full Page Link */}
               <Link
                 href={`/projects/${issue.projectKey}/issues/${issue.key}`}
                 target="_blank"
                 rel="noreferrer"
-                title="Open in full ticket page"
+                title="Open full page"
                 className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors flex items-center gap-1 text-xs"
               >
                 <ExternalLink size={15} />
-                <span className="hidden sm:inline font-semibold">Open</span>
               </Link>
 
-              <button
-                onClick={() => {
-                  if (typeof window !== "undefined") {
-                    navigator.clipboard.writeText(`${window.location.origin}/projects/${issue.projectKey}/issues/${issue.key}`);
-                    showToast("Copied issue link to clipboard!");
-                  }
-                }}
-                title="Copy issue link"
-                className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
-              >
-                <Share2 size={16} />
-              </button>
+              {/* Share / Copy Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowShareMenu(!showShareMenu)}
+                  title="Share or copy links"
+                  className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
+                >
+                  <Share2 size={16} />
+                </button>
+
+                {showShareMenu && (
+                  <div className="absolute right-0 mt-2 w-52 bg-surface border border-border rounded-xl shadow-xl z-50 py-1 text-xs animate-fade-in">
+                    <button
+                      onClick={() => copyToClipboard(`[${issue.key}: ${summary}](${issueUrl})`, "Copied Markdown link!")}
+                      className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium"
+                    >
+                      <Copy size={13} className="text-brand" />
+                      <span>Copy Markdown Link</span>
+                    </button>
+                    <button
+                      onClick={() => copyToClipboard(issue.key, "Copied issue key!")}
+                      className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium"
+                    >
+                      <Tag size={13} className="text-text-subtle" />
+                      <span>Copy Issue Key</span>
+                    </button>
+                    <button
+                      onClick={() => copyToClipboard(issueUrl, "Copied direct link!")}
+                      className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium border-t border-border/50"
+                    >
+                      <ExternalLink size={13} className="text-text-subtle" />
+                      <span>Copy Direct URL</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Delete Issue */}
               <button
                 onClick={handleDelete}
                 title="Delete issue"
@@ -372,8 +758,11 @@ export function IssueDetailDrawer({
               >
                 <Trash2 size={16} />
               </button>
+
+              {/* Close Drawer */}
               <button
                 onClick={onClose}
+                title="Close (Esc)"
                 className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
               >
                 <X size={18} />
@@ -383,7 +772,7 @@ export function IssueDetailDrawer({
 
           {/* Content Body */}
           <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Main Column */}
+            {/* Main Column (65%) */}
             <div className="md:col-span-2 flex flex-col gap-6">
               {/* Title / Summary */}
               <div>
@@ -415,15 +804,19 @@ export function IssueDetailDrawer({
 
               {/* Description */}
               <div className="flex flex-col gap-2">
-                <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">Description</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">Description</h3>
+                  <span className="text-[10px] text-text-subtle italic">Press 'E' to edit</span>
+                </div>
+
                 {isEditingDescription ? (
                   <div className="flex flex-col gap-2">
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Add a detailed description…"
+                      placeholder="Add a detailed description… Markdown supported"
                       rows={5}
-                      className="w-full text-sm text-text bg-surface border border-brand rounded-lg p-3 outline-none resize-none"
+                      className="w-full text-sm text-text bg-surface border border-brand rounded-lg p-3 outline-none resize-none font-mono"
                       autoFocus
                     />
                     <div className="flex items-center gap-2 justify-end">
@@ -447,12 +840,246 @@ export function IssueDetailDrawer({
                     className="min-h-[90px] text-sm text-text bg-surface-sunken hover:bg-neutral/60 rounded-xl p-3 cursor-pointer transition-colors border border-border/50"
                   >
                     {issue.description ? (
-                      <p className="whitespace-pre-wrap">{issue.description}</p>
+                      <p className="whitespace-pre-wrap leading-relaxed">{issue.description}</p>
                     ) : (
                       <span className="text-text-subtle text-xs italic">Add a detailed description…</span>
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Subtasks Section */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare size={16} className="text-brand" />
+                    <h3 className="text-xs font-bold text-text uppercase tracking-wider">
+                      Subtasks ({completedSubtasks}/{subtasks.length})
+                    </h3>
+                  </div>
+
+                  {subtasks.length > 0 && (
+                    <span className="text-xs font-bold font-mono text-brand">
+                      {subtaskProgressPercent}%
+                    </span>
+                  )}
+                </div>
+
+                {/* Subtask Progress Bar */}
+                {subtasks.length > 0 && (
+                  <div className="h-1.5 w-full bg-neutral rounded-full overflow-hidden">
+                    <div
+                      style={{ width: `${subtaskProgressPercent}%` }}
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                    />
+                  </div>
+                )}
+
+                {/* Subtasks Checklist List */}
+                <div className="flex flex-col gap-1.5">
+                  {subtasks.map((st) => (
+                    <div
+                      key={st.id}
+                      onClick={() => handleToggleSubtask(st.id)}
+                      className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken hover:bg-neutral/50 border border-border/40 cursor-pointer text-xs transition-colors group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <button type="button" className="text-brand">
+                          {st.status === "DONE" ? (
+                            <CheckSquare size={16} className="text-emerald-500" />
+                          ) : (
+                            <Square size={16} className="text-text-subtle group-hover:text-brand" />
+                          )}
+                        </button>
+                        <span className={`font-medium ${st.status === "DONE" ? "line-through text-text-subtle" : "text-text"}`}>
+                          {st.summary}
+                        </span>
+                      </div>
+                      <span className="font-mono text-[10px] text-text-subtle">{st.key}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Subtask Inline Form */}
+                <form onSubmit={handleAddSubtask} className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    placeholder="+ Add subtask (press Enter)"
+                    className="flex-1 h-8 px-3 text-xs rounded-lg border border-border bg-surface text-text outline-none focus:border-brand"
+                  />
+                  <button
+                    type="submit"
+                    className="h-8 px-3 bg-neutral hover:bg-neutral/80 text-text font-bold text-xs rounded-lg"
+                  >
+                    Add
+                  </button>
+                </form>
+              </div>
+
+              {/* Developer Context Section (Git PRs & Commits) */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <GitPullRequest size={16} className="text-brand" />
+                    <h3 className="text-xs font-bold text-text uppercase tracking-wider">Developer Context</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowAddPrModal(!showAddPrModal)}
+                    className="text-[11px] font-bold text-brand hover:underline cursor-pointer"
+                  >
+                    + Link PR
+                  </button>
+                </div>
+
+                {showAddPrModal && (
+                  <form onSubmit={handleAddPr} className="flex gap-2 p-2.5 bg-neutral/30 rounded-lg border border-border">
+                    <input
+                      type="text"
+                      value={newPrInput}
+                      onChange={(e) => setNewPrInput(e.target.value)}
+                      placeholder="PR Title or #number..."
+                      className="flex-1 h-7 px-2 text-xs rounded border border-border bg-surface text-text outline-none"
+                    />
+                    <button type="submit" className="h-7 px-2.5 bg-brand text-white font-bold text-xs rounded">
+                      Save
+                    </button>
+                  </form>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {/* PRs */}
+                  {pullRequests.map((pr) => (
+                    <div key={pr.number} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
+                      <div className="flex items-center gap-2 font-mono">
+                        <GitPullRequest size={14} className="text-purple-500" />
+                        <span className="font-bold text-text">#{pr.number}</span>
+                        <span className="text-text font-sans font-medium">{pr.title}</span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          pr.status === "MERGED"
+                            ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
+                            : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                        }`}
+                      >
+                        {pr.status}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Commits */}
+                  {commits.map((cm) => (
+                    <div key={cm.hash} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <GitCommit size={14} className="text-brand" />
+                        <span className="font-bold text-brand">{cm.hash}</span>
+                        <span className="text-text font-sans font-medium">{cm.message}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Linked Issues / Dependencies */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Link2 size={16} className="text-brand" />
+                    <h3 className="text-xs font-bold text-text uppercase tracking-wider">Linked Issues</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowAddLinkModal(!showAddLinkModal)}
+                    className="text-[11px] font-bold text-brand hover:underline cursor-pointer"
+                  >
+                    + Link issue
+                  </button>
+                </div>
+
+                {showAddLinkModal && (
+                  <form onSubmit={handleAddLink} className="flex gap-2 p-2.5 bg-neutral/30 rounded-lg border border-border">
+                    <select
+                      value={linkRelationInput}
+                      onChange={(e) => setLinkRelationInput(e.target.value)}
+                      className="h-7 px-2 text-xs rounded border border-border bg-surface text-text font-medium"
+                    >
+                      <option value="BLOCKS">Blocks</option>
+                      <option value="IS_BLOCKED_BY">Is blocked by</option>
+                      <option value="RELATES_TO">Relates to</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={linkKeyInput}
+                      onChange={(e) => setLinkKeyInput(e.target.value)}
+                      placeholder="Issue Key (e.g. TRACK-12)..."
+                      className="flex-1 h-7 px-2 text-xs rounded border border-border bg-surface text-text outline-none"
+                    />
+                    <button type="submit" className="h-7 px-2.5 bg-brand text-white font-bold text-xs rounded">
+                      Link
+                    </button>
+                  </form>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {linkedIssues.map((lk) => (
+                    <div key={lk.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded">
+                          {lk.relation.replace(/_/g, " ")}
+                        </span>
+                        <span className="font-bold font-mono text-brand">{lk.key}</span>
+                        <span className="text-text font-medium">{lk.summary}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-text-subtle bg-neutral px-2 py-0.5 rounded">
+                        {lk.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Attachments Section */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Paperclip size={16} className="text-brand" />
+                    <h3 className="text-xs font-bold text-text uppercase tracking-wider">
+                      Attachments ({attachments.length})
+                    </h3>
+                  </div>
+                  <label className="text-[11px] font-bold text-brand hover:underline cursor-pointer">
+                    + Upload
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e.target.files)}
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs group"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <Paperclip size={14} className="text-text-subtle shrink-0" />
+                        <span className="truncate font-medium text-text">{att.filename}</span>
+                      </div>
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-brand hover:underline ml-2"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Activity Section (Comments, History, Work Log) */}
@@ -495,14 +1122,16 @@ export function IssueDetailDrawer({
                       <div className="flex items-center gap-2 mb-1">
                         <Avatar name="You" size={24} />
                         <span className="text-xs font-bold text-text">Add a comment...</span>
+                        <span className="text-[10px] text-text-subtle ml-auto italic">Hotkey 'C' to focus</span>
                       </div>
 
                       <textarea
+                        ref={commentInputRef}
                         rows={3}
                         value={commentInput}
                         onChange={(e) => setCommentInput(e.target.value)}
-                        placeholder="Type your comment or update..."
-                        className="w-full rounded border border-border bg-surface p-2.5 text-xs outline-none focus:border-brand"
+                        placeholder="Type your comment or update... Markdown supported"
+                        className="w-full rounded border border-border bg-surface p-2.5 text-xs outline-none focus:border-brand font-sans"
                       />
 
                       <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
@@ -537,10 +1166,28 @@ export function IssueDetailDrawer({
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-bold text-text">{c.author?.name || c.author || "User"}</span>
                                 <span className="text-[11px] text-text-subtle">
-                                  {typeof c.createdAt === "string" ? c.createdAt : "Recently"}
+                                  {typeof c.createdAt === "string" ? c.createdAt.split("T")[0] : "Recently"}
                                 </span>
                               </div>
-                              <p className="text-text whitespace-pre-wrap leading-relaxed">{c.body || c.text}</p>
+                              <p className="text-text whitespace-pre-wrap leading-relaxed mb-2">{c.body || c.text}</p>
+
+                              {/* Comment Emoji Reactions Bar */}
+                              <div className="flex items-center gap-1.5">
+                                {["👍", "🚀", "❤️", "👀"].map((emoji) => {
+                                  const count = (c.reactions && c.reactions[emoji]) || 0;
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => handleToggleCommentReaction(c.id, emoji)}
+                                      className={`px-2 py-0.5 rounded-full border text-[11px] font-semibold transition-colors ${
+                                        count > 0 ? "bg-brand/10 border-brand/40 text-brand" : "bg-neutral/40 border-border text-text-subtle hover:bg-neutral"
+                                      }`}
+                                    >
+                                      {emoji} {count > 0 ? count : ""}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         ))
@@ -632,7 +1279,7 @@ export function IssueDetailDrawer({
               </div>
             </div>
 
-            {/* Sidebar Attributes Column */}
+            {/* Sidebar Attributes Column (35%) */}
             <div className="flex flex-col gap-5 p-4 rounded-xl bg-surface-sunken border border-border/60 shrink-0 h-fit">
               {/* Status Dropdown */}
               <div className="flex flex-col gap-1.5">
@@ -650,9 +1297,20 @@ export function IssueDetailDrawer({
                 </select>
               </div>
 
-              {/* Assignee Dropdown */}
+              {/* Assignee Dropdown + Assign to me */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Assignee</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Assignee</label>
+                  {availableUsers.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleAssigneeSelect(availableUsers[0].id)}
+                      className="text-[10px] font-bold text-brand hover:underline cursor-pointer"
+                    >
+                      Assign to me
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 bg-surface p-2 rounded-lg border border-border">
                   <Avatar name={issue.assignee?.name || "Unassigned"} src={issue.assignee?.avatarUrl} size={24} />
                   <select
@@ -789,9 +1447,16 @@ export function IssueDetailDrawer({
                 />
               </div>
 
-              {/* Due Date */}
+              {/* Due Date & Overdue Alert */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Due Date</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Due Date</label>
+                  {dueDateStatus && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${dueDateStatus.bg}`}>
+                      {dueDateStatus.label}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="date"
                   value={dueDate}

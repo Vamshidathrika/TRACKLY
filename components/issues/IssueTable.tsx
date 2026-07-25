@@ -17,6 +17,7 @@ export type IssueListItem = {
   status: IssueStatus;
   priority: IssuePriority;
   storyPoints?: number | null;
+  originalEstimate?: number | null;
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
   projectKey: string;
   loggedHours?: number;
@@ -161,6 +162,7 @@ export function IssueTable({
             <th className="w-28">Priority</th>
             <th className="w-44">Assignee</th>
             <th className="w-24 text-center">Logged</th>
+            <th className="w-20 text-center">Est</th>
             <th className="w-16 text-right pr-3">Pts</th>
           </tr>
         </thead>
@@ -266,6 +268,11 @@ export function IssueTable({
                   <Clock size={11} className="text-brand" />
                   {issue.loggedHours ? `${issue.loggedHours.toFixed(1)}h` : "-"}
                 </span>
+              </td>
+
+              {/* Original Estimate */}
+              <td className="text-center font-mono text-xs text-text-subtle">
+                {issue.originalEstimate ? `${issue.originalEstimate.toFixed(1)}h` : "-"}
               </td>
 
               {/* Story Points */}

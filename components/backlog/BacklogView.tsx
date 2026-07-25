@@ -44,6 +44,8 @@ export type BacklogIssue = {
   status: IssueStatus;
   priority: IssuePriority;
   storyPoints?: number | null;
+  originalEstimate?: number | null;
+  loggedHours?: number;
   sprintId?: string | null;
   assignee?: { id: string; name: string; avatarUrl?: string | null } | null;
   projectKey: string;
@@ -727,6 +729,12 @@ export function BacklogView({
                           </select>
                         </div>
 
+                        {issue.originalEstimate != null && (
+                          <span className="flex h-5 items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-bold text-brand" title={`Estimated: ${issue.originalEstimate}h`}>
+                            {issue.originalEstimate}h
+                          </span>
+                        )}
+
                         {issue.storyPoints != null && (
                           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                             {issue.storyPoints}
@@ -909,6 +917,12 @@ export function BacklogView({
                         ))}
                       </select>
                     </div>
+
+                    {issue.originalEstimate != null && (
+                      <span className="flex h-5 items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-bold text-brand" title={`Estimated: ${issue.originalEstimate}h`}>
+                        {issue.originalEstimate}h
+                      </span>
+                    )}
 
                     {issue.storyPoints != null && (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
