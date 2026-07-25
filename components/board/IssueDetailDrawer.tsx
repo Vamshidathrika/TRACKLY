@@ -23,6 +23,7 @@ import {
   Minimize2,
   ThumbsUp,
   Eye,
+  GitBranch,
   GitPullRequest,
   GitCommit,
   Link2,

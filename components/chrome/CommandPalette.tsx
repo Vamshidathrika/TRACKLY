@@ -248,24 +248,24 @@ export function CommandPalette({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed top-[15vh] left-1/2 z-50 w-full max-w-[580px] -translate-x-1/2 rounded-[16px] border border-border-default bg-surface shadow-xl outline-none overflow-hidden animate-scale-in">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md transition-opacity" />
+        <Dialog.Content className="fixed top-[12vh] left-1/2 z-50 w-full max-w-[620px] -translate-x-1/2 rounded-2xl border border-border-strong bg-surface/95 backdrop-blur-2xl shadow-2xl outline-none overflow-hidden animate-scale-in select-none">
           {/* Search Input */}
           <div className="flex items-center gap-3 border-b border-border-default px-4">
-            <Search size={16} className="text-subtlest shrink-0" />
+            <Search size={17} className="text-brand shrink-0" />
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search or jump to…"
+              placeholder="Search tasks, projects, settings, or jump to…"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
               onKeyDown={handleKeyDown}
-              className="h-13 w-full bg-transparent py-4 text-[15px] text-default outline-none placeholder:text-subtlest"
+              className="h-14 w-full bg-transparent py-4 text-sm font-medium text-default outline-none placeholder:text-subtlest"
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
-                className="shrink-0 text-[11px] font-semibold text-subtlest bg-neutral hover:bg-neutral-hovered px-2 py-0.5 rounded-[4px] transition-colors"
+                className="shrink-0 text-[11px] font-bold text-subtlest bg-neutral hover:bg-neutral-hovered px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 Clear
               </button>
@@ -273,17 +273,17 @@ export function CommandPalette({
           </div>
 
           {/* Results */}
-          <div ref={listRef} className="max-h-[380px] overflow-y-auto py-2">
+          <div ref={listRef} className="max-h-[400px] overflow-y-auto py-2">
             {isLoading && (
-              <div className="flex items-center justify-center py-8">
-                <span className="w-4 h-4 rounded-full border-2 border-brand/30 border-t-brand animate-spin" />
+              <div className="flex items-center justify-center py-10">
+                <span className="w-5 h-5 rounded-full border-2 border-brand/30 border-t-brand animate-spin" />
               </div>
             )}
 
             {!isLoading && flatItems.length === 0 && query.trim() && (
               <div className="py-12 text-center">
-                <p className="text-[13px] font-medium text-subtle">No results for &quot;{query}&quot;</p>
-                <p className="text-[11px] text-subtlest mt-1">Try a different search term</p>
+                <p className="text-xs font-bold text-subtle">No matching results for &quot;{query}&quot;</p>
+                <p className="text-[11px] text-subtlest mt-1">Try searching by task key, title, or project name</p>
               </div>
             )}
 
@@ -292,8 +292,8 @@ export function CommandPalette({
               runningIndex += section.items.length;
 
               return (
-                <div key={section.label} className="mb-1">
-                  <p className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-subtlest">
+                <div key={section.label} className="mb-2">
+                  <p className="px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-subtlest">
                     {section.label}
                   </p>
                   {section.items.map((item, i) => {
@@ -306,26 +306,26 @@ export function CommandPalette({
                         data-selected={active}
                         onClick={item.handler}
                         onMouseEnter={() => setSelectedIndex(globalIdx)}
-                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                          active ? "bg-brand/8" : "hover:bg-neutral/60"
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-all duration-150 cursor-pointer ${
+                          active ? "bg-brand/10" : "hover:bg-neutral/50"
                         }`}
                       >
-                        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] ${
-                          active ? "bg-brand/15" : "bg-neutral"
+                        <div className={`flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                          active ? "bg-brand text-white shadow-2xs" : "bg-neutral text-subtle"
                         }`}>
-                          <Icon size={14} className={active ? "text-brand" : "text-subtle"} />
+                          <Icon size={14} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className={`text-[13px] font-medium truncate ${active ? "text-brand" : "text-default"}`}>
+                          <span className={`text-xs font-semibold truncate ${active ? "text-brand" : "text-default"}`}>
                             {item.label}
                           </span>
                           {item.sublabel && (
-                            <span className="text-[11px] text-subtlest font-mono">
+                            <span className="text-[10px] text-subtlest font-mono">
                               {item.sublabel}
                             </span>
                           )}
                         </div>
-                        {active && <ChevronRight size={13} className="shrink-0 text-brand/60 ml-auto" />}
+                        {active && <ChevronRight size={14} className="shrink-0 text-brand/70 ml-auto" />}
                       </button>
                     );
                   })}
@@ -335,13 +335,13 @@ export function CommandPalette({
           </div>
 
           {/* Footer hints */}
-          <div className="flex items-center justify-between border-t border-border-default bg-neutral/30 px-4 py-2.5">
-            <div className="flex items-center gap-3 text-[11px] text-subtlest">
-              <span><kbd className="px-1.5 py-0.5 rounded-[4px] bg-surface border border-border-default font-mono font-bold text-[10px]">↑↓</kbd> Navigate</span>
-              <span><kbd className="px-1.5 py-0.5 rounded-[4px] bg-surface border border-border-default font-mono font-bold text-[10px]">↵</kbd> Select</span>
-              <span><kbd className="px-1.5 py-0.5 rounded-[4px] bg-surface border border-border-default font-mono font-bold text-[10px]">ESC</kbd> Close</span>
+          <div className="flex items-center justify-between border-t border-border-default bg-neutral/40 px-4 py-2.5">
+            <div className="flex items-center gap-3 text-[11px] text-subtle font-medium">
+              <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded-md bg-surface border border-border-default font-mono font-bold text-[10px] shadow-2xs">↑↓</kbd> Navigate</span>
+              <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded-md bg-surface border border-border-default font-mono font-bold text-[10px] shadow-2xs">↵</kbd> Select</span>
+              <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded-md bg-surface border border-border-default font-mono font-bold text-[10px] shadow-2xs">ESC</kbd> Close</span>
             </div>
-            <span className="text-[11px] font-semibold text-brand">Press &quot;C&quot; to create</span>
+            <span className="text-[11px] font-extrabold text-brand">Press &quot;C&quot; for Quick Task</span>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

@@ -105,7 +105,7 @@ export function ProjectNav({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-md border-b-2 text-xs transition-all whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-xl border-b-2 text-xs transition-all duration-180 whitespace-nowrap cursor-pointer ${
                 isActive
                   ? "border-brand bg-brand/10 text-brand font-bold shadow-2xs"
                   : "border-transparent text-subtle hover:text-default hover:bg-neutral/60"

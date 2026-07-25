@@ -24,13 +24,13 @@ export function TopBar({
   hideRemote?: boolean;
 }) {
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-default bg-surface px-3 z-30">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-strong bg-surface/90 backdrop-blur-xl px-3 z-30 select-none">
       {/* Sidebar toggle */}
       <Tooltip content="Toggle sidebar (⌘ /)">
         <button
           aria-label="Toggle sidebar"
           onClick={onToggleSidebar}
-          className="flex h-8 w-8 items-center justify-center rounded-[8px] hover:bg-neutral text-subtle hover:text-default transition-all"
+          className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-neutral text-subtle hover:text-default transition-all duration-180 active:scale-[0.96] cursor-pointer"
         >
           <Menu size={17} />
         </button>
@@ -39,30 +39,30 @@ export function TopBar({
       {/* Logo */}
       <Link
         href="/your-work"
-        className="flex items-center gap-1.5 px-1 mr-1 group"
+        className="flex items-center gap-2 px-1 mr-1 group cursor-pointer"
       >
-        <div className="w-6 h-6 bg-brand rounded-[6px] flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="8" height="8" rx="1.5" fill="white" />
-            <rect x="14" y="3" width="7" height="7" rx="1.5" fill="white" opacity="0.65" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" fill="white" opacity="0.45" />
-            <rect x="14" y="14" width="7" height="7" rx="1.5" fill="white" />
+        <div className="w-7 h-7 bg-brand rounded-xl flex items-center justify-center shadow-sm shadow-brand/20 group-hover:scale-105 transition-transform duration-200">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white">
+            <rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.7" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" fill="currentColor" />
           </svg>
         </div>
-        <span className="text-[15px] font-bold text-brand tracking-tight">Trackly</span>
+        <span className="text-[15px] font-black text-default tracking-tight">Trackly</span>
       </Link>
 
       {/* Search bar — opens command palette */}
       <div className="relative mx-auto w-full max-w-[520px]">
-        <Search size={13} className="absolute top-1/2 left-3 -translate-y-1/2 text-subtlest pointer-events-none" />
+        <Search size={14} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-subtlest pointer-events-none" />
         <input
-          placeholder="Search tasks, projects..."
+          placeholder="Search tasks, projects, code..."
           readOnly
           onClick={onOpenPalette}
           onFocus={onOpenPalette}
-          className="h-8 w-full cursor-pointer rounded-[8px] border border-border-default bg-neutral pl-8 pr-14 text-sm text-subtle outline-none hover:bg-neutral-hovered transition-colors"
+          className="h-8.5 w-full cursor-pointer rounded-xl border border-border-default bg-surface-sunken/80 pl-9 pr-14 text-xs font-medium text-subtle outline-none hover:bg-surface hover:border-border-strong focus:border-brand focus:ring-3 focus:ring-brand/10 transition-all duration-200"
         />
-        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 text-[10px] font-mono font-semibold text-subtlest bg-surface border border-border-default rounded-[4px] px-1.5 py-0.5 pointer-events-none">
+        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 text-[10px] font-mono font-bold text-subtlest bg-surface border border-border-default rounded-md px-1.5 py-0.5 pointer-events-none shadow-2xs">
           ⌘K
         </kbd>
       </div>
@@ -71,7 +71,7 @@ export function TopBar({
       <Tooltip content="Create task (C)">
         <button
           onClick={onOpenCreate}
-          className="flex h-8 items-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hovered transition-all shadow-sm hover:shadow-md active:scale-[0.97]"
+          className="flex h-8.5 items-center gap-1.5 rounded-xl bg-brand px-3.5 text-xs font-bold text-white hover:bg-brand-hovered transition-all duration-180 shadow-xs hover:shadow-md active:scale-[0.97] cursor-pointer"
         >
           <Plus size={15} />
           <span className="hidden sm:inline">Create</span>
@@ -86,7 +86,7 @@ export function TopBar({
           <button
             aria-label="Keyboard shortcuts"
             onClick={onOpenHelp}
-            className="flex h-8 w-8 items-center justify-center rounded-[8px] text-subtle hover:bg-neutral hover:text-default transition-all"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-subtle hover:bg-neutral hover:text-default transition-all duration-180 active:scale-[0.96] cursor-pointer"
           >
             <HelpCircle size={17} />
           </button>

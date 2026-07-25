@@ -57,7 +57,7 @@ export function NavItem({
     return (
       <span
         title={title}
-        className={`flex cursor-not-allowed items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] text-subtlest opacity-40 ${collapsed ? "justify-center" : ""}`}
+        className={`flex cursor-not-allowed items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-subtlest opacity-40 ${collapsed ? "justify-center" : ""}`}
       >
         <Icon size={16} />
         {!collapsed && <span className="truncate">{label}</span>}
@@ -69,11 +69,11 @@ export function NavItem({
     <Link
       href={href}
       title={collapsed ? label : undefined}
-      className={`relative flex items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] transition-all group
+      className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs transition-all duration-180 group cursor-pointer
         ${collapsed ? "justify-center" : ""}
         ${active
-          ? "bg-brand/10 text-brand font-semibold"
-          : "text-default hover:bg-neutral font-medium"
+          ? "bg-brand/10 text-brand font-bold shadow-2xs"
+          : "text-default hover:bg-neutral/60 font-medium"
         }`}
     >
       {active && (
@@ -99,20 +99,20 @@ function ProjectItem({ proj, collapsed }: { proj: Proj; collapsed: boolean }) {
     <Link
       href={href}
       title={collapsed ? proj.name : undefined}
-      className={`flex items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-[13px] transition-all group
+      className={`flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-xs transition-all duration-180 group cursor-pointer
         ${collapsed ? "justify-center" : ""}
         ${active
-          ? "bg-brand/10 text-brand font-semibold"
-          : "text-default hover:bg-neutral font-medium"
+          ? "bg-brand/10 text-brand font-bold shadow-2xs"
+          : "text-default hover:bg-neutral/60 font-medium"
         }`}
     >
-      <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-[5px] text-[10px] font-bold text-white ${color}`}>
+      <span className={`shrink-0 flex h-5.5 w-5.5 items-center justify-center rounded-lg text-[10px] font-bold text-white shadow-2xs ${color}`}>
         {initial}
       </span>
       {!collapsed && (
         <>
           <span className="truncate flex-1">{proj.name}</span>
-          {active && <ChevronRight size={12} className="text-brand/60 shrink-0" />}
+          {active && <ChevronRight size={13} className="text-brand/70 shrink-0" />}
         </>
       )}
     </Link>
@@ -135,8 +135,8 @@ function Section({
   }
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold tracking-widest text-subtlest uppercase">
-        <Icon size={10} />
+      <p className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-extrabold tracking-widest text-subtlest uppercase select-none">
+        <Icon size={11} />
         {title}
       </p>
       {children}

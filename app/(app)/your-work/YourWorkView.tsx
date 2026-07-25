@@ -182,22 +182,22 @@ export function YourWorkView({
         </div>
       </div>
 
-      {/* ✨ AI Daily Action Plan Banner (Renders when active tasks exist) */}
+      {/* AI Daily Action Plan Banner (Renders when active tasks exist) */}
       {assignedIssues.length > 0 && (
-        <div className="rounded-[16px] border border-purple-500/30 bg-purple-500/5 p-5 shadow-xs flex flex-col gap-4">
+        <div className="rounded-2xl border border-purple-500/25 bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-transparent p-5 shadow-sm flex flex-col gap-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-purple-500/20 text-purple-600 flex items-center justify-center">
-                <Sparkles size={16} />
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-purple-500/20 text-purple-600 flex items-center justify-center shrink-0 border border-purple-500/30">
+                <Sparkles size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-text tracking-tight flex items-center gap-2">
-                  <span>✨ AI Daily Action Plan</span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 uppercase font-mono">
+                <h3 className="text-sm font-extrabold text-default tracking-tight flex items-center gap-2">
+                  <span>AI Daily Action Plan</span>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 uppercase font-mono border border-purple-500/20">
                     Rovo Agent Sync
                   </span>
                 </h3>
-                <p className="text-xs text-text-subtle mt-0.5">
+                <p className="text-xs text-subtle mt-0.5 font-normal">
                   AI-prioritized daily sequence based on task urgency, status, and project deadlines.
                 </p>
               </div>
@@ -206,13 +206,13 @@ export function YourWorkView({
             <button
               type="button"
               onClick={() => {
-                setToastMsg("✨ AI Daily Action Plan updated with latest task priorities!");
+                setToastMsg("AI Daily Action Plan updated with latest task priorities!");
                 setTimeout(() => setToastMsg(null), 3500);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-500/10 text-purple-600 border border-purple-500/25 text-xs font-bold hover:bg-purple-500/20 active:scale-[0.98] transition-all cursor-pointer shadow-2xs"
             >
               <Zap size={13} />
-              <span>⚡ Re-Analyze Plan</span>
+              <span>Re-Analyze Plan</span>
             </button>
           </div>
 
