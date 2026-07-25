@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { requireMembership, checkProjectAccess } from "@/lib/tenant";
-import { getIssuesByProject } from "@/lib/issues";
+import { requireMembership, checkProjectAccess, getBoardIssues } from "@/lib/dal";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getUsersForSite } from "@/lib/users";
 import { KanbanBoard } from "@/components/board/KanbanBoard";
@@ -35,7 +35,7 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
   if (!access) redirect("/your-work");
 
   const [issues, sprints, siteUsers, star] = await Promise.all([
-    getIssuesByProject(project.id),
+    getBoardIssues(project.id),
     getSprintsByProject(project.id),
     getUsersForSite(project.siteId),
     prisma.star.findUnique({
