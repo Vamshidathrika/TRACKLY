@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
 import {
   Eye,
   Share2,
@@ -909,6 +910,9 @@ export function IssueDetail({
                 </div>
               )}
             </div>
+
+            {/* Development Activity Panel */}
+            <DevelopmentPanel issueKey={issue.key} />
 
             {/* Danger Zone: Delete Task */}
             <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/20 p-4 flex flex-col gap-2 shadow-xs">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from "react";
 import Link from "next/link";
+import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
 import {
   X,
   User,
@@ -1699,6 +1700,11 @@ export function IssueDetailDrawer({
                     Add
                   </button>
                 </form>
+              </div>
+
+              {/* Development Panel (Jira-style GitHub activity linking) */}
+              <div className="pt-3 border-t border-border">
+                <DevelopmentPanel issueKey={issue.key} />
               </div>
             </div>
           </div>

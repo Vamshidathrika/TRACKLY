@@ -95,13 +95,18 @@ model User {
 }
 
 model Site {
-  id          String       @id @default(cuid())
-  name        String
-  slug        String       @unique
-  createdAt   DateTime     @default(now())
-  memberships Membership[]
-  invites     Invite[]
-  projects    Project[]
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  createdAt        DateTime          @default(now())
+  memberships      Membership[]
+  invites          Invite[]
+  projects         Project[]
+  gitInstallations GitInstallation[]
+  gitRepositories  GitRepository[]
+  gitCommits       GitCommit[]
+  pullRequests     PullRequest[]
+  gitBranches      GitBranch[]
 }
 
 model Membership {
@@ -392,26 +397,46 @@ model Star {
   @@unique([userId, projectId])
 }
 
+model GitInstallation {
+  id             String          @id @default(cuid())
+  siteId         String
+  installationId String          @unique
+  accountName    String
+  accountType    String          @default("USER") // USER or ORGANIZATION
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  repositories   GitRepository[]
+
+  @@index([siteId])
+}
+
 model GitRepository {
-  id            String        @id @default(cuid())
-  projectId     String
-  owner         String
-  repoName      String
-  accessToken   String?
-  webhookSecret String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  commits       GitCommit[]
-  pullRequests  PullRequest[]
-  branches      GitBranch[]
+  id             String           @id @default(cuid())
+  siteId         String
+  projectId      String
+  installationId String?
+  owner          String
+  repoName       String
+  accessToken    String?
+  webhookSecret  String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  site           Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  installation   GitInstallation? @relation(fields: [installationId], references: [id], onDelete: SetNull)
+  commits        GitCommit[]
+  pullRequests   PullRequest[]
+  branches       GitBranch[]
 
   @@unique([projectId, owner, repoName])
+  @@index([siteId])
   @@index([projectId])
 }
 
 model GitCommit {
   id           String        @id @default(cuid())
+  siteId       String
   repositoryId String
   hash         String
   message      String
@@ -420,15 +445,19 @@ model GitCommit {
   committedAt  DateTime
   issueId      String?
   url          String?
+  site         Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
   repository   GitRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   issue        Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
 
+  @@unique([repositoryId, hash])
+  @@index([siteId])
   @@index([repositoryId])
   @@index([issueId])
 }
 
 model PullRequest {
   id           String        @id @default(cuid())
+  siteId       String
   repositoryId String
   prNumber     Int
   title        String
@@ -438,22 +467,29 @@ model PullRequest {
   issueId      String?
   url          String?
   createdAt    DateTime      @default(now())
+  site         Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
   repository   GitRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   issue        Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
 
+  @@unique([repositoryId, prNumber])
+  @@index([siteId])
   @@index([repositoryId])
   @@index([issueId])
 }
 
 model GitBranch {
   id             String        @id @default(cuid())
+  siteId         String
   repositoryId   String
   name           String
   lastCommitHash String?
   issueId        String?
+  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
   repository     GitRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   issue          Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
 
+  @@unique([repositoryId, name])
+  @@index([siteId])
   @@index([repositoryId])
   @@index([issueId])
 }

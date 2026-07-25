@@ -20,6 +20,12 @@ export async function connectGithubRepoAction(input: {
     const owner = input.owner.trim();
     const repoName = input.repoName.trim();
 
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+      select: { siteId: true },
+    });
+    if (!project) return { error: "Project not found" };
+
     const repo = await prisma.gitRepository.upsert({
       where: {
         projectId_owner_repoName: {
@@ -29,6 +35,7 @@ export async function connectGithubRepoAction(input: {
         },
       },
       create: {
+        siteId: project.siteId,
         projectId: input.projectId,
         owner,
         repoName,
