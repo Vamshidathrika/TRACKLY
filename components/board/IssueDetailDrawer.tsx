@@ -173,7 +173,7 @@ export function IssueDetailDrawer({
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   // Activity Section
-  const [activeTab, setActiveTab] = useState<"comments" | "history" | "worklog">("comments");
+  const [activeTab, setActiveTab] = useState<"comments" | "history" | "worklog" | "development">("comments");
   const [commentInput, setCommentInput] = useState("");
   const [commentsList, setCommentsList] = useState<any[]>([]);
   const [historyList, setHistoryList] = useState<any[]>([]);
@@ -1281,6 +1281,14 @@ export function IssueDetailDrawer({
                     >
                       <Clock size={14} /> Work Log ({workLogsList.length})
                     </button>
+                    <button
+                      onClick={() => setActiveTab("development")}
+                      className={`pb-3 -mb-3 transition-colors flex items-center gap-1.5 ${
+                        activeTab === "development" ? "border-b-2 border-brand text-brand font-bold" : "hover:text-text"
+                      }`}
+                    >
+                      <Layers size={14} className="text-purple-600" /> Development & Apps ⚡
+                    </button>
                   </div>
                 </div>
 
@@ -1445,6 +1453,18 @@ export function IssueDetailDrawer({
                         ))
                       )}
                     </div>
+                  </div>
+                )}
+
+                {/* Tab 4: Development & Superpowers */}
+                {activeTab === "development" && (
+                  <div className="flex flex-col gap-4">
+                    <DevelopmentPanel
+                      issueKey={issue.key}
+                      branches={devData.branches}
+                      pullRequests={devData.pullRequests}
+                      commits={devData.commits}
+                    />
                   </div>
                 )}
               </div>
@@ -1710,14 +1730,45 @@ export function IssueDetailDrawer({
                 </form>
               </div>
 
-              {/* Development Panel (Jira-style GitHub activity linking) */}
-              <div className="pt-3 border-t border-border">
-                <DevelopmentPanel
-                  issueKey={issue.key}
-                  branches={devData.branches}
-                  pullRequests={devData.pullRequests}
-                  commits={devData.commits}
-                />
+              {/* Development & Superpowers Summary Card (Jira-style sidebar badge) */}
+              <div className="pt-3 border-t border-border flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-text uppercase tracking-wider flex items-center gap-1">
+                    <Layers size={13} className="text-purple-600" /> Development & Apps
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("development")}
+                    className="text-[10px] font-bold text-brand hover:underline cursor-pointer"
+                  >
+                    Open Panel →
+                  </button>
+                </div>
+                <div
+                  onClick={() => setActiveTab("development")}
+                  className="p-3 rounded-xl border border-border bg-neutral/20 hover:bg-neutral/40 transition-all cursor-pointer flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-text flex items-center gap-1.5 truncate">
+                      <GitPullRequest size={13} className="text-purple-600 shrink-0" /> 1 Pull Request
+                    </span>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono bg-purple-500/10 text-purple-600 shrink-0">
+                      #42 MERGED
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-text-subtle">
+                    <span className="flex items-center gap-1 font-mono truncate">
+                      <GitBranch size={11} className="text-brand shrink-0" /> 1 Branch
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-600 font-bold shrink-0">● Vercel Ready</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[10px] text-purple-600 font-extrabold">
+                    <span className="flex items-center gap-1">
+                      <Sparkles size={11} className="text-amber-500" /> 8 Superpowers Available
+                    </span>
+                    <span>View All →</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

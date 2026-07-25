@@ -93,49 +93,50 @@ export function ZendeskTicketsWidget({
         {tickets.map((t) => (
           <div
             key={t.id}
-            className="flex items-center justify-between p-3 rounded-lg border border-border bg-surface shadow-2xs text-xs gap-3 hover:border-brand/30 transition-all"
+            className="flex flex-col gap-2 p-2.5 rounded-lg border border-border bg-surface shadow-2xs text-xs hover:border-brand/30 transition-all"
           >
-            <div className="flex items-start gap-2.5 min-w-0">
-              <span className="font-mono font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded text-[11px] shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px] shrink-0">
                 #ZD-{t.ticketNumber}
               </span>
-              <div className="min-w-0">
-                <a
-                  href={t.zendeskUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-text hover:text-brand hover:underline block truncate flex items-center gap-1"
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span
+                  className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded ${
+                    t.status === "SOLVED"
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      : t.status === "PENDING"
+                      ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                      : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                  }`}
                 >
-                  <span>{t.subject}</span>
-                  <ExternalLink size={11} className="shrink-0 text-text-subtle" />
-                </a>
-                <span className="text-[11px] text-text-subtle block">
-                  {t.customerName ? `${t.customerName} (${t.customerEmail})` : t.customerEmail} · Updated {t.updatedAt}
+                  {t.status}
                 </span>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemove(t.id)}
+                  className="text-text-subtle hover:text-red-500 transition-colors p-0.5 rounded"
+                  title="Unlink ticket"
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span
-                className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded ${
-                  t.status === "SOLVED"
-                    ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                    : t.status === "PENDING"
-                    ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                    : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                }`}
+            <div className="min-w-0">
+              <a
+                href={t.zendeskUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-text hover:text-brand hover:underline text-[11px] leading-tight block truncate flex items-center gap-1"
               >
-                {t.status}
+                <span className="truncate">{t.subject}</span>
+                <ExternalLink size={10} className="shrink-0 text-text-subtle" />
+              </a>
+              <span className="text-[10px] text-text-subtle block truncate mt-0.5">
+                {t.customerName ? `${t.customerName} (${t.customerEmail})` : t.customerEmail} · {t.updatedAt}
               </span>
-
-              <button
-                type="button"
-                onClick={() => handleRemove(t.id)}
-                className="text-text-subtle hover:text-red-500 transition-colors p-1 rounded"
-                title="Unlink ticket"
-              >
-                <Trash2 size={13} />
-              </button>
             </div>
           </div>
         ))}

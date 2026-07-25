@@ -13,6 +13,12 @@ import {
   Check,
   Sparkles,
   Triangle,
+  Video,
+  LayoutGrid,
+  Headphones,
+  Flag,
+  Activity,
+  ShieldAlert,
 } from "lucide-react";
 import { FigmaEmbedPanel } from "./FigmaEmbedPanel";
 import { LoomEmbedder } from "./LoomEmbedder";
@@ -47,6 +53,8 @@ export type LinkedCommit = {
   url?: string | null;
 };
 
+type DevTab = "GIT" | "AI" | "MEDIA" | "SUPPORT" | "FLAGS";
+
 export function DevelopmentPanel({
   issueKey,
   branches = [],
@@ -60,6 +68,7 @@ export function DevelopmentPanel({
   commits?: LinkedCommit[];
   pipelineStatus?: string;
 }) {
+  const [activeTab, setActiveTab] = useState<DevTab>("GIT");
   const [copiedBranch, setCopiedBranch] = useState(false);
   const [copiedCommit, setCopiedCommit] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
@@ -84,7 +93,7 @@ export function DevelopmentPanel({
 
   const handleGenerateAiReleaseNote = () => {
     const commitsCount = (commits.length > 0 ? commits : defaultCommits).length;
-    const note = `🚀 Release Note (${issueKey}): Delivered ${commitsCount} verified git commits including automated pipeline updates and regression fixes.`;
+    const note = `🚀 Release Note (${issueKey}): Delivered ${commitsCount} verified git commits including automated pipeline updates.`;
     setAiNote(note);
   };
 
@@ -93,20 +102,20 @@ export function DevelopmentPanel({
     : [
         {
           id: "b-1",
-          name: `feature/${issueKey.toLowerCase()}-pipeline-auth`,
+          name: `feature/${issueKey.toLowerCase()}-auth`,
           lastCommitHash: "8f3a12b",
         },
       ];
 
-  const defaultPRs: LinkedPullRequest[] = pullRequests.length > 0
+  const defaultPullRequests: LinkedPullRequest[] = pullRequests.length > 0
     ? pullRequests
     : [
         {
-          id: "pr-42",
+          id: "pr-1",
           prNumber: 42,
-          title: `feat(${issueKey.toLowerCase()}): implement core pipeline & auth`,
+          title: `fix(${issueKey}): resolve production issue`,
           status: "MERGED",
-          authorName: "Antigravity",
+          authorName: "Sarah C.",
           url: "https://github.com/Vamshidathrika/TRACKLY/pull/42",
         },
       ];
@@ -117,183 +126,197 @@ export function DevelopmentPanel({
         {
           id: "c-1",
           hash: "8f3a12b",
-          message: `feat(${issueKey}): implement core pipeline validations`,
-          authorName: "Antigravity",
-          committedAt: new Date().toISOString(),
+          message: `fix(${issueKey}): resolve production issue`,
+          authorName: "Alex V.",
+          committedAt: "2 hours ago",
           url: "https://github.com/Vamshidathrika/TRACKLY/commit/8f3a12b",
         },
       ];
 
   return (
-    <div className="rounded-[16px] border border-border bg-surface p-4 shadow-xs flex flex-col gap-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-neutral/20 p-3 text-xs w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border pb-2.5">
-        <div className="flex items-center gap-2">
-          <FolderGit2 size={16} className="text-brand" />
-          <h4 className="text-xs font-extrabold text-text uppercase tracking-wider">
-            Development Activity
-          </h4>
+      <div className="flex items-center justify-between border-b border-border pb-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <FolderGit2 size={16} className="text-brand shrink-0" />
+          <span className="font-extrabold text-text text-xs truncate">Development Activity</span>
         </div>
-        <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20">
-          GitHub Linked
+        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand/10 text-brand shrink-0">
+          {issueKey}
         </span>
       </div>
 
-      {/* Summary Row Badges */}
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl border border-border bg-neutral/30 p-2">
-          <span className="text-[10px] text-text-subtle uppercase font-bold block">Branches</span>
-          <span className="text-sm font-mono font-extrabold text-text">{defaultBranches.length}</span>
-        </div>
-        <div className="rounded-xl border border-border bg-neutral/30 p-2">
-          <span className="text-[10px] text-text-subtle uppercase font-bold block">Pull Requests</span>
-          <span className="text-sm font-mono font-extrabold text-text">{defaultPRs.length}</span>
-        </div>
-        <div className="rounded-xl border border-border bg-neutral/30 p-2">
-          <span className="text-[10px] text-text-subtle uppercase font-bold block">Commits</span>
-          <span className="text-sm font-mono font-extrabold text-text">{defaultCommits.length}</span>
-        </div>
-      </div>
-
-      {/* Pull Requests Section */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
-          <GitPullRequest size={13} className="text-emerald-600" /> Pull Requests
-        </span>
-        {defaultPRs.map((pr) => (
-          <div
-            key={pr.id}
-            className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs gap-2"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full font-mono shrink-0 ${
-                  pr.status === "MERGED"
-                    ? "bg-purple-500/15 text-purple-600"
-                    : pr.status === "OPEN"
-                    ? "bg-emerald-500/15 text-emerald-600"
-                    : "bg-red-500/15 text-red-600"
-                }`}
-              >
-                #{pr.prNumber} {pr.status}
-              </span>
-              <a
-                href={pr.url || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-bold text-text hover:text-brand truncate"
-              >
-                {pr.title}
-              </a>
-            </div>
-            <span className="text-[11px] text-text-subtle shrink-0">{pr.authorName}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Branches Section */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
-            <GitBranch size={13} className="text-purple-600" /> Active Branches
-          </span>
-          <button
-            type="button"
-            onClick={handleCopyBranchCommand}
-            className="text-[10px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
-            title="Copy git checkout -b command"
-          >
-            {copiedBranch ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-            <span>{copiedBranch ? "Copied!" : "Copy Branch Cmd"}</span>
-          </button>
-        </div>
-        {defaultBranches.map((b) => (
-          <div key={b.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs font-mono">
-            <span className="font-bold text-brand truncate">{b.name}</span>
-            {b.lastCommitHash && <span className="text-[10px] text-text-subtle shrink-0">{b.lastCommitHash}</span>}
-          </div>
-        ))}
-      </div>
-
-      {/* Commits Stream */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
-            <GitCommit size={13} className="text-sky-600" /> Linked Commits
-          </span>
-          <div className="flex items-center gap-2">
+      {/* Sub-Tabs Bar */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b border-border text-[11px]">
+        {[
+          { id: "GIT", label: "Git & CI", icon: GitBranch },
+          { id: "AI", label: "🤖 AI Fix", icon: Sparkles },
+          { id: "MEDIA", label: "🎨 Canvas", icon: LayoutGrid },
+          { id: "SUPPORT", label: "🎧 Support", icon: Headphones },
+          { id: "FLAGS", label: "🚩 Telemetry", icon: Flag },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
             <button
+              key={tab.id}
               type="button"
-              onClick={handleGenerateAiReleaseNote}
-              className="text-[10px] font-bold text-purple-600 hover:underline flex items-center gap-1 cursor-pointer"
-              title="Generate AI Release Note"
+              onClick={() => setActiveTab(tab.id as DevTab)}
+              className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0 ${
+                isActive
+                  ? "bg-brand text-white shadow-2xs"
+                  : "bg-surface text-text-subtle hover:text-text hover:bg-neutral border border-border"
+              }`}
             >
-              <Sparkles size={11} className="text-amber-500" />
-              <span>AI Release Note</span>
+              <Icon size={12} />
+              <span>{tab.label}</span>
             </button>
-            <button
-              type="button"
-              onClick={handleCopyCommitCommand}
-              className="text-[10px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
-              title="Copy git commit -m command"
-            >
-              {copiedCommit ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-              <span>{copiedCommit ? "Copied!" : "Copy Commit Cmd"}</span>
-            </button>
-          </div>
-        </div>
+          );
+        })}
+      </div>
 
-        {aiNote && (
-          <div className="p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-sans text-text flex flex-col gap-1 animate-in fade-in duration-200">
-            <span className="font-bold text-purple-600 text-[10px] uppercase tracking-wider flex items-center gap-1">
-              <Sparkles size={12} className="text-amber-500" /> AI Synthesized Release Note
+      {/* Tab 1: Git & CI/CD */}
+      {activeTab === "GIT" && (
+        <div className="flex flex-col gap-3 pt-1">
+          {/* Pull Requests */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
+              <GitPullRequest size={12} className="text-purple-600" /> Pull Requests
             </span>
-            <p className="text-[11px] text-text leading-relaxed font-medium">{aiNote}</p>
+            {defaultPullRequests.map((pr) => (
+              <div key={pr.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs gap-2 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0 truncate">
+                  <span
+                    className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                      pr.status === "MERGED"
+                        ? "bg-purple-500/15 text-purple-600"
+                        : pr.status === "OPEN"
+                        ? "bg-emerald-500/15 text-emerald-600"
+                        : "bg-red-500/15 text-red-600"
+                    }`}
+                  >
+                    #{pr.prNumber} {pr.status}
+                  </span>
+                  <a
+                    href={pr.url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-text hover:text-brand truncate text-[11px]"
+                  >
+                    {pr.title}
+                  </a>
+                </div>
+                <span className="text-[10px] text-text-subtle shrink-0">{pr.authorName}</span>
+              </div>
+            ))}
           </div>
-        )}
-        {defaultCommits.slice(0, 3).map((c) => (
-          <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <a
-                href={c.url || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono font-bold text-brand hover:underline shrink-0 flex items-center gap-0.5"
+
+          {/* Active Branches */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
+                <GitBranch size={12} className="text-purple-600" /> Branches
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyBranchCommand}
+                className="text-[10px] font-bold text-brand hover:underline flex items-center gap-0.5 cursor-pointer"
               >
-                <span>{c.hash}</span>
-                <ExternalLink size={10} />
-              </a>
-              <span className="font-semibold text-text truncate">{c.message}</span>
+                {copiedBranch ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                <span>{copiedBranch ? "Copied!" : "Copy Branch Cmd"}</span>
+              </button>
             </div>
-            <span className="text-[11px] text-text-subtle shrink-0">{c.authorName}</span>
+            {defaultBranches.map((b) => (
+              <div key={b.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-[11px] font-mono min-w-0">
+                <span className="font-bold text-brand truncate">{b.name}</span>
+                {b.lastCommitHash && <span className="text-[10px] text-text-subtle shrink-0">{b.lastCommitHash}</span>}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* CI/CD & Deployment Badges */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs flex-wrap gap-2">
-        <span className="text-text-subtle font-medium">CI/CD & Deployments</span>
-        <div className="flex items-center gap-2">
-          <span className="font-extrabold text-sky-600 flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
-            <Triangle size={11} /> Vercel: Ready
-          </span>
-          <span className="font-extrabold text-emerald-600 flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-            <CheckCircle2 size={11} /> {pipelineStatus} (main)
-          </span>
+          {/* Commits Stream */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
+                <GitCommit size={12} className="text-sky-600" /> Commits
+              </span>
+              <button
+                type="button"
+                onClick={handleGenerateAiReleaseNote}
+                className="text-[10px] font-bold text-purple-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+              >
+                <Sparkles size={10} className="text-amber-500" />
+                <span>AI Note</span>
+              </button>
+            </div>
+
+            {aiNote && (
+              <div className="p-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-[11px] text-text flex flex-col gap-1">
+                <span className="font-bold text-purple-600 text-[9px] uppercase tracking-wider">
+                  AI Release Note
+                </span>
+                <p className="text-[11px] text-text leading-tight">{aiNote}</p>
+              </div>
+            )}
+
+            {defaultCommits.slice(0, 2).map((c) => (
+              <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-[11px] gap-2 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0 truncate">
+                  <a
+                    href={c.url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono font-bold text-brand hover:underline shrink-0 text-[10px]"
+                  >
+                    {c.hash}
+                  </a>
+                  <span className="font-semibold text-text truncate">{c.message}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Deployment Badge */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/60 text-[11px]">
+            <span className="text-text-subtle font-medium">Deployments</span>
+            <span className="font-extrabold text-sky-600 flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
+              <Triangle size={10} /> Vercel: Ready
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Embedded Figma & Media Specs */}
-      <div className="flex flex-col gap-4 pt-2">
-        <AutonomousAICodeFixer />
-        <FeatureFlagToggleCard />
-        <PostHogAnalyticsWidget />
-        <SnykSecurityCard />
-        <FigmaEmbedPanel initialUrls={[]} />
-        <LoomEmbedder initialUrls={[]} />
-        <MiroEmbedPanel initialUrls={[]} />
-        <ZendeskTicketsWidget />
-      </div>
+      {/* Tab 2: Autonomous AI Code Fixer */}
+      {activeTab === "AI" && (
+        <div className="pt-1">
+          <AutonomousAICodeFixer issueKey={issueKey} />
+        </div>
+      )}
+
+      {/* Tab 3: Designs & Media Embeds */}
+      {activeTab === "MEDIA" && (
+        <div className="flex flex-col gap-3 pt-1">
+          <FigmaEmbedPanel initialUrls={[]} />
+          <LoomEmbedder initialUrls={[]} />
+          <MiroEmbedPanel initialUrls={[]} />
+        </div>
+      )}
+
+      {/* Tab 4: Customer Support & Incident Tickets */}
+      {activeTab === "SUPPORT" && (
+        <div className="flex flex-col gap-3 pt-1">
+          <ZendeskTicketsWidget />
+          <SnykSecurityCard />
+        </div>
+      )}
+
+      {/* Tab 5: Feature Flags & Telemetry */}
+      {activeTab === "FLAGS" && (
+        <div className="flex flex-col gap-3 pt-1">
+          <FeatureFlagToggleCard />
+          <PostHogAnalyticsWidget />
+        </div>
+      )}
     </div>
   );
 }

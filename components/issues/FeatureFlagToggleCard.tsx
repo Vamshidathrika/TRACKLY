@@ -14,38 +14,35 @@ export function FeatureFlagToggleCard({
   const [rolloutPct, setRolloutPct] = useState(100);
 
   return (
-    <div className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-neutral/20 text-xs">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold">
-            <Flag size={16} />
+    <div className="flex flex-col gap-3 p-3 rounded-xl border border-border bg-neutral/20 text-xs w-full overflow-hidden">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-7 w-7 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold shrink-0">
+            <Flag size={15} />
           </div>
-          <div>
-            <h4 className="font-extrabold text-text text-xs flex items-center gap-1.5">
-              <span>LaunchDarkly Feature Flag Control</span>
-              <span className="text-[9px] font-mono bg-orange-500/10 text-orange-600 px-1.5 py-0.5 rounded font-bold">LIVE TOGGLE</span>
-            </h4>
-            <p className="text-[11px] text-text-subtle font-mono">
+          <div className="min-w-0">
+            <h4 className="font-extrabold text-text text-xs truncate">LaunchDarkly Flag Control</h4>
+            <p className="text-[10px] text-text-subtle font-mono truncate">
               flag_key: <code className="text-text font-bold">{flagKey}</code>
             </p>
           </div>
         </div>
 
         {/* Live Toggle Switch */}
-        <div className="flex items-center gap-2">
-          <span className={`text-[11px] font-bold ${enabled ? "text-emerald-600" : "text-text-subtle"}`}>
-            {enabled ? "ENABLED" : "DISABLED"}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`text-[10px] font-bold ${enabled ? "text-emerald-600" : "text-text-subtle"}`}>
+            {enabled ? "ON" : "OFF"}
           </span>
           <button
             type="button"
             onClick={() => setEnabled(!enabled)}
-            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+            className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
               enabled ? "bg-emerald-600" : "bg-neutral-400 dark:bg-neutral-600"
             }`}
           >
             <div
-              className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                enabled ? "translate-x-5" : "translate-x-0"
+              className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                enabled ? "translate-x-4" : "translate-x-0"
               }`}
             />
           </button>
@@ -53,11 +50,11 @@ export function FeatureFlagToggleCard({
       </div>
 
       {/* Rollout Slider */}
-      <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border bg-surface text-xs">
-        <div className="flex items-center gap-2 text-text-subtle font-medium">
-          <Sliders size={14} className="text-orange-500" />
-          <span>Rollout Percentage:</span>
-          <span className="font-mono font-bold text-text">{rolloutPct}% Users</span>
+      <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-border bg-surface text-xs flex-wrap">
+        <div className="flex items-center gap-1.5 text-text-subtle font-medium min-w-0 text-[11px]">
+          <Sliders size={13} className="text-orange-500 shrink-0" />
+          <span className="truncate">Rollout:</span>
+          <span className="font-mono font-bold text-text shrink-0">{rolloutPct}%</span>
         </div>
 
         <input
@@ -66,7 +63,7 @@ export function FeatureFlagToggleCard({
           max={100}
           value={rolloutPct}
           onChange={(e) => setRolloutPct(parseInt(e.target.value, 10))}
-          className="w-32 accent-orange-500 cursor-pointer"
+          className="w-20 accent-orange-500 cursor-pointer shrink-0"
         />
       </div>
     </div>
