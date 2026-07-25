@@ -44,24 +44,16 @@ export const requireMembership = cache(async (): Promise<TenantContext> => {
   });
 
   if (!membership) {
-    // Auto-heal: If user has no membership, associate them with the primary site or create one
-    const existingSite = await prisma.site.findFirst();
-    if (existingSite) {
-      membership = await prisma.membership.create({
-        data: { userId: user.id, siteId: existingSite.id, role: "ADMIN" },
-        include: { site: true },
-      });
-    } else {
-      const { makeSlug } = await import("./slug");
-      const siteName = `${user.name || "Main"}'s Workspace`;
-      const newSite = await prisma.site.create({
-        data: { name: siteName, slug: makeSlug(siteName) },
-      });
-      membership = await prisma.membership.create({
-        data: { userId: user.id, siteId: newSite.id, role: "ADMIN" },
-        include: { site: true },
-      });
-    }
+    // Auto-provision a dedicated isolated workspace for the user
+    const { makeSlug } = await import("./slug");
+    const siteName = `${user.name || "Main"}'s Workspace`;
+    const newSite = await prisma.site.create({
+      data: { name: siteName, slug: makeSlug(siteName) },
+    });
+    membership = await prisma.membership.create({
+      data: { userId: user.id, siteId: newSite.id, role: "ADMIN" },
+      include: { site: true },
+    });
 
     const { delCache } = await import("./redis");
     await delCache(`user:chrome:${user.id}`);

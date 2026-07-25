@@ -41,13 +41,14 @@ export async function createIssue(input: {
     });
     if (!project) throw new Error("PROJECT_NOT_FOUND");
 
-    const number = project.issueCounter + 1;
-    const key = `${project.key}-${number}`;
-
-    await tx.project.update({
+    const updatedProject = await tx.project.update({
       where: { id: input.projectId },
-      data: { issueCounter: number },
+      data: { issueCounter: { increment: 1 } },
+      select: { issueCounter: true, key: true },
     });
+
+    const number = updatedProject.issueCounter;
+    const key = `${updatedProject.key}-${number}`;
 
     const newIssue = await tx.issue.create({
       data: {

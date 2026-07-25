@@ -2,9 +2,8 @@
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { loginAction, googleLoginAction } from "../actions";
-import { Button } from "@/components/ui/Button";
+import { Eye, EyeOff, Sparkles, ArrowRight, Zap, ShieldCheck } from "lucide-react";
+import { loginAction, googleLoginAction, demoLoginAction } from "../actions";
 
 export function LoginForm({
   googleEnabled = false,
@@ -17,6 +16,7 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [state, action, pending] = useActionState(loginAction, {});
+  const [demoState, demoAction, demoPending] = useActionState(demoLoginAction, {});
 
   const getOAuthErrorMessage = (code?: string) => {
     if (!code) return null;
@@ -32,23 +32,55 @@ export function LoginForm({
     return "Authentication failed. Please try again.";
   };
 
-  const errorMessage = state.error || getOAuthErrorMessage(errorParam);
+  const errorMessage = state.error || demoState.error || getOAuthErrorMessage(errorParam);
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="mb-1">
-        <h1 className="text-2xl font-bold text-default tracking-tight">Welcome back</h1>
-        <p className="mt-1 text-sm text-subtle">Sign in to continue to Trackly</p>
+    <div className="flex flex-col gap-6">
+      {/* Welcome Header */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-black text-text tracking-tight flex items-center gap-2">
+          <span>Welcome back</span>
+          <span className="text-xl">👋</span>
+        </h1>
+        <p className="text-xs text-text-subtle font-medium">
+          Sign in to access your Trackly workspace & AI agents
+        </p>
       </div>
 
-      {/* Google SSO */}
+      {/* 1-Click Demo Login Shortcut */}
+      <form action={demoAction}>
+        <button
+          type="submit"
+          disabled={demoPending || pending}
+          className="w-full h-11 flex items-center justify-between px-4 rounded-xl bg-gradient-to-r from-brand/10 via-purple-500/10 to-indigo-500/10 border border-brand/30 hover:border-brand/60 text-brand font-bold text-xs shadow-xs hover:shadow-md transition-all group cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-amber-500 fill-amber-500 animate-bounce" />
+            <span>Quick 1-Click Demo Login</span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] font-semibold opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+            <span>{demoPending ? "Signing in..." : "Instant Access"}</span>
+            <ArrowRight size={14} />
+          </div>
+        </button>
+      </form>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-border/60" />
+        <span className="text-[10px] font-bold text-text-subtle uppercase tracking-widest">
+          Or sign in with email
+        </span>
+        <div className="flex-1 h-px bg-border/60" />
+      </div>
+
+      {/* Google SSO Button */}
       {googleEnabled && (
         <form action={googleLoginAction}>
           <button
             type="submit"
-            disabled={pending}
-            className="w-full h-11 flex items-center justify-center gap-2.5 rounded-[10px] border border-border-default bg-surface hover:bg-neutral transition-all text-sm font-medium text-default shadow-xs"
+            disabled={pending || demoPending}
+            className="w-full h-11 flex items-center justify-center gap-2.5 rounded-xl border border-border bg-surface hover:bg-neutral/60 transition-all text-xs font-bold text-text shadow-xs cursor-pointer"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
               <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z" />
@@ -61,21 +93,12 @@ export function LoginForm({
         </form>
       )}
 
-      {/* Divider */}
-      {googleEnabled && (
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-border-default" />
-          <span className="text-[11px] font-semibold text-subtlest uppercase tracking-wider">Or</span>
-          <div className="flex-1 h-px bg-border-default" />
-        </div>
-      )}
-
-      {/* Email/Password Form */}
+      {/* Email / Password Form */}
       <form action={action} className="flex flex-col gap-4">
-        {/* Email */}
+        {/* Email Field */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-semibold text-default" htmlFor="login-email">
-            Email
+          <label className="text-xs font-bold text-text-subtle uppercase tracking-wider" htmlFor="login-email">
+            Email Address
           </label>
           <input
             id="login-email"
@@ -86,20 +109,20 @@ export function LoginForm({
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-11 rounded-[10px] border border-border-default bg-surface px-3.5 text-sm outline-none transition-all placeholder:text-subtlest focus:border-brand focus:ring-3 focus:ring-brand/10"
+            className="h-11 rounded-xl border border-border bg-surface px-3.5 text-xs outline-none transition-all placeholder:text-text-subtle focus:border-brand focus:ring-2 focus:ring-brand/20 font-medium"
           />
         </div>
 
-        {/* Password */}
+        {/* Password Field */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-[13px] font-semibold text-default" htmlFor="login-password">
+            <label className="text-xs font-bold text-text-subtle uppercase tracking-wider" htmlFor="login-password">
               Password
             </label>
             <button
               type="button"
               tabIndex={-1}
-              className="text-[12px] font-medium text-brand hover:underline"
+              className="text-xs font-bold text-brand hover:underline"
             >
               Forgot password?
             </button>
@@ -114,12 +137,12 @@ export function LoginForm({
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="h-11 w-full rounded-[10px] border border-border-default bg-surface px-3.5 pr-11 text-sm outline-none transition-all placeholder:text-subtlest focus:border-brand focus:ring-3 focus:ring-brand/10"
+              className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 pr-11 text-xs outline-none transition-all placeholder:text-text-subtle focus:border-brand focus:ring-2 focus:ring-brand/20 font-medium"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-subtlest hover:text-subtle transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-text transition-colors p-1"
               tabIndex={-1}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
@@ -128,18 +151,18 @@ export function LoginForm({
           </div>
         </div>
 
-        {/* Error */}
+        {/* Error Alert */}
         {errorMessage && (
-          <div className="flex items-center gap-2 rounded-[8px] bg-danger/8 border border-danger/20 px-3 py-2.5">
-            <span className="text-danger text-sm font-medium">{errorMessage}</span>
+          <div className="flex items-center gap-2 rounded-xl bg-danger/10 border border-danger/30 p-3 text-xs font-semibold text-danger animate-in fade-in duration-200">
+            <span>⚠️ {errorMessage}</span>
           </div>
         )}
 
-        {/* Submit */}
+        {/* Submit Button */}
         <button
           type="submit"
-          disabled={pending}
-          className="h-11 w-full flex items-center justify-center rounded-[10px] bg-brand text-white text-sm font-semibold hover:bg-brand-hovered active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm mt-1"
+          disabled={pending || demoPending}
+          className="h-11 w-full flex items-center justify-center rounded-xl bg-brand text-white text-xs font-bold hover:bg-brand-hovered active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shadow-md mt-1 cursor-pointer"
         >
           {pending ? (
             <span className="flex items-center gap-2">
@@ -147,18 +170,21 @@ export function LoginForm({
               Signing in…
             </span>
           ) : (
-            "Sign in"
+            <span className="flex items-center gap-1.5">
+              <span>Sign in to Workspace</span>
+              <ArrowRight size={14} />
+            </span>
           )}
         </button>
       </form>
 
-      {/* Signup link */}
-      <p className="text-center text-sm text-subtle">
+      {/* Signup Redirection Link */}
+      <div className="pt-2 text-center text-xs text-text-subtle font-medium border-t border-border/40">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-semibold text-brand hover:underline">
-          Create one free
+        <Link href="/signup" className="font-bold text-brand hover:underline">
+          Create free account
         </Link>
-      </p>
+      </div>
     </div>
   );
 }

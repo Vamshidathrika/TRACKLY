@@ -123,7 +123,7 @@ export function AICopilotDrawer({
       {/* Sliding Drawer Overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-xs">
-          <div className="w-[460px] h-full bg-surface shadow-2xl border-l border-border flex flex-col animate-in slide-in-from-right duration-250">
+          <div className="w-full sm:w-[460px] max-w-full h-full bg-surface shadow-2xl border-l border-border flex flex-col animate-in slide-in-from-right duration-250">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-brand text-white shrink-0">
               <div className="flex items-center gap-2">
