@@ -256,7 +256,7 @@ export function CommandPalette({
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search tasks, projects, settings, or jump to…"
+              placeholder="Search or jump to…"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
               onKeyDown={handleKeyDown}

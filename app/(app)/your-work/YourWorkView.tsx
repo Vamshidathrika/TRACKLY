@@ -192,7 +192,7 @@ export function YourWorkView({
               </div>
               <div>
                 <h3 className="text-sm font-extrabold text-default tracking-tight flex items-center gap-2">
-                  <span>AI Daily Action Plan</span>
+                  <span>✨ AI Daily Action Plan</span>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 uppercase font-mono border border-purple-500/20">
                     Rovo Agent Sync
                   </span>
