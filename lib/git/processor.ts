@@ -1,27 +1,36 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * Jira-grade Issue Key Regex Extractor:
- * Matches issue keys like "TRK-123", "VAM-14", "PROJ_99-42"
+ * Jira-grade Multi-Format Task Key Extractor:
+ * Matches issue keys in various developer formats:
+ * - "TRK-123", "[TRK-123]", "#TRK-123", "trk-123", "TRK_123"
  */
 export function extractIssueKeys(text: string): string[] {
   if (!text) return [];
-  const regex = /\b([A-Z][A-Z0-9_]+)-(\d+)\b/g;
-  const matches = text.match(regex);
-  if (!matches) return [];
-  return Array.from(new Set(matches.map((m) => m.toUpperCase())));
+  const regex = /(?:\[|#|\b)([A-Za-z][A-Za-z0-9_]+)[-_](\d+)(?:\]|\b)/g;
+  const matches: string[] = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    matches.push(`${match[1].toUpperCase()}-${match[2]}`);
+  }
+  if (matches.length === 0) return [];
+  return Array.from(new Set(matches));
 }
 
 /**
- * Resolves an Issue by key scoped to the specific multi-tenant siteId.
+ * Resolves an Issue by key scoped to the specific multi-tenant siteId and optional board projectId.
  */
-export async function resolveIssueByKey(siteId: string, key: string) {
+export async function resolveIssueByKey(siteId: string, key: string, projectId?: string) {
   if (!key) return null;
+  const whereClause: any = {
+    key: key.toUpperCase().trim(),
+    project: { siteId },
+  };
+  if (projectId) {
+    whereClause.projectId = projectId;
+  }
   return prisma.issue.findFirst({
-    where: {
-      key: key.toUpperCase().trim(),
-      project: { siteId },
-    },
+    where: whereClause,
     select: { id: true, status: true, key: true, projectId: true },
   });
 }
@@ -44,7 +53,7 @@ export async function processPushEvent(payload: any, siteId: string) {
     const keys = extractIssueKeys(c.message);
     let linkedIssueId: string | null = null;
     if (keys.length > 0) {
-      const issue = await resolveIssueByKey(siteId, keys[0]);
+      const issue = await resolveIssueByKey(siteId, keys[0], gitRepo.projectId);
       if (issue) linkedIssueId = issue.id;
     }
 
@@ -77,7 +86,9 @@ export async function processPushEvent(payload: any, siteId: string) {
 
 /**
  * Processes Git `pull_request` webhook payload for a site/tenant.
- * Features Smart PR Transitions: Automatically transitions issue status to DONE when PR is merged!
+ * Features Smart PR Transitions: Automatically transitions issue status!
+ * - PR opened -> IN_REVIEW
+ * - PR merged -> DONE
  */
 export async function processPullRequestEvent(payload: any, siteId: string) {
   const repoName = payload.repository?.name;
@@ -93,7 +104,7 @@ export async function processPullRequestEvent(payload: any, siteId: string) {
   const keys = extractIssueKeys(`${pr.title} ${pr.body || ""} ${pr.head?.ref || ""}`);
   let linkedIssue: { id: string; status: string; key: string; projectId: string } | null = null;
   if (keys.length > 0) {
-    linkedIssue = await resolveIssueByKey(siteId, keys[0]);
+    linkedIssue = await resolveIssueByKey(siteId, keys[0], gitRepo.projectId);
   }
 
   let status = "OPEN";
@@ -128,17 +139,25 @@ export async function processPullRequestEvent(payload: any, siteId: string) {
     },
   });
 
-  // Smart Transition: Auto-transition linked issue to DONE when PR is MERGED
-  if (status === "MERGED" && linkedIssue && linkedIssue.status !== "DONE") {
-    await prisma.issue.update({
-      where: { id: linkedIssue.id },
-      data: { status: "DONE" },
-    });
+  // Smart Transitions
+  if (linkedIssue) {
+    if (status === "MERGED" && linkedIssue.status !== "DONE") {
+      await prisma.issue.update({
+        where: { id: linkedIssue.id },
+        data: { status: "DONE" },
+      });
+    } else if (status === "OPEN" && linkedIssue.status === "TO_DO") {
+      await prisma.issue.update({
+        where: { id: linkedIssue.id },
+        data: { status: "IN_REVIEW" },
+      });
+    }
   }
 }
 
 /**
  * Processes Git `create` or `delete` branch webhook payload for a site/tenant.
+ * Features Smart Branch Transitions: Auto-transitions TO_DO tasks to IN_PROGRESS when branch created!
  */
 export async function processBranchEvent(payload: any, siteId: string, action: "create" | "delete") {
   const repoName = payload.repository?.name;
@@ -160,10 +179,9 @@ export async function processBranchEvent(payload: any, siteId: string, action: "
   }
 
   const keys = extractIssueKeys(branchName);
-  let linkedIssueId: string | null = null;
+  let linkedIssue: { id: string; status: string; key: string; projectId: string } | null = null;
   if (keys.length > 0) {
-    const issue = await resolveIssueByKey(siteId, keys[0]);
-    if (issue) linkedIssueId = issue.id;
+    linkedIssue = await resolveIssueByKey(siteId, keys[0], gitRepo.projectId);
   }
 
   await prisma.gitBranch.upsert({
@@ -178,10 +196,18 @@ export async function processBranchEvent(payload: any, siteId: string, action: "
       repositoryId: gitRepo.id,
       name: branchName,
       lastCommitHash: payload.master_branch ? payload.master_branch.substring(0, 7) : null,
-      issueId: linkedIssueId,
+      issueId: linkedIssue?.id || null,
     },
     update: {
-      issueId: linkedIssueId,
+      issueId: linkedIssue?.id || null,
     },
   });
+
+  // Smart Transition: Auto-transition TO_DO tasks to IN_PROGRESS on branch creation
+  if (linkedIssue && linkedIssue.status === "TO_DO") {
+    await prisma.issue.update({
+      where: { id: linkedIssue.id },
+      data: { status: "IN_PROGRESS" },
+    });
+  }
 }

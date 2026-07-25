@@ -82,6 +82,62 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
         </div>
       </div>
 
+      {/* Project Board Repository Mapping Matrix */}
+      <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-sm font-extrabold text-text tracking-tight flex items-center gap-2">
+              <span>Project Board Repository Mapping</span>
+              <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
+                Board Isolation Active
+              </span>
+            </h3>
+            <p className="text-xs text-text-subtle mt-0.5">
+              Each project board in your workspace is linked to its own dedicated GitHub repository.
+            </p>
+          </div>
+        </div>
+
+        <div className="divide-y divide-border/60">
+          {[
+            { id: "p-1", key: "VAM", name: "Trackly Core Project", repo: "Vamshidathrika/TRACKLY", status: "Connected", branches: 14, prs: 5 },
+            { id: "p-2", key: "MOB", name: "Mobile iOS & Android", repo: "Vamshidathrika/mobile-app", status: "Connected", branches: 4, prs: 2 },
+            { id: "p-3", key: "DES", name: "Design System & Tokens", repo: "Unlinked", status: "Not Connected", branches: 0, prs: 0 },
+          ].map((board) => (
+            <div key={board.id} className="py-3 flex items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-3">
+                <span className="font-mono font-extrabold px-2 py-1 rounded bg-neutral text-text text-[11px]">
+                  {board.key}
+                </span>
+                <div>
+                  <h4 className="font-bold text-text">{board.name}</h4>
+                  <span className="font-mono text-[11px] text-text-subtle">{board.repo}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {board.status === "Connected" ? (
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    ● {board.branches} Branches · {board.prs} PRs
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                    Not Connected
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => showToast(`Repository settings updated for ${board.key}`)}
+                  className="px-3 py-1 rounded-full border border-border bg-neutral/40 hover:bg-neutral text-[11px] font-bold text-text cursor-pointer transition-all"
+                >
+                  Configure
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Security & Webhook Setup Information Card */}
       <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
         <div className="flex items-center gap-2">

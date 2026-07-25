@@ -26,4 +26,9 @@ describe("Jira-grade Git Issue Key Extractor Engine", () => {
     const keys = extractIssueKeys("chore: update npm packages and lockfile");
     expect(keys).toEqual([]);
   });
+
+  it("extracts bracketed and hash-prefixed issue keys like [TRK-123] and #VAM-14", () => {
+    const keys = extractIssueKeys("fix: [TRK-123] resolve auth loop and #VAM-14");
+    expect(keys).toEqual(["TRK-123", "VAM-14"]);
+  });
 });

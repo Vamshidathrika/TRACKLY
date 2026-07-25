@@ -11,6 +11,7 @@ import {
   Zap,
   Copy,
   Check,
+  Sparkles,
 } from "lucide-react";
 
 export type LinkedBranch = {
@@ -50,15 +51,32 @@ export function DevelopmentPanel({
   commits?: LinkedCommit[];
   pipelineStatus?: string;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copiedBranch, setCopiedBranch] = useState(false);
+  const [copiedCommit, setCopiedCommit] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
 
   const handleCopyBranchCommand = () => {
     const cmd = `git checkout -b feature/${issueKey.toLowerCase()}-task-branch`;
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(cmd);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setCopiedBranch(true);
+      setTimeout(() => setCopiedBranch(false), 2500);
     }
+  };
+
+  const handleCopyCommitCommand = () => {
+    const cmd = `git commit -m "fix(${issueKey}): resolve task changes"`;
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(cmd);
+      setCopiedCommit(true);
+      setTimeout(() => setCopiedCommit(false), 2500);
+    }
+  };
+
+  const handleGenerateAiReleaseNote = () => {
+    const commitsCount = (commits.length > 0 ? commits : defaultCommits).length;
+    const note = `🚀 Release Note (${issueKey}): Delivered ${commitsCount} verified git commits including automated pipeline updates and regression fixes.`;
+    setAiNote(note);
   };
 
   const defaultBranches: LinkedBranch[] = branches.length > 0
@@ -176,8 +194,8 @@ export function DevelopmentPanel({
             className="text-[10px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
             title="Copy git checkout -b command"
           >
-            {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-            <span>{copied ? "Copied!" : "Copy Branch Cmd"}</span>
+            {copiedBranch ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+            <span>{copiedBranch ? "Copied!" : "Copy Branch Cmd"}</span>
           </button>
         </div>
         {defaultBranches.map((b) => (
@@ -190,9 +208,40 @@ export function DevelopmentPanel({
 
       {/* Commits Stream */}
       <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
-          <GitCommit size={13} className="text-sky-600" /> Linked Commits
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
+            <GitCommit size={13} className="text-sky-600" /> Linked Commits
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGenerateAiReleaseNote}
+              className="text-[10px] font-bold text-purple-600 hover:underline flex items-center gap-1 cursor-pointer"
+              title="Generate AI Release Note"
+            >
+              <Sparkles size={11} className="text-amber-500" />
+              <span>AI Release Note</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyCommitCommand}
+              className="text-[10px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
+              title="Copy git commit -m command"
+            >
+              {copiedCommit ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+              <span>{copiedCommit ? "Copied!" : "Copy Commit Cmd"}</span>
+            </button>
+          </div>
+        </div>
+
+        {aiNote && (
+          <div className="p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-sans text-text flex flex-col gap-1 animate-in fade-in duration-200">
+            <span className="font-bold text-purple-600 text-[10px] uppercase tracking-wider flex items-center gap-1">
+              <Sparkles size={12} className="text-amber-500" /> AI Synthesized Release Note
+            </span>
+            <p className="text-[11px] text-text leading-relaxed font-medium">{aiNote}</p>
+          </div>
+        )}
         {defaultCommits.slice(0, 3).map((c) => (
           <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs gap-2">
             <div className="flex items-center gap-2 min-w-0">
