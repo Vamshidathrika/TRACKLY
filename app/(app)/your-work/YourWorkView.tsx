@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, Folder, UserCheck, Plus } from "lucide-react";
+import { CheckCircle2, Clock, Folder, UserCheck, Plus, AlertCircle, Layout, Layers, Calendar } from "lucide-react";
 import { IssueTable, type IssueListItem } from "@/components/issues/IssueTable";
 import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -105,27 +105,74 @@ export function YourWorkView({
     assignee: i.assignee,
   }));
 
+  const highPriorityCount = assignedIssues.filter(
+    (i) => i.priority === "HIGHEST" || i.priority === "HIGH"
+  ).length;
+
   return (
-    <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto max-w-6xl">
+    <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto max-w-6xl mx-auto w-full gap-6">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text">Your Work</h1>
-          <p className="text-xs text-text-subtle">Welcome back, {userName}. Here is an overview of your active tasks and spaces.</p>
+          <h1 className="text-2xl font-extrabold text-text tracking-tight">Your Work</h1>
+          <p className="text-xs text-text-subtle mt-0.5">Welcome back, {userName}. Here is an overview of your active tasks and spaces.</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary" className="bg-brand text-white hover:bg-brand-hovered"><Plus size={15} /> Create issue</Button>} />
+        <CreateIssueModal trigger={<Button appearance="primary" className="bg-brand text-white hover:bg-brand-hovered rounded-full px-4 font-bold shadow-xs"><Plus size={15} /> Create task</Button>} />
+      </div>
+
+      {/* Productivity Stats Summary Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-[16px] border border-border bg-surface p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">Assigned Tasks</p>
+            <p className="text-2xl font-extrabold text-text font-mono mt-1">{assignedIssues.length}</p>
+          </div>
+          <div className="h-10 w-10 rounded-full bg-brand/10 text-brand flex items-center justify-center shrink-0">
+            <UserCheck size={20} />
+          </div>
+        </div>
+
+        <div className="rounded-[16px] border border-border bg-surface p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">High Priority</p>
+            <p className="text-2xl font-extrabold text-amber-500 font-mono mt-1">{highPriorityCount}</p>
+          </div>
+          <div className="h-10 w-10 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+            <AlertCircle size={20} />
+          </div>
+        </div>
+
+        <div className="rounded-[16px] border border-border bg-surface p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">Worked / Reported</p>
+            <p className="text-2xl font-extrabold text-text font-mono mt-1">{reportedIssues.length}</p>
+          </div>
+          <div className="h-10 w-10 rounded-full bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+            <Clock size={20} />
+          </div>
+        </div>
+
+        <div className="rounded-[16px] border border-border bg-surface p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">Workspace Spaces</p>
+            <p className="text-2xl font-extrabold text-text font-mono mt-1">{userProjects.length}</p>
+          </div>
+          <div className="h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+            <Folder size={20} />
+          </div>
+        </div>
       </div>
 
       {/* No Board Alert Banner */}
       {userProjects.length === 0 && (
-        <div className="mb-6 rounded-xl border border-dashed border-brand/40 bg-brand/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="rounded-[16px] border border-dashed border-brand/40 bg-brand/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-text">No board found in your workspace</h3>
+            <h3 className="text-base font-extrabold text-text">No board found in your workspace</h3>
             <p className="text-xs text-text-subtle mt-0.5">Create your first board to start organizing tasks, tracking progress, and running sprints.</p>
           </div>
           <CreateProjectModal
             trigger={
-              <button className="h-10 px-5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hovered transition-all shadow-sm flex items-center gap-2 shrink-0">
+              <button className="h-10 px-5 rounded-full bg-brand text-white text-xs font-bold hover:bg-brand-hovered transition-all shadow-xs flex items-center gap-2 shrink-0">
                 <Plus size={15} />
                 Create Board to Continue
               </button>
@@ -135,35 +182,35 @@ export function YourWorkView({
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-border text-sm font-semibold text-text-subtle gap-6 mb-6">
+      <div className="flex border-b border-border text-sm font-semibold text-text-subtle gap-6">
         <button
           onClick={() => setActiveTab("assigned")}
-          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === "assigned" ? "border-brand text-brand font-bold" : "border-transparent hover:text-text"
           }`}
         >
           <UserCheck size={16} /> Assigned to me
-          <span className="rounded-full bg-neutral px-2 py-0.5 text-xs text-text">{assignedIssues.length}</span>
+          <span className="rounded-full bg-neutral px-2.5 py-0.5 text-xs text-text font-mono font-bold">{assignedIssues.length}</span>
         </button>
 
         <button
           onClick={() => setActiveTab("reported")}
-          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === "reported" ? "border-brand text-brand font-bold" : "border-transparent hover:text-text"
           }`}
         >
           <Clock size={16} /> Worked / Reported by me
-          <span className="rounded-full bg-neutral px-2 py-0.5 text-xs text-text">{reportedIssues.length}</span>
+          <span className="rounded-full bg-neutral px-2.5 py-0.5 text-xs text-text font-mono font-bold">{reportedIssues.length}</span>
         </button>
 
         <button
           onClick={() => setActiveTab("projects")}
-          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === "projects" ? "border-brand text-brand font-bold" : "border-transparent hover:text-text"
           }`}
         >
           <Folder size={16} /> Workspace Spaces
-          <span className="rounded-full bg-neutral px-2 py-0.5 text-xs text-text">{userProjects.length}</span>
+          <span className="rounded-full bg-neutral px-2.5 py-0.5 text-xs text-text font-mono font-bold">{userProjects.length}</span>
         </button>
       </div>
 
@@ -197,14 +244,14 @@ export function YourWorkView({
       {activeTab === "assigned" && (
         <div className="flex flex-col gap-3">
           {assignedIssues.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-12 text-center">
-              <CheckCircle2 size={32} className="mx-auto text-success mb-2" />
-              <h3 className="text-base font-semibold text-text">No active tasks assigned to you</h3>
-              <p className="text-xs text-text-subtle mt-1 mb-4">You&apos;re all caught up! Create a new ticket or assign existing issues to yourself.</p>
-              <CreateIssueModal trigger={<Button appearance="primary" className="mx-auto bg-brand text-white">Create First Task</Button>} />
+            <div className="rounded-[16px] border border-dashed border-border p-12 text-center bg-neutral/20">
+              <CheckCircle2 size={36} className="mx-auto text-emerald-500 mb-2" />
+              <h3 className="text-base font-bold text-text">No active tasks assigned to you</h3>
+              <p className="text-xs text-text-subtle mt-1 mb-4">You&apos;re all caught up! Create a new ticket or assign existing tasks to yourself.</p>
+              <CreateIssueModal trigger={<Button appearance="primary" className="mx-auto bg-brand text-white rounded-full px-4 font-bold">Create First Task</Button>} />
             </div>
           ) : (
-            <div className="border border-border rounded-lg bg-surface p-4 shadow-xs">
+            <div className="border border-border rounded-[16px] bg-surface p-4 shadow-xs">
               <IssueTable
                 issues={formattedAssigned}
                 projectKey={assignedIssues[0]?.project.key ?? "PROJ"}
@@ -219,13 +266,13 @@ export function YourWorkView({
       {activeTab === "reported" && (
         <div className="flex flex-col gap-3">
           {reportedIssues.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-12 text-center">
-              <Clock size={32} className="mx-auto text-text-subtle mb-2" />
-              <h3 className="text-base font-semibold text-text">No reported issues yet</h3>
-              <p className="text-xs text-text-subtle mt-1">Issues created by you will appear here.</p>
+            <div className="rounded-[16px] border border-dashed border-border p-12 text-center bg-neutral/20">
+              <Clock size={36} className="mx-auto text-text-subtle mb-2" />
+              <h3 className="text-base font-bold text-text">No reported tasks yet</h3>
+              <p className="text-xs text-text-subtle mt-1">Tasks created by you will appear here.</p>
             </div>
           ) : (
-            <div className="border border-border rounded-lg bg-surface p-4 shadow-xs">
+            <div className="border border-border rounded-[16px] bg-surface p-4 shadow-xs">
               <IssueTable
                 issues={formattedReported}
                 projectKey={reportedIssues[0]?.project.key ?? "PROJ"}
@@ -239,13 +286,13 @@ export function YourWorkView({
       {/* Tab Content: Workspace Spaces */}
       {activeTab === "projects" && (
         userProjects.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-12 text-center">
-            <Folder size={32} className="mx-auto text-brand mb-2" />
-            <h3 className="text-base font-semibold text-text">No board found in your workspace</h3>
-            <p className="text-xs text-text-subtle mt-1 mb-4">Create your first board to start managing issues and collaborating with your team.</p>
+          <div className="rounded-[16px] border border-dashed border-border p-12 text-center bg-neutral/20">
+            <Folder size={36} className="mx-auto text-brand mb-2" />
+            <h3 className="text-base font-bold text-text">No board found in your workspace</h3>
+            <p className="text-xs text-text-subtle mt-1 mb-4">Create your first board to start managing tasks and collaborating with your team.</p>
             <CreateProjectModal
               trigger={
-                <button className="h-10 px-5 mx-auto rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hovered transition-all shadow-sm flex items-center gap-2">
+                <button className="h-10 px-5 mx-auto rounded-full bg-brand text-white text-xs font-bold hover:bg-brand-hovered transition-all shadow-xs flex items-center gap-2">
                   <Plus size={15} />
                   Create Board to Continue
                 </button>
@@ -255,20 +302,51 @@ export function YourWorkView({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {userProjects.map((p) => (
-              <Link
+              <div
                 key={p.id}
-                href={`/projects/${p.key}`}
-                className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 hover:border-brand transition-colors"
+                className="flex flex-col justify-between rounded-[16px] border border-border bg-surface p-4.5 shadow-xs hover:border-brand/50 transition-all gap-4"
               >
-                <div className="flex items-center gap-2">
-                  <Folder size={18} className="text-brand shrink-0" />
-                  <span className="font-bold text-sm text-text truncate">{p.name}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-9 w-9 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0">
+                      <Folder size={18} />
+                    </div>
+                    <Link href={`/projects/${p.key}/board`} className="font-extrabold text-sm text-text hover:text-brand truncate">
+                      {p.name}
+                    </Link>
+                  </div>
+                  <span className="font-mono bg-neutral px-2 py-0.5 rounded-full text-[11px] font-bold text-text shrink-0">
+                    {p.key}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-text-subtle mt-2">
-                  <span className="font-mono bg-neutral px-1.5 py-0.5 rounded">{p.key}</span>
-                  <span>{p._count.issues} issues</span>
+
+                <div className="flex items-center justify-between pt-3 border-t border-border/50 text-xs">
+                  <span className="font-semibold text-text-subtle font-mono">{p._count.issues} tasks</span>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/projects/${p.key}/board`}
+                      className="p-1.5 text-text-subtle hover:text-brand rounded-md hover:bg-neutral transition-colors"
+                      title="Kanban Board"
+                    >
+                      <Layout size={14} />
+                    </Link>
+                    <Link
+                      href={`/projects/${p.key}/backlog`}
+                      className="p-1.5 text-text-subtle hover:text-brand rounded-md hover:bg-neutral transition-colors"
+                      title="Sprint Backlog"
+                    >
+                      <Layers size={14} />
+                    </Link>
+                    <Link
+                      href={`/projects/${p.key}/timeline`}
+                      className="p-1.5 text-text-subtle hover:text-brand rounded-md hover:bg-neutral transition-colors"
+                      title="Roadmap Timeline"
+                    >
+                      <Calendar size={14} />
+                    </Link>
+                  </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )
@@ -276,3 +354,4 @@ export function YourWorkView({
     </div>
   );
 }
+
