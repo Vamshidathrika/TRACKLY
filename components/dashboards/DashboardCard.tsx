@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { HelpCircle, Info, ExternalLink } from "lucide-react";
 
 export type EmptyStateConfig = {
@@ -22,7 +22,7 @@ export type DashboardCardProps = {
   className?: string;
 };
 
-export function DashboardCard({
+export const DashboardCard = memo(function DashboardCard({
   title,
   icon: Icon,
   badge,
@@ -78,4 +78,4 @@ export function DashboardCard({
       </div>
     </div>
   );
-}
+});

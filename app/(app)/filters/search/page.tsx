@@ -14,13 +14,13 @@ export default async function FilterSearchPage({
   const { jql } = await searchParams;
   const { userId, siteId } = await requireMembership();
 
-  const [savedFilters, allUsers] = await Promise.all([
+  const initialJql = jql || "status = IN_PROGRESS OR status = TO_DO";
+
+  const [savedFilters, allUsers, initialIssues] = await Promise.all([
     getSavedFiltersAction(),
     getAllUsers(siteId, userId),
+    executeJQLQueryAction(initialJql),
   ]);
-
-  const initialJql = jql || "status = IN_PROGRESS OR status = TO_DO";
-  const initialIssues = await executeJQLQueryAction(initialJql);
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto">

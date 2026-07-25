@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 const colors = {
   gray: "bg-neutral text-default",
   blue: "bg-selected text-selected-text",
@@ -6,6 +8,6 @@ const colors = {
   purple: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
 } as const;
 
-export function Tag({ children, color = "gray" }: { children: React.ReactNode; color?: keyof typeof colors }) {
+export const Tag = memo(function Tag({ children, color = "gray" }: { children: React.ReactNode; color?: keyof typeof colors }) {
   return <span className={`inline-flex items-center rounded-ds px-1.5 py-0.5 text-xs font-medium ${colors[color]}`}>{children}</span>;
-}
+});

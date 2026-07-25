@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { ChevronsUp, ChevronUp, Equal, ChevronDown, ChevronsDown } from "lucide-react";
 import type { IssuePriority } from "@prisma/client";
 
-export function PriorityIcon({ priority, size = 16 }: { priority: IssuePriority; size?: number }) {
+export const PriorityIcon = memo(function PriorityIcon({ priority, size = 16 }: { priority: IssuePriority; size?: number }) {
   switch (priority) {
     case "HIGHEST":
       return <span title="Highest Priority"><ChevronsUp size={size} className="text-red-600" /></span>;
@@ -16,4 +17,4 @@ export function PriorityIcon({ priority, size = 16 }: { priority: IssuePriority;
     default:
       return <Equal size={size} className="text-amber-500" />;
   }
-}
+});

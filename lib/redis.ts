@@ -91,10 +91,15 @@ export async function delCachePrefix(prefix: string): Promise<void> {
   try {
     memoryCache.delPrefix(prefix);
     if (redis) {
-      const keys = await redis.keys(`${prefix}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
-      }
+      let cursor: string | number = 0;
+      do {
+        const res: [string | number, string[]] = await redis.scan(cursor, { match: `${prefix}*`, count: 100 });
+        cursor = res[0];
+        const keys = res[1];
+        if (keys && keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } while (cursor !== 0 && cursor !== "0");
     }
   } catch (err) {
     console.error(`[Redis DelPrefix Error] ${prefix}:`, err);

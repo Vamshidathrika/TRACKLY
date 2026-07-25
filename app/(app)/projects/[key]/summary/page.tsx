@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
+import { resolveProjectByKey } from "@/lib/projects";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { DashboardView, type EpicProgressItem } from "@/components/dashboards/DashboardView";
 
@@ -9,39 +10,36 @@ export default async function ProjectSummaryPage({
 }: {
   params: Promise<{ key: string }>;
 }) {
-  const { userId, siteId, role } = await requireMembership();
+  const { userId, siteId } = await requireMembership();
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
-  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
-
-  const project = await prisma.project.findFirst({
-    where: {
-      siteId: { in: siteIds },
-      OR: [
-        { key: upperKey },
-        { name: { equals: key, mode: "insensitive" } },
-        { id: key },
-      ],
-    },
-    select: { id: true, key: true, name: true, type: true, siteId: true },
-  });
-
+  const project = await resolveProjectByKey(userId, siteId, key);
   if (!project) redirect("/your-work");
 
   const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
-  // Fetch issues & history for this project
-  const issues = await prisma.issue.findMany({
-    where: { projectId: project.id },
-    include: {
-      assignee: { select: { id: true, name: true, avatarUrl: true } },
-      subtasks: { select: { id: true, status: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  // Fetch issues & history concurrently
+  const [issues, historyEntries] = await Promise.all([
+    prisma.issue.findMany({
+      where: { projectId: project.id },
+      include: {
+        assignee: { select: { id: true, name: true, avatarUrl: true } },
+        subtasks: { select: { id: true, status: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.issueHistory.findMany({
+      where: { issue: { projectId: project.id } },
+      take: 8,
+      orderBy: { createdAt: "desc" },
+      include: {
+        author: { select: { name: true } },
+        issue: { select: { key: true, project: { select: { key: true } } } },
+      },
+    }),
+  ]);
 
   // Calculate Status counts
   const statusCounts: Record<string, number> = {
@@ -109,16 +107,7 @@ export default async function ProjectSummaryPage({
     }
   }
 
-  // Fetch recent history
-  const historyEntries = await prisma.issueHistory.findMany({
-    where: { issue: { projectId: project.id } },
-    take: 8,
-    orderBy: { createdAt: "desc" },
-    include: {
-      author: { select: { name: true } },
-      issue: { select: { key: true, project: { select: { key: true } } } },
-    },
-  });
+
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">

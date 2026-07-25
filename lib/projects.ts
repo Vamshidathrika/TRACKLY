@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "./prisma";
 import type { ProjectType } from "@prisma/client";
 import { getCache, setCache, delCache } from "./redis";
@@ -147,7 +148,7 @@ export async function getProjectsForUser(siteId: string, userId: string) {
  * Shared helper to resolve a project by key, case-insensitive name, or ID
  * across all site memberships of a given user.
  */
-export async function resolveProjectByKey(userId: string, siteId: string, rawKey: string) {
+export const resolveProjectByKey = cache(async (userId: string, siteId: string, rawKey: string) => {
   const userMemberships = await prisma.membership.findMany({
     where: { userId },
     select: { siteId: true },
@@ -168,4 +169,4 @@ export async function resolveProjectByKey(userId: string, siteId: string, rawKey
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
   });
-}
+});

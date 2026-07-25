@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Bookmark, SlidersHorizontal, Code, Share2, Globe, Lock, Shield } from "lucide-react";
+import { Search, Bookmark, SlidersHorizontal, Code, Share2, Globe, Lock, Shield, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { IssueTable, type IssueListItem } from "@/components/issues/IssueTable";
 import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
-import { getJQLSuggestions } from "@/lib/jql";
+import { getJQLSuggestions, convertNaturalLanguageToJQL } from "@/lib/jql";
 import { executeJQLQueryAction, saveFilterAction } from "@/app/(app)/filters/actions";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -163,8 +163,58 @@ export function JQLNavigator({
     assignee: i.assignee,
   }));
 
+  const [aiPrompt, setAiPrompt] = useState("");
+
+  const handleAiConvertAndSearch = () => {
+    if (!aiPrompt.trim()) return;
+    const generatedJQL = convertNaturalLanguageToJQL(aiPrompt);
+    setJql(generatedJQL);
+    handleSearch(generatedJQL);
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-6xl">
+      {/* ✨ Natural Language AI Search Assistant Bar */}
+      <div className="rounded-[16px] border border-purple-500/30 bg-purple-500/5 p-4 shadow-xs flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full bg-purple-500/20 text-purple-600 flex items-center justify-center shrink-0">
+            <Sparkles size={15} />
+          </div>
+          <div>
+            <h3 className="text-xs font-extrabold text-text tracking-tight flex items-center gap-2">
+              <span>✨ Natural Language AI Search Assistant</span>
+              <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 uppercase font-mono">
+                Smart JQL Converter
+              </span>
+            </h3>
+            <p className="text-[11px] text-text-subtle">
+              Type plain English (e.g. &quot;urgent high priority bugs in progress&quot;) and convert to JQL instantly.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAiConvertAndSearch();
+            }}
+            placeholder="Try: 'high priority open tasks' or 'in progress bugs'..."
+            className="flex-1 h-9 px-3.5 rounded-full border border-purple-500/30 bg-surface text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-purple-500 shadow-2xs font-medium"
+          />
+          <button
+            type="button"
+            onClick={handleAiConvertAndSearch}
+            className="h-9 px-4 rounded-full bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-all flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+          >
+            <Zap size={13} />
+            <span>✨ AI Convert & Search</span>
+          </button>
+        </div>
+      </div>
+
       {/* Search Header Mode Toggle & Search Control */}
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 shadow-xs">
         <div className="flex items-center justify-between border-b border-border pb-3">

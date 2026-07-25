@@ -23,15 +23,27 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const loadData = async () => {
-    const data = await fetchUserNotificationsAction();
-    setNotifications(data.notifications);
-    setUnreadCount(data.unreadCount);
+    if (document.hidden) return;
+    try {
+      const data = await fetchUserNotificationsAction();
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
+    } catch {
+      // Ignore background network errors
+    }
   };
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 10000); // Poll every 10s for live updates
-    return () => clearInterval(interval);
+    const interval = setInterval(loadData, 20000); // 20s smart poll
+    const handleVisibility = () => {
+      if (!document.hidden) loadData();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const handleMarkAllRead = async () => {

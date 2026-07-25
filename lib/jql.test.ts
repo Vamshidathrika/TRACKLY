@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseJQLToPrisma, getJQLSuggestions } from "./jql";
+import { parseJQLToPrisma, getJQLSuggestions, convertNaturalLanguageToJQL } from "./jql";
 
 describe("jql engine", () => {
   it("parses single condition status = IN_PROGRESS", () => {
@@ -48,5 +48,17 @@ describe("jql engine", () => {
     const suggestions = getJQLSuggestions("status = ");
     expect(suggestions).toContain("IN_PROGRESS");
     expect(suggestions).toContain("DONE");
+  });
+
+  it("converts natural language text to valid JQL syntax", () => {
+    const jql1 = convertNaturalLanguageToJQL("high priority open bugs");
+    expect(jql1).toContain('priority = "HIGH"');
+    expect(jql1).toContain('type = "BUG"');
+    expect(jql1).toContain('status = "TO_DO"');
+
+    const jql2 = convertNaturalLanguageToJQL("urgent tasks in progress");
+    expect(jql2).toContain('priority = "HIGH"');
+    expect(jql2).toContain('type = "TASK"');
+    expect(jql2).toContain('status = "IN_PROGRESS"');
   });
 });

@@ -14,6 +14,7 @@ export async function setThemeAction(pref: ThemePref) {
 export async function toggleStarAction(projectId: string) {
   const user = await getAuthUser();
   const res = await toggleStar(user.id, projectId);
-  revalidatePath("/", "layout");
+  revalidatePath("/your-work");
+  revalidatePath("/projects");
   return res;
 }

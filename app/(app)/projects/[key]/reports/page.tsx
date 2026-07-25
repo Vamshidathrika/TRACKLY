@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
+import { resolveProjectByKey } from "@/lib/projects";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getBurndownData, getVelocityData, getProjectMetrics } from "@/lib/reports";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
@@ -15,20 +16,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ key: s
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
-  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
-
-  const project = await prisma.project.findFirst({
-    where: {
-      siteId: { in: siteIds },
-      OR: [
-        { key: upperKey },
-        { name: { equals: key, mode: "insensitive" } },
-        { id: key },
-      ],
-    },
-    select: { id: true, key: true, name: true, siteId: true },
-  });
+  const project = await resolveProjectByKey(userId, siteId, key);
 
   if (!project) {
     return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
@@ -37,20 +25,20 @@ export default async function ReportsPage({ params }: { params: Promise<{ key: s
   const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
-  const sprints = await getSprintsByProject(project.id).catch(() => []);
-  const activeSprint = sprints.find((s) => s.status === "ACTIVE") || sprints[0];
-
-  const [burndown, velocity, metrics] = await Promise.all([
-    getBurndownData(activeSprint?.id ?? "").catch(() => ({
-      sprintName: activeSprint?.name ?? "Sprint",
-      totalPoints: 0,
-      pointsDone: 0,
-      pointsRemaining: 0,
-      timeline: [],
-    })),
+  const [sprints, velocity, metrics] = await Promise.all([
+    getSprintsByProject(project.id).catch(() => []),
     getVelocityData(project.id).catch(() => []),
     getProjectMetrics(project.id).catch(() => ({ statusCounts: {}, typeCounts: {}, priorityCounts: {} })),
   ]);
+
+  const activeSprint = sprints.find((s) => s.status === "ACTIVE") || sprints[0];
+  const burndown = await getBurndownData(activeSprint?.id ?? "").catch(() => ({
+    sprintName: activeSprint?.name ?? "Sprint",
+    totalPoints: 0,
+    pointsDone: 0,
+    pointsRemaining: 0,
+    timeline: [],
+  }));
 
   const cumulativeData = Object.entries(metrics.statusCounts).map(([status, count]) => ({
     status,

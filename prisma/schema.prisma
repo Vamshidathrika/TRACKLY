@@ -114,6 +114,7 @@ model Membership {
   site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@unique([userId, siteId])
+  @@index([siteId])
 }
 
 model Invite {
@@ -128,6 +129,9 @@ model Invite {
   createdAt  DateTime  @default(now())
   site       Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([email, acceptedAt, expiresAt])
+  @@index([siteId])
 }
 
 model Project {
@@ -163,6 +167,7 @@ model ProjectMember {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model Sprint {
@@ -286,6 +291,7 @@ model IssueLink {
 
   @@unique([sourceIssueId, targetIssueId, relation])
   @@index([sourceIssueId])
+  @@index([targetIssueId])
 }
 
 model WorkLog {
@@ -301,6 +307,7 @@ model WorkLog {
 
   @@index([issueId])
   @@index([issueId, startedAt])
+  @@index([authorId])
 }
 
 model Notification {
@@ -328,6 +335,7 @@ model Watcher {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([issueId, userId])
+  @@index([userId])
 }
 
 model SavedFilter {
@@ -338,6 +346,8 @@ model SavedFilter {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model AutomationRule {
@@ -351,6 +361,8 @@ model AutomationRule {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model CustomField {
@@ -361,6 +373,8 @@ model CustomField {
   required  Boolean  @default(false)
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model Star {

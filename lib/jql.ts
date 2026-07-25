@@ -78,3 +78,36 @@ export function getJQLSuggestions(input: string): string[] {
 
   return FIELDS.filter((f) => f.startsWith(lastToken.toLowerCase()));
 }
+
+export function convertNaturalLanguageToJQL(prompt: string): string {
+  const p = prompt.trim().toLowerCase();
+  if (!p) return "status = IN_PROGRESS OR status = TO_DO";
+
+  const clauses: string[] = [];
+
+  // Priority detection
+  if (p.includes("highest")) clauses.push('priority = "HIGHEST"');
+  else if (p.includes("high") || p.includes("urgent") || p.includes("critical")) clauses.push('priority = "HIGH"');
+  else if (p.includes("medium")) clauses.push('priority = "MEDIUM"');
+  else if (p.includes("low")) clauses.push('priority = "LOW"');
+
+  // Type detection
+  if (p.includes("bug") || p.includes("bugs") || p.includes("defect")) clauses.push('type = "BUG"');
+  else if (p.includes("story") || p.includes("stories") || p.includes("feature")) clauses.push('type = "STORY"');
+  else if (p.includes("epic") || p.includes("epics")) clauses.push('type = "EPIC"');
+  else if (p.includes("subtask") || p.includes("subtasks")) clauses.push('type = "SUBTASK"');
+  else if (p.includes("task") || p.includes("tasks")) clauses.push('type = "TASK"');
+
+  // Status detection
+  if (p.includes("in progress") || p.includes("active") || p.includes("doing") || p.includes("working on")) clauses.push('status = "IN_PROGRESS"');
+  else if (p.includes("in review") || p.includes("review")) clauses.push('status = "IN_REVIEW"');
+  else if (p.includes("done") || p.includes("completed") || p.includes("closed") || p.includes("finished")) clauses.push('status = "DONE"');
+  else if (p.includes("todo") || p.includes("to do") || p.includes("open") || p.includes("pending")) clauses.push('status = "TO_DO"');
+
+  // Text search fallback if no clauses parsed
+  if (clauses.length === 0) {
+    clauses.push(`summary ~ "${prompt.trim().replace(/"/g, "")}"`);
+  }
+
+  return clauses.join(" AND ");
+}
