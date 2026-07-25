@@ -247,7 +247,7 @@ export function YourWorkView({
             <div className="rounded-[16px] border border-dashed border-border p-12 text-center bg-neutral/20">
               <CheckCircle2 size={36} className="mx-auto text-emerald-500 mb-2" />
               <h3 className="text-base font-bold text-text">No active tasks assigned to you</h3>
-              <p className="text-xs text-text-subtle mt-1 mb-4">You&apos;re all caught up! Create a new ticket or assign existing tasks to yourself.</p>
+              <p className="text-xs text-text-subtle mt-1 mb-4">You&apos;re all caught up! Create a new task or assign existing tasks to yourself.</p>
               <CreateIssueModal trigger={<Button appearance="primary" className="mx-auto bg-brand text-white rounded-full px-4 font-bold">Create First Task</Button>} />
             </div>
           ) : (

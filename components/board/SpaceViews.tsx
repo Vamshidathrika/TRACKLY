@@ -146,7 +146,7 @@ export function SummaryView({ issues, projectName }: { issues: BoardIssue[]; pro
               <span className="font-semibold">Active Contributors:</span> {new Set(issues.map(i => i.assignee?.name).filter(Boolean)).size || 1} team members assigned.
             </div>
             <div className="p-3 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-              <span className="font-semibold">Attention Needed:</span> {todoCount} tickets pending assignment or start.
+              <span className="font-semibold">Attention Needed:</span> {todoCount} tasks pending assignment or start.
             </div>
           </div>
         </div>
