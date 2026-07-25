@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, ShieldCheck, Layers, ShieldAlert, Sliders, Zap, Activity, Palette, Download } from "lucide-react";
+import { Users, ShieldCheck, Layers, Sliders, ShieldAlert, GitBranch, Bell, Workflow, Zap, Activity, Palette, Download } from "lucide-react";
 
 export function SettingsNav() {
   const pathname = usePathname();
@@ -11,8 +11,11 @@ export function SettingsNav() {
     { label: "Members & Access", href: "/settings/members", icon: Users },
     { label: "Permissions Matrix", href: "/settings/permissions", icon: ShieldCheck },
     { label: "Issue Types", href: "/settings/issue-types", icon: Layers },
+    { label: "Field Configurations", href: "/settings/fields", icon: Sliders },
     { label: "Priorities & Resolutions", href: "/settings/priorities", icon: ShieldAlert },
-    { label: "Integrations & Apps", href: "/settings/integrations", icon: Sliders },
+    { label: "Workflow Schemes", href: "/settings/workflows", icon: GitBranch },
+    { label: "Notification Schemes", href: "/settings/notifications", icon: Bell },
+    { label: "Integrations & Apps", href: "/settings/integrations", icon: Workflow },
     { label: "Automation Engine", href: "/settings/automation", icon: Zap },
     { label: "Security Audit Stream", href: "/settings/audit-logs", icon: Activity },
     { label: "Branding & Themes", href: "/settings/branding", icon: Palette },
