@@ -204,7 +204,7 @@ export function IssueDetailDrawer({
           e.preventDefault();
           const me = availableUsers[0];
           handleAssigneeSelect(me.id);
-          showToast(`Assigned issue to ${me.name}`);
+          showToast(`Assigned task to ${me.name}`);
         }
       }
     };
@@ -476,7 +476,7 @@ export function IssueDetailDrawer({
   // Superpower Action: AI Subtask Auto-Decomposer
   const handleAiAutoDecomposeSubtasks = () => {
     setIsGeneratingAiSubtasks(true);
-    showToast("✨ AI Copilot is decomposing issue into subtasks...");
+    showToast("✨ AI Copilot is decomposing task into subtasks...");
 
     setTimeout(() => {
       const generatedSts = [
@@ -487,7 +487,7 @@ export function IssueDetailDrawer({
       ];
       setSubtasks(generatedSts);
       setIsGeneratingAiSubtasks(false);
-      showToast("✨ AI successfully decomposed issue into 4 subtasks!");
+      showToast("✨ AI successfully decomposed task into 4 subtasks!");
     }, 1200);
   };
 
@@ -503,7 +503,7 @@ export function IssueDetailDrawer({
 
   // Superpower Action: AI Executive Summary Recap
   const handleAiSummarize = () => {
-    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type} with ${completedSubtasks}/${subtasks.length} subtasks completed and 1 PR merged.`);
+    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and 1 PR merged.`);
   };
 
   // Clipboard Image Paste Handler (`Cmd+V` / `Ctrl+V`)
@@ -560,7 +560,7 @@ export function IssueDetailDrawer({
     } else {
       setIsVoted(true);
       setUpvotes((v) => v + 1);
-      showToast("Upvoted issue");
+      showToast("Upvoted task");
     }
   };
 
@@ -571,7 +571,7 @@ export function IssueDetailDrawer({
     } else {
       setIsWatching(true);
       setWatchersCount((w) => w + 1);
-      showToast("Watching issue updates");
+      showToast("Watching task updates");
     }
   };
 
@@ -604,7 +604,7 @@ export function IssueDetailDrawer({
     ]);
     setLinkKeyInput("");
     setShowAddLinkModal(false);
-    showToast("Issue link created");
+    showToast("Task link created");
   };
 
   const handleFileUpload = (files: FileList | null) => {
@@ -621,7 +621,7 @@ export function IssueDetailDrawer({
   };
 
   const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this issue?")) {
+    if (confirm("Are you sure you want to delete this task?")) {
       onDeleteIssue(issue.id);
       onClose();
       startTransition(async () => {
@@ -789,7 +789,7 @@ export function IssueDetailDrawer({
               {/* Upvote Button */}
               <button
                 onClick={handleToggleVote}
-                title="Upvote issue"
+                title="Upvote task"
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
                   isVoted
                     ? "bg-brand text-white border-brand shadow-xs"
@@ -803,7 +803,7 @@ export function IssueDetailDrawer({
               {/* Watcher Button */}
               <button
                 onClick={handleToggleWatch}
-                title="Watch issue for updates"
+                title="Watch task for updates"
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
                   isWatching
                     ? "bg-selected text-selected-text border-selected-text/30"
@@ -856,11 +856,11 @@ export function IssueDetailDrawer({
                       <span>Copy Markdown Link</span>
                     </button>
                     <button
-                      onClick={() => copyToClipboard(issue.key, "Copied issue key!")}
+                      onClick={() => copyToClipboard(issue.key, "Copied task key!")}
                       className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium"
                     >
                       <Tag size={13} className="text-text-subtle" />
-                      <span>Copy Issue Key</span>
+                      <span>Copy Task Key</span>
                     </button>
                     <button
                       onClick={() => copyToClipboard(issueUrl, "Copied direct link!")}
@@ -873,10 +873,10 @@ export function IssueDetailDrawer({
                 )}
               </div>
 
-              {/* Delete Issue */}
+              {/* Delete Task */}
               <button
                 onClick={handleDelete}
-                title="Delete issue"
+                title="Delete task"
                 className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
               >
                 <Trash2 size={16} />
@@ -899,14 +899,14 @@ export function IssueDetailDrawer({
             <div className="md:col-span-2 flex flex-col gap-6">
               {/* Dependency Blocker Warning Guard Banner */}
               {isBlocked && (
-                <div className="p-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-xs font-semibold flex items-center justify-between gap-2">
+                <div className="p-3.5 rounded-[12px] bg-danger/10 border border-danger/30 text-danger text-xs font-semibold flex items-center justify-between gap-2 shadow-2xs">
                   <div className="flex items-center gap-2">
-                    <ShieldAlert size={16} className="shrink-0" />
+                    <ShieldAlert size={16} className="shrink-0 text-danger" />
                     <span>
-                      <strong>Blocked by:</strong> {activeBlockers[0].key} ({activeBlockers[0].summary})
+                      <strong>Blocked by task:</strong> {activeBlockers[0].key} ({activeBlockers[0].summary})
                     </span>
                   </div>
-                  <span className="text-[10px] uppercase tracking-wider font-bold bg-danger/20 px-2 py-0.5 rounded">
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold bg-danger/20 text-danger px-2.5 py-0.5 rounded-full">
                     {activeBlockers[0].status}
                   </span>
                 </div>

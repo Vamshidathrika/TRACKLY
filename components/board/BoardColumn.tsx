@@ -100,27 +100,35 @@ function BoardColumnComponent({
     }
   };
 
+  const statusColors: Record<IssueStatus, string> = {
+    TO_DO: "bg-amber-400",
+    IN_PROGRESS: "bg-sky-500",
+    IN_REVIEW: "bg-purple-500",
+    DONE: "bg-emerald-500",
+  };
+
   return (
     <div
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex w-72 shrink-0 flex-col rounded-[14px] border p-3 min-h-[500px] max-h-[calc(100vh-200px)] transition-all ${
+      className={`flex w-72 shrink-0 flex-col rounded-[16px] border p-3.5 min-h-[520px] max-h-[calc(100vh-170px)] transition-all ${
         isWipExceeded
           ? "border-danger/50 bg-danger/5"
           : isDragOver
-          ? "border-brand bg-brand/5 ring-2 ring-brand/30"
-          : "border-border-default bg-surface-sunken"
+          ? "border-brand bg-brand/5 ring-2 ring-brand/30 shadow-md"
+          : "border-border-default/60 bg-surface-sunken/40"
       }`}
     >
       {/* Column Header */}
       <div className="mb-3 flex items-center justify-between px-1">
-        <div className="flex items-center gap-1.5">
-          <h3 className={`text-[11px] font-bold uppercase tracking-wider ${isWipExceeded ? "text-danger" : "text-subtle"}`}>
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${statusColors[status]}`} />
+          <h3 className={`text-[11px] font-extrabold uppercase tracking-wider ${isWipExceeded ? "text-danger" : "text-subtle"}`}>
             {columnTitles[status]}
           </h3>
           {status === "DONE" && (
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-success fill-none stroke-[3] stroke-current" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-emerald-500 fill-none stroke-[3] stroke-current" xmlns="http://www.w3.org/2000/svg">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           )}
@@ -135,13 +143,13 @@ function BoardColumnComponent({
           {totalStoryPoints > 0 && (
             <span
               title="Total story points"
-              className="flex h-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-subtle"
+              className="flex h-5 items-center justify-center rounded-full bg-neutral px-2 font-mono text-[10px] font-bold text-subtle"
             >
               {totalStoryPoints} pts
             </span>
           )}
           <span
-            className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[11px] font-bold ${
+            className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-bold ${
               isWipExceeded ? "bg-danger/20 text-danger" : "bg-neutral text-default"
             }`}
           >

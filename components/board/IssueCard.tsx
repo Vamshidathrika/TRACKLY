@@ -114,15 +114,15 @@ function IssueCardComponent({
           if (target.closest("select") || target.closest("button") || target.closest("a")) return;
           onSelectIssue?.(issue);
         }}
-        className={`flex flex-col gap-2 rounded-ds border border-border bg-surface p-3 shadow-xs transition-all relative group cursor-pointer ${
-          canEditStatus ? "hover:shadow-md hover:border-brand/60" : "opacity-90"
+        className={`flex flex-col gap-2 rounded-[12px] border border-border-default/80 bg-surface p-3 shadow-2xs transition-all duration-200 relative group cursor-pointer ${
+          canEditStatus ? "hover:shadow-md hover:border-brand/40 hover:-translate-y-0.5" : "opacity-90"
         }`}
       >
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => onSelectIssue?.(issue)}
-            className="font-mono text-xs font-semibold text-text-subtle group-hover:text-brand hover:underline"
+            className="font-mono text-xs font-bold text-text-subtle group-hover:text-brand hover:underline tracking-tight"
           >
             {issue.key}
           </button>
@@ -132,8 +132,8 @@ function IssueCardComponent({
             value={issue.status}
             onChange={(e) => onStatusChange(issue.id, e.target.value as IssueStatus)}
             title={canEditStatus ? "Change status" : "Status changes restricted to Assignee or Admin"}
-            className={`h-6 rounded-ds border border-border bg-background px-1 text-[11px] font-semibold text-text-subtle outline-none focus:border-brand ${
-              !canEditStatus ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+            className={`h-5.5 rounded-full border border-border/80 bg-neutral/40 px-2 text-[10px] font-bold text-text-subtle outline-none focus:border-brand transition-colors ${
+              !canEditStatus ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-neutral"
             }`}
           >
             <option value="TO_DO">TO DO</option>
