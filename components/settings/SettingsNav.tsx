@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Layers, Zap } from "lucide-react";
+import { Users, Layers, ShieldAlert, Sliders, Zap, Download } from "lucide-react";
 
 export function SettingsNav() {
   const pathname = usePathname();
 
   const tabs = [
     { label: "Members & Access", href: "/settings/members", icon: Users },
-    { label: "Integrations & Apps", href: "/settings/integrations", icon: Layers },
+    { label: "Issue Types", href: "/settings/issue-types", icon: Layers },
+    { label: "Priorities & Resolutions", href: "/settings/priorities", icon: ShieldAlert },
+    { label: "Integrations & Apps", href: "/settings/integrations", icon: Sliders },
     { label: "Automation Engine", href: "/settings/automation", icon: Zap },
+    { label: "Data Backup & Export", href: "/settings/export", icon: Download },
   ];
 
   return (
