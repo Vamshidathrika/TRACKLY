@@ -13,5 +13,5 @@ export default async function ReleasesPage({ params }: { params: Promise<{ key: 
     return <BoardNotFound projectKey={key.toUpperCase()} isAdmin={false} />;
   }
 
-  return <ReleaseHub projectKey={project.key} />;
+  return <ReleaseHub projectId={project.id} projectKey={project.key} />;
 }

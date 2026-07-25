@@ -1,5 +1,11 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
+  fetchDevDashboardDataAction: vi.fn().mockResolvedValue({ hasConnectedRepo: false }),
+  connectGithubRepoAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 import { ReleaseHub } from "./ReleaseHub";
 
 describe("ReleaseHub", () => {

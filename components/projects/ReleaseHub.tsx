@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Package, Plus, CheckCircle2, Clock, Copy, Check, FileText, Calendar, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Package, Plus, CheckCircle2, Clock, Copy, Check, FileText, Calendar, Sparkles, FolderGit2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ConnectRepoModal } from "@/components/dev/ConnectRepoModal";
+import { fetchDevDashboardDataAction } from "@/app/(app)/projects/[key]/dev/actions";
 
 export type ReleaseVersion = {
   id: string;
@@ -16,12 +18,22 @@ export type ReleaseVersion = {
 };
 
 export function ReleaseHub({
+  projectId = "demo-proj",
   projectKey,
   initialReleases = [],
 }: {
+  projectId?: string;
   projectKey: string;
   initialReleases?: ReleaseVersion[];
 }) {
+  const [hasConnectedRepo, setHasConnectedRepo] = useState(false);
+
+  useEffect(() => {
+    if (!projectId) return;
+    fetchDevDashboardDataAction(projectId).then((res) => {
+      setHasConnectedRepo(res?.hasConnectedRepo ?? false);
+    });
+  }, [projectId]);
   const [releases, setReleases] = useState<ReleaseVersion[]>(
     initialReleases.length > 0
       ? initialReleases
@@ -101,19 +113,50 @@ export function ReleaseHub({
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b border-border-default pb-4">
         <div>
-          <h1 className="text-xl font-bold text-default flex items-center gap-2">
-            <Package className="h-6 w-6 text-brand" />
-            <span>Releases & Versioning</span>
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-default flex items-center gap-2">
+              <Package className="h-6 w-6 text-brand" />
+              <span>Releases & Versioning</span>
+            </h1>
+            {hasConnectedRepo ? (
+              <span className="text-[11px] font-bold font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1.5">
+                <CheckCircle2 size={13} /> ● GitHub Sync Active
+              </span>
+            ) : (
+              <ConnectRepoModal
+                projectId={projectId}
+                onSuccess={() => setHasConnectedRepo(true)}
+                trigger={
+                  <button className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <FolderGit2 size={13} /> + Connect Repository
+                  </button>
+                }
+              />
+            )}
+          </div>
           <p className="text-xs text-subtle mt-0.5">
             Manage release versions, track fixVersion progress, and generate AI release notes for {projectKey}.
           </p>
         </div>
 
-        <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-1.5 text-xs">
-          <Plus size={14} />
-          <span>New Version</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {!hasConnectedRepo && (
+            <ConnectRepoModal
+              projectId={projectId}
+              onSuccess={() => setHasConnectedRepo(true)}
+              trigger={
+                <button className="px-3 py-1.5 rounded-full border border-border bg-neutral/40 hover:bg-neutral text-xs font-bold text-text flex items-center gap-1.5 cursor-pointer transition-all">
+                  <FolderGit2 size={14} className="text-brand" />
+                  <span>Connect Repo</span>
+                </button>
+              }
+            />
+          )}
+          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-1.5 text-xs">
+            <Plus size={14} />
+            <span>New Version</span>
+          </Button>
+        </div>
       </div>
 
       {/* Version Cards Grid */}
