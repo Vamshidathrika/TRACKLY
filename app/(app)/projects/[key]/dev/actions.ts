@@ -54,6 +54,32 @@ export async function connectGithubRepoAction(input: {
   }
 }
 
+export async function updateGithubRepoAction(input: {
+  repositoryId: string;
+  owner?: string;
+  repoName?: string;
+  accessToken?: string;
+}) {
+  await getAuthUser();
+  try {
+    const data: any = {};
+    if (input.owner?.trim()) data.owner = input.owner.trim();
+    if (input.repoName?.trim()) data.repoName = input.repoName.trim();
+    if (input.accessToken !== undefined) data.accessToken = input.accessToken.trim() || null;
+
+    const repo = await prisma.gitRepository.update({
+      where: { id: input.repositoryId },
+      data,
+    });
+
+    revalidatePath("/projects");
+    return { success: true, repo };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    return { error: "Failed to update repository settings" };
+  }
+}
+
 export async function disconnectGithubRepoAction(repositoryId: string) {
   await getAuthUser();
   try {

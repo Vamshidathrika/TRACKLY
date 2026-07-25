@@ -613,3 +613,37 @@ export async function getIssueDevelopmentDataAction(issueId: string) {
     return { commits: [], pullRequests: [], branches: [] };
   }
 }
+
+export async function bulkUpdateIssuesAction(
+  issueIds: string[],
+  data: {
+    status?: string;
+    priority?: string;
+    assigneeId?: string | null;
+    sprintId?: string | null;
+  }
+) {
+  await getAuthUser();
+  if (!issueIds || issueIds.length === 0) {
+    return { error: "No issues selected for bulk update" };
+  }
+
+  try {
+    const updatePayload: any = {};
+    if (data.status) updatePayload.status = data.status;
+    if (data.priority) updatePayload.priority = data.priority;
+    if (data.assigneeId !== undefined) updatePayload.assigneeId = data.assigneeId;
+    if (data.sprintId !== undefined) updatePayload.sprintId = data.sprintId;
+
+    const res = await prisma.issue.updateMany({
+      where: { id: { in: issueIds } },
+      data: updatePayload,
+    });
+
+    revalidatePath("/projects");
+    return { success: true, count: res.count };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    return { error: "Failed to perform bulk update" };
+  }
+}

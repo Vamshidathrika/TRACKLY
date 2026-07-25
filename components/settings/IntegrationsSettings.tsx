@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FolderGit2, CheckCircle2, Zap, Shield, Key, RefreshCw, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { EditRepoModal } from "@/components/dev/EditRepoModal";
 
 export function IntegrationsSettings({ siteId }: { siteId: string }) {
   const [smartTransitions, setSmartTransitions] = useState(true);
@@ -125,13 +126,20 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
                     Not Connected
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => showToast(`Repository settings updated for ${board.key}`)}
-                  className="px-3 py-1 rounded-full border border-border bg-neutral/40 hover:bg-neutral text-[11px] font-bold text-text cursor-pointer transition-all"
-                >
-                  Configure
-                </button>
+                <EditRepoModal
+                  repositoryId={`repo-${board.id}`}
+                  initialOwner={board.repo !== "Unlinked" ? board.repo.split("/")[0] : ""}
+                  initialRepoName={board.repo !== "Unlinked" ? board.repo.split("/")[1] : ""}
+                  onSuccess={() => showToast(`Repository configuration updated for ${board.key}!`)}
+                  trigger={
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-full border border-border bg-neutral/40 hover:bg-neutral text-[11px] font-bold text-text cursor-pointer transition-all"
+                    >
+                      Configure
+                    </button>
+                  }
+                />
               </div>
             </div>
           ))}
