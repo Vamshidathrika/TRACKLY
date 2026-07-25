@@ -66,7 +66,7 @@ function BoardFilterBarComponent({
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search issues…"
+            placeholder="Search tasks…"
             className="w-full h-8 pl-8 pr-3 text-xs bg-surface border border-border rounded-lg outline-none focus:border-brand transition-colors"
           />
           {search && (
@@ -98,7 +98,7 @@ function BoardFilterBarComponent({
           })}
         </div>
 
-        {/* "Only My Issues" quick filter */}
+        {/* "Only My Tasks" quick filter */}
         <button
           onClick={onToggleMyIssues}
           className={`h-8 px-3 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
@@ -107,7 +107,7 @@ function BoardFilterBarComponent({
               : "bg-surface border-border text-text-subtle hover:text-text hover:bg-neutral"
           }`}
         >
-          <UserCheck size={13} /> Only my issues
+          <UserCheck size={13} /> Only my tasks
         </button>
 
         {/* "Unassigned" quick filter */}

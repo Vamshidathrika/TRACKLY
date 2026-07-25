@@ -125,12 +125,12 @@ describe("KanbanBoard Swimlanes & WIP Limit Warnings", () => {
       // Verify swimlane headers appear for users and unassigned
       expect(screen.getByText("Alice Smith")).toBeInTheDocument();
       expect(screen.getByText("Bob Jones")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Unassigned.*1 issues/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Unassigned.*1 tasks/i })).toBeInTheDocument();
 
-      // Check swimlane stats (issues & story points)
-      expect(screen.getByText("2 issues • 8 pts")).toBeInTheDocument(); // Alice: PROJ-1 (3) + PROJ-2 (5)
-      expect(screen.getByText("1 issues • 2 pts")).toBeInTheDocument(); // Bob: PROJ-3 (2)
-      expect(screen.getByText("1 issues • 1 pts")).toBeInTheDocument(); // Unassigned: PROJ-4 (1)
+      // Check swimlane stats (tasks & story points)
+      expect(screen.getByText("2 tasks • 8 pts")).toBeInTheDocument(); // Alice: PROJ-1 (3) + PROJ-2 (5)
+      expect(screen.getByText("1 tasks • 2 pts")).toBeInTheDocument(); // Bob: PROJ-3 (2)
+      expect(screen.getByText("1 tasks • 1 pts")).toBeInTheDocument(); // Unassigned: PROJ-4 (1)
     });
 
     it("collapses and expands swimlane when clicked", async () => {
@@ -187,10 +187,10 @@ describe("KanbanBoard Swimlanes & WIP Limit Warnings", () => {
       expect(screen.getByText("LOW Priority")).toBeInTheDocument();
 
       // Verify stats inside priority headers
-      expect(screen.getByText("1 issues • 3 pts")).toBeInTheDocument(); // HIGHEST
-      expect(screen.getByText("1 issues • 5 pts")).toBeInTheDocument(); // HIGH
-      expect(screen.getByText("1 issues • 2 pts")).toBeInTheDocument(); // MEDIUM
-      expect(screen.getByText("1 issues • 1 pts")).toBeInTheDocument(); // LOW
+      expect(screen.getByText("1 tasks • 3 pts")).toBeInTheDocument(); // HIGHEST
+      expect(screen.getByText("1 tasks • 5 pts")).toBeInTheDocument(); // HIGH
+      expect(screen.getByText("1 tasks • 2 pts")).toBeInTheDocument(); // MEDIUM
+      expect(screen.getByText("1 tasks • 1 pts")).toBeInTheDocument(); // LOW
     });
   });
 

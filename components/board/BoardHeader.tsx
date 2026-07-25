@@ -33,36 +33,17 @@ function BoardHeaderComponent({
   showSpaceMenu,
 }: BoardHeaderProps) {
   return (
-    <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-border">
-      {/* Title & Key */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-brand/10 text-brand font-bold text-sm flex items-center justify-center border border-brand/20 shadow-xs">
-          {projectKey.slice(0, 3)}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-text tracking-tight">{projectName}</h1>
-            <button
-              onClick={onToggleStar}
-              title={isStarred ? "Unstar project" : "Star project"}
-              className="p-1 rounded-md hover:bg-neutral transition-colors text-subtle hover:text-amber-500"
-            >
-              <Star size={16} className={isStarred ? "fill-amber-400 text-amber-400" : ""} />
-            </button>
-          </div>
-          <p className="text-xs text-text-subtle">Key: <span className="font-mono font-semibold">{projectKey}</span></p>
-        </div>
+    <div className="flex items-center justify-between flex-wrap gap-4 pb-3 border-b border-border">
+      {/* View Title & Quick Info */}
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-bold text-text tracking-tight">{projectName}</h2>
+        <span className="text-xs text-text-subtle bg-neutral px-2 py-0.5 rounded-full font-mono">
+          {projectKey}
+        </span>
       </div>
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
-        <button
-          onClick={onToggleAIDrawer}
-          className="h-9 px-3.5 rounded-lg border border-brand/40 bg-brand/5 text-brand hover:bg-brand/15 transition-all text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-        >
-          <Sparkles size={14} /> AI Assistant
-        </button>
-
         <button
           onClick={onShare}
           title="Share board link"
@@ -117,7 +98,7 @@ function BoardHeaderComponent({
           defaultProjectId={projectId}
           trigger={
             <Button appearance="primary" className="h-9 px-4 rounded-lg bg-brand text-white hover:bg-brand-hovered font-semibold text-xs shadow-xs">
-              Create issue
+              Create task
             </Button>
           }
         />

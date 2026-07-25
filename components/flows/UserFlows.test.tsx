@@ -169,8 +169,8 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       // Verify Assignee swimlane headers appear
       expect(screen.getByText("Alice Smith")).toBeInTheDocument();
       expect(screen.getByText("Bob Jones")).toBeInTheDocument();
-      expect(screen.getByText("1 issues • 3 pts")).toBeInTheDocument(); // Alice
-      expect(screen.getByText("1 issues • 5 pts")).toBeInTheDocument(); // Bob
+      expect(screen.getByText("1 tasks • 3 pts")).toBeInTheDocument(); // Alice
+      expect(screen.getByText("1 tasks • 5 pts")).toBeInTheDocument(); // Bob
     });
 
     it("toggles Group By to Priority swimlanes", async () => {

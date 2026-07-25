@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { prisma } from "../prisma";
-import { getCache, setCache, delCache } from "../redis";
-import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
+import { getCache, setCache } from "../redis";
 
 /**
  * Summary Query for Kanban Board & Backlog Cards

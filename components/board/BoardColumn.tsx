@@ -154,7 +154,7 @@ function BoardColumnComponent({
       <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-0.5">
         {issues.length === 0 ? (
           <div className="rounded-[10px] border border-dashed border-border-default p-4 text-center text-[12px] text-subtlest italic">
-            Drop issues here
+            Drop tasks here
           </div>
         ) : (
           issues.map((issue) => {
@@ -214,7 +214,7 @@ function BoardColumnComponent({
             className="flex items-center gap-1 w-full rounded-[8px] py-1.5 px-2 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
           >
             <Plus size={13} />
-            <span>Create issue</span>
+            <span>Create task</span>
           </button>
         )}
       </div>

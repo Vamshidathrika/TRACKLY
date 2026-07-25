@@ -305,24 +305,8 @@ export function KanbanBoard({
         showSpaceMenu={showSpaceMenu}
       />
 
-      {/* Secondary Tab Navigation Bar */}
-      <div className="flex items-center gap-6 border-b border-border text-xs font-semibold text-text-subtle pt-2">
-        {mainTabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-2 border-b-2 transition-colors ${
-              activeTab === tab ? "border-brand text-brand font-bold" : "border-transparent hover:text-text"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
       {/* Primary Board View */}
-      {activeTab === "Board" && (
-        <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
           {/* Filter Toolbar */}
           <BoardFilterBar
             search={search}
@@ -425,7 +409,7 @@ export function KanbanBoard({
                             <span className="text-text-subtle font-mono">{isCollapsed ? "▶" : "▼"}</span>
                             <span>{lane.name}</span>
                             <span className="rounded-full bg-brand/10 text-brand px-2 py-0.5 text-[10px]">
-                              {lane.issues.length} issues • {pts} pts
+                              {lane.issues.length} tasks • {pts} pts
                             </span>
                           </div>
                         </button>
@@ -500,14 +484,6 @@ export function KanbanBoard({
             </div>
           )}
         </div>
-      )}
-
-      {/* Lazy Loaded Secondary Views */}
-      {activeTab === "Summary" && <SummaryView issues={issues} projectName={projectName} />}
-      {activeTab === "Timeline" && <TimelineView issues={issues} />}
-      {activeTab === "Calendar" && <CalendarView issues={issues} />}
-      {activeTab === "Dev" && <DevView />}
-      {activeTab === "Code" && <CodeView />}
 
       {/* Modals & Drawers */}
       {showAutomationModal && (
