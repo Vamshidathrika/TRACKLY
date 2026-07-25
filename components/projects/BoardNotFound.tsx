@@ -23,7 +23,7 @@ export function BoardNotFound({ projectKey, isAdmin = true }: { projectKey?: str
 
         <p className="mt-3 mb-8 text-sm text-text-subtle leading-relaxed">
           {isAdmin
-            ? "The board you requested does not exist in your workspace or has been removed. Create a new board to start managing issues and tickets for your team."
+            ? "The board you requested does not exist in your workspace or has been removed. Create a new board to start managing tasks and projects for your team."
             : "The board you requested does not exist or you do not have access to it yet. Check with your workspace admin for a valid link."}
         </p>
 

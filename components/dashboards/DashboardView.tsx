@@ -213,7 +213,7 @@ export function DashboardView({
           }
         >
           {assignedIssues.length === 0 ? (
-            <div className="py-6 text-center text-[12px] text-subtlest italic">No issues assigned to you.</div>
+            <div className="py-6 text-center text-[12px] text-subtlest italic">No tasks assigned to you.</div>
           ) : (
             <div className="flex flex-col divide-y divide-border-default">
               {assignedIssues.map((issue) => (

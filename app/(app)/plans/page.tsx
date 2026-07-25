@@ -119,7 +119,7 @@ export default async function PlansPage() {
                     </div>
                     <div>
                       <h3 className="text-[16px] font-bold text-default tracking-tight">{project.name}</h3>
-                      <p className="text-[12px] text-subtle font-mono">{project.key} • {totalIssues} total issues</p>
+                      <p className="text-[12px] text-subtle font-mono">{project.key} • {totalIssues} total tasks</p>
                     </div>
                   </div>
 

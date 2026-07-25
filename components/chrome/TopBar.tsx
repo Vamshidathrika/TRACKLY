@@ -56,7 +56,7 @@ export function TopBar({
       <div className="relative mx-auto w-full max-w-[520px]">
         <Search size={13} className="absolute top-1/2 left-3 -translate-y-1/2 text-subtlest pointer-events-none" />
         <input
-          placeholder="Search issues, projects..."
+          placeholder="Search tasks, projects..."
           readOnly
           onClick={onOpenPalette}
           onFocus={onOpenPalette}
@@ -68,7 +68,7 @@ export function TopBar({
       </div>
 
       {/* Create button */}
-      <Tooltip content="Create issue (C)">
+      <Tooltip content="Create task (C)">
         <button
           onClick={onOpenCreate}
           className="flex h-8 items-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hovered transition-all shadow-sm hover:shadow-md active:scale-[0.97]"

@@ -429,6 +429,19 @@ export function BacklogView({
     });
   };
 
+  const handleAiGroomBacklog = () => {
+    const priorityOrder: Record<IssuePriority, number> = {
+      HIGHEST: 5,
+      HIGH: 4,
+      MEDIUM: 3,
+      LOW: 2,
+      LOWEST: 1,
+    };
+    setBacklog((prev) =>
+      [...prev].sort((a, b) => (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0))
+    );
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-5xl relative pb-20">
       {/* Floating Apple-Style Multi-Select Bulk Actions Toolbar */}
@@ -459,11 +472,11 @@ export function BacklogView({
             className="h-8 rounded-[8px] border border-border-default bg-surface px-2.5 text-[12px] font-semibold text-default outline-none hover:bg-neutral transition-colors cursor-pointer"
           >
             <option value="" disabled>Priority…</option>
-            <option value="HIGHEST">Highest</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-            <option value="LOWEST">Lowest</option>
+            <option value="HIGHEST">HIGHEST</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+            <option value="LOWEST">LOWEST</option>
           </select>
 
           {/* Bulk Assignee */}
@@ -508,14 +521,26 @@ export function BacklogView({
       />
 
       {/* Header Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-[18px] font-bold text-default tracking-tight">Sprint Planning & Backlog</h2>
           <p className="text-[12px] text-subtle mt-0.5">Drag items between sprints, plan iterations, and organize work.</p>
         </div>
-        <Button appearance="primary" onClick={handleOpenCreateSprint} disabled={isCreatingSprint}>
-          <Plus size={14} /> Create sprint
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* AI Backlog Groomer Button */}
+          <button
+            type="button"
+            onClick={handleAiGroomBacklog}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer"
+          >
+            <Sparkles size={14} />
+            <span>✨ AI Backlog Groomer</span>
+          </button>
+
+          <Button appearance="primary" onClick={handleOpenCreateSprint} disabled={isCreatingSprint}>
+            <Plus size={14} /> Create sprint
+          </Button>
+        </div>
       </div>
 
       {/* Profile Circles Filter Toolbar */}
@@ -792,7 +817,7 @@ export function BacklogView({
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-subtle hover:text-brand hover:bg-neutral rounded-[8px] transition-all mt-1 w-fit"
                   >
                     <Plus size={13} />
-                    <span>Create issue in {sprint.name}</span>
+                    <span>Create task in {sprint.name}</span>
                   </button>
                 )}
               </div>
@@ -986,7 +1011,7 @@ export function BacklogView({
                 className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-subtle hover:text-brand hover:bg-neutral rounded-[8px] transition-all mt-1 w-fit"
               >
                 <Plus size={13} />
-                <span>Create issue in Backlog</span>
+                <span>Create task in Backlog</span>
               </button>
             )}
           </div>

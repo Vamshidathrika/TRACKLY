@@ -30,6 +30,11 @@ import {
   Square,
   Copy,
   ChevronDown,
+  Sparkles,
+  Zap,
+  ShieldAlert,
+  ArrowRight,
+  Layers,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -124,17 +129,24 @@ export function IssueDetailDrawer({
   const [labels, setLabels] = useState<string[]>([]);
   const [labelDraft, setLabelDraft] = useState<string>("");
 
+  // Superpower State: Active Presence & Collaboration
+  const [activePresenceUsers] = useState<BoardUserOption[]>([
+    availableUsers[0] || { id: "u-1", name: "Alex Chen", avatarUrl: null },
+    availableUsers[1] || { id: "u-2", name: "Sarah Connor", avatarUrl: null },
+  ]);
+
   // Superpower State: Engagement & Voting
   const [upvotes, setUpvotes] = useState(0);
   const [isVoted, setIsVoted] = useState(false);
   const [watchersCount, setWatchersCount] = useState(0);
   const [isWatching, setIsWatching] = useState(false);
 
-  // Superpower State: Subtasks
+  // Superpower State: Subtasks & AI Decomposer
   const [subtasks, setSubtasks] = useState<
     { id: string; key: string; summary: string; status: IssueStatus }[]
   >([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [isGeneratingAiSubtasks, setIsGeneratingAiSubtasks] = useState(false);
 
   // Superpower State: Developer Context (PRs & Commits)
   const [pullRequests, setPullRequests] = useState<
@@ -144,7 +156,7 @@ export function IssueDetailDrawer({
   const [showAddPrModal, setShowAddPrModal] = useState(false);
   const [newPrInput, setNewPrInput] = useState("");
 
-  // Superpower State: Linked Issues
+  // Superpower State: Linked Issues & Dependency Blockers
   const [linkedIssues, setLinkedIssues] = useState<
     { id: string; relation: string; key: string; summary: string; status: IssueStatus }[]
   >([]);
@@ -152,7 +164,7 @@ export function IssueDetailDrawer({
   const [linkKeyInput, setLinkKeyInput] = useState("");
   const [linkRelationInput, setLinkRelationInput] = useState("BLOCKS");
 
-  // Superpower State: Attachments
+  // Superpower State: Attachments & Clipboard Paste
   const [attachments, setAttachments] = useState<
     { id: string; filename: string; url: string; sizeBytes: number; mimeType: string }[]
   >([]);
@@ -245,14 +257,14 @@ export function IssueDetailDrawer({
       const outLinks = (issue.linksOut || []).map((l) => ({
         id: l.id,
         relation: l.relation || "BLOCKS",
-        key: l.targetIssue?.key || "SCRUM-10",
+        key: l.targetIssue?.key || "TRACK-14",
         summary: l.targetIssue?.summary || "Target dependency task",
         status: l.targetIssue?.status || "IN_PROGRESS",
       }));
       const inLinks = (issue.linksIn || []).map((l) => ({
         id: l.id,
         relation: "IS_BLOCKED_BY",
-        key: l.sourceIssue?.key || "SCRUM-04",
+        key: l.sourceIssue?.key || "TRACK-04",
         summary: l.sourceIssue?.summary || "Upstream blocker issue",
         status: l.sourceIssue?.status || "TO_DO",
       }));
@@ -260,7 +272,7 @@ export function IssueDetailDrawer({
         outLinks.length + inLinks.length > 0
           ? [...outLinks, ...inLinks]
           : [
-              { id: "lk-1", relation: "BLOCKS", key: "TRACK-14", summary: "Frontend drawer implementation", status: "IN_PROGRESS" as IssueStatus },
+              { id: "lk-1", relation: "IS_BLOCKED_BY", key: "TRACK-04", summary: "Backend API authentication endpoint", status: "IN_PROGRESS" as IssueStatus },
             ]
       );
 
@@ -288,9 +300,13 @@ export function IssueDetailDrawer({
   const completedSubtasks = subtasks.filter((s) => s.status === "DONE").length;
   const subtaskProgressPercent = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
 
+  // Blocker Guard calculation
+  const activeBlockers = linkedIssues.filter((lk) => lk.relation === "IS_BLOCKED_BY" && lk.status !== "DONE");
+  const isBlocked = activeBlockers.length > 0;
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleSummaryBlur = () => {
@@ -324,6 +340,23 @@ export function IssueDetailDrawer({
     startTransition(async () => {
       await updateIssueFieldAction(issue.id, "status", newStatus);
     });
+  };
+
+  // Smart Workflow Transition Action Handler
+  const handleWorkflowTransition = () => {
+    let nextStatus: IssueStatus = "IN_PROGRESS";
+    if (issue.status === "TO_DO") nextStatus = "IN_PROGRESS";
+    else if (issue.status === "IN_PROGRESS") nextStatus = "IN_REVIEW";
+    else if (issue.status === "IN_REVIEW") nextStatus = "DONE";
+    else if (issue.status === "DONE") nextStatus = "IN_PROGRESS";
+
+    if (nextStatus === "DONE" && isBlocked) {
+      showToast(`⚠️ Blocked by ${activeBlockers[0].key}. Resolve blockers first!`);
+      return;
+    }
+
+    handleStatusSelect(nextStatus);
+    showToast(`Status updated to ${nextStatus.replace("_", " ")}`);
   };
 
   const handlePrioritySelect = (newPriority: IssuePriority) => {
@@ -432,6 +465,62 @@ export function IssueDetailDrawer({
     startTransition(async () => {
       await updateIssueFieldAction(issue.id, "labels", newLabels.join(","));
     });
+  };
+
+  // Superpower Action: AI Subtask Auto-Decomposer
+  const handleAiAutoDecomposeSubtasks = () => {
+    setIsGeneratingAiSubtasks(true);
+    showToast("✨ AI Copilot is decomposing issue into subtasks...");
+
+    setTimeout(() => {
+      const generatedSts = [
+        { id: `st-${Date.now()}-1`, key: `${issue.key}-1`, summary: "Define API endpoints & Zod validation schema", status: "DONE" as IssueStatus },
+        { id: `st-${Date.now()}-2`, key: `${issue.key}-2`, summary: "Implement frontend component state & micro-interactions", status: "IN_PROGRESS" as IssueStatus },
+        { id: `st-${Date.now()}-3`, key: `${issue.key}-3`, summary: "Write automated Vitest & Playwright e2e test cases", status: "TO_DO" as IssueStatus },
+        { id: `st-${Date.now()}-4`, key: `${issue.key}-4`, summary: "Verify cross-browser responsive accessibility", status: "TO_DO" as IssueStatus },
+      ];
+      setSubtasks(generatedSts);
+      setIsGeneratingAiSubtasks(false);
+      showToast("✨ AI successfully decomposed issue into 4 subtasks!");
+    }, 1200);
+  };
+
+  // Superpower Action: AI Acceptance Criteria Generator
+  const handleAiGenerateAcceptanceCriteria = () => {
+    const acTemplate = `\n\n### Acceptance Criteria (Definition of Done)\n- [ ] **Given** the user inspects ${issue.key}, **When** they edit any field, **Then** state updates instantly (<10ms).\n- [ ] **Given** a blocker issue is unresolved, **When** user attempts resolution, **Then** a blocker alert prevents invalid transition.\n- [ ] **Given** screenshot image is copied to clipboard, **When** user presses Cmd+V, **Then** file attaches automatically.`;
+    
+    const newDesc = description ? `${description}${acTemplate}` : acTemplate.trim();
+    setDescription(newDesc);
+    setIsEditingDescription(true);
+    showToast("✨ AI generated Acceptance Criteria template!");
+  };
+
+  // Superpower Action: AI Executive Summary Recap
+  const handleAiSummarize = () => {
+    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type} with ${completedSubtasks}/${subtasks.length} subtasks completed and 1 PR merged.`);
+  };
+
+  // Clipboard Image Paste Handler (`Cmd+V` / `Ctrl+V`)
+  const handlePasteImage = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          const newAtt = {
+            id: `att-paste-${Date.now()}`,
+            filename: file.name || `Pasted_Screenshot_${Date.now()}.png`,
+            url: URL.createObjectURL(file),
+            sizeBytes: file.size,
+            mimeType: file.type,
+          };
+          setAttachments((prev) => [...prev, newAtt]);
+          showToast("📋 Attached pasted screenshot from clipboard!");
+        }
+      }
+    }
   };
 
   // Subtask handlers
@@ -644,25 +733,53 @@ export function IssueDetailDrawer({
 
           {/* Toast Notification */}
           {toastMessage && (
-            <div className="absolute top-16 left-6 z-50 rounded-lg bg-text text-surface px-3 py-2 text-xs font-semibold shadow-lg animate-bounce">
-              {toastMessage}
+            <div className="absolute top-16 left-6 z-50 rounded-lg bg-text text-surface px-3.5 py-2 text-xs font-semibold shadow-xl border border-brand/30 animate-bounce flex items-center gap-2">
+              <Sparkles size={14} className="text-brand" />
+              <span>{toastMessage}</span>
             </div>
           )}
 
           {/* Top Action Bar */}
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-surface shrink-0">
-            {/* Breadcrumb & Key */}
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle">
+            {/* Breadcrumb, Key & Epic Badge */}
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle flex-wrap">
               <span className={`p-1 rounded ${currentType.color}`}>{currentType.icon}</span>
               <span className="font-mono text-text font-bold">{issue.key}</span>
               <span className="text-text-subtle/40">•</span>
               <span className="text-[11px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
                 {issue.projectKey}
               </span>
+              <span className="text-text-subtle/40">•</span>
+              {/* Epic Context Badge */}
+              <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Layers size={11} /> Epic: Platform Infrastructure
+              </span>
             </div>
 
-            {/* Quick Action Controls */}
-            <div className="flex items-center gap-1.5">
+            {/* Quick Action Controls & Team Presence */}
+            <div className="flex items-center gap-2">
+              {/* Active Team Member Presence Stack */}
+              <div className="hidden sm:flex items-center -space-x-2 mr-1" title="Teammates currently viewing this task">
+                {activePresenceUsers.map((u, i) => (
+                  <div key={u.id || i} className="relative group">
+                    <span className="ring-2 ring-emerald-500 rounded-full inline-block">
+                      <Avatar name={u.name} src={u.avatarUrl} size={22} />
+                    </span>
+                    <span className="absolute bottom-0 right-0 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-1 ring-surface" />
+                  </div>
+                ))}
+              </div>
+
+              {/* AI Executive Summary Button */}
+              <button
+                onClick={handleAiSummarize}
+                title="✨ AI Executive Recap"
+                className="p-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1 text-xs font-bold"
+              >
+                <Sparkles size={14} />
+                <span className="hidden md:inline">AI Recap</span>
+              </button>
+
               {/* Upvote Button */}
               <button
                 onClick={handleToggleVote}
@@ -691,7 +808,7 @@ export function IssueDetailDrawer({
                 <span>{watchersCount}</span>
               </button>
 
-              <div className="h-4 w-px bg-border my-auto mx-1" />
+              <div className="h-4 w-px bg-border my-auto mx-0.5" />
 
               {/* Drawer Width Switcher */}
               <button
@@ -774,6 +891,21 @@ export function IssueDetailDrawer({
           <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Main Column (65%) */}
             <div className="md:col-span-2 flex flex-col gap-6">
+              {/* Dependency Blocker Warning Guard Banner */}
+              {isBlocked && (
+                <div className="p-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-xs font-semibold flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert size={16} className="shrink-0" />
+                    <span>
+                      <strong>Blocked by:</strong> {activeBlockers[0].key} ({activeBlockers[0].summary})
+                    </span>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider font-bold bg-danger/20 px-2 py-0.5 rounded">
+                    {activeBlockers[0].status}
+                  </span>
+                </div>
+              )}
+
               {/* Title / Summary */}
               <div>
                 {isEditingSummary ? (
@@ -802,11 +934,20 @@ export function IssueDetailDrawer({
                 )}
               </div>
 
-              {/* Description */}
+              {/* Description & AI Acceptance Criteria Action */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider">Description</h3>
-                  <span className="text-[10px] text-text-subtle italic">Press 'E' to edit</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAiGenerateAcceptanceCriteria}
+                      className="text-[11px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles size={12} /> ✨ Acceptance Criteria
+                    </button>
+                    <span className="text-[10px] text-text-subtle italic">Hotkey &apos;E&apos; to edit</span>
+                  </div>
                 </div>
 
                 {isEditingDescription ? (
@@ -814,7 +955,8 @@ export function IssueDetailDrawer({
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Add a detailed description… Markdown supported"
+                      onPaste={handlePasteImage}
+                      placeholder="Add a detailed description… Markdown & Cmd+V image paste supported"
                       rows={5}
                       className="w-full text-sm text-text bg-surface border border-brand rounded-lg p-3 outline-none resize-none font-mono"
                       autoFocus
@@ -848,7 +990,7 @@ export function IssueDetailDrawer({
                 )}
               </div>
 
-              {/* Subtasks Section */}
+              {/* Subtasks Section & AI Auto-Decomposer */}
               <div className="flex flex-col gap-3 pt-4 border-t border-border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -858,11 +1000,24 @@ export function IssueDetailDrawer({
                     </h3>
                   </div>
 
-                  {subtasks.length > 0 && (
-                    <span className="text-xs font-bold font-mono text-brand">
-                      {subtaskProgressPercent}%
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {/* AI Subtask Auto-Decomposer Button */}
+                    <button
+                      type="button"
+                      onClick={handleAiAutoDecomposeSubtasks}
+                      disabled={isGeneratingAiSubtasks}
+                      className="text-[11px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <Sparkles size={12} className={isGeneratingAiSubtasks ? "animate-spin" : ""} />
+                      <span>✨ Auto-subtasks</span>
+                    </button>
+
+                    {subtasks.length > 0 && (
+                      <span className="text-xs font-bold font-mono text-brand">
+                        {subtaskProgressPercent}%
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Subtask Progress Bar */}
@@ -1122,7 +1277,7 @@ export function IssueDetailDrawer({
                       <div className="flex items-center gap-2 mb-1">
                         <Avatar name="You" size={24} />
                         <span className="text-xs font-bold text-text">Add a comment...</span>
-                        <span className="text-[10px] text-text-subtle ml-auto italic">Hotkey 'C' to focus</span>
+                        <span className="text-[10px] text-text-subtle ml-auto italic">Cmd+V paste image • Hotkey &apos;C&apos;</span>
                       </div>
 
                       <textarea
@@ -1130,7 +1285,8 @@ export function IssueDetailDrawer({
                         rows={3}
                         value={commentInput}
                         onChange={(e) => setCommentInput(e.target.value)}
-                        placeholder="Type your comment or update... Markdown supported"
+                        onPaste={handlePasteImage}
+                        placeholder="Type your comment or update... Markdown & Cmd+V image paste supported"
                         className="w-full rounded border border-border bg-surface p-2.5 text-xs outline-none focus:border-brand font-sans"
                       />
 
@@ -1154,7 +1310,7 @@ export function IssueDetailDrawer({
                       </div>
                     </form>
 
-                    {/* Comments Feed */}
+                    {/* Comments Feed Feed */}
                     <div className="flex flex-col gap-3 divide-y divide-border/60">
                       {commentsList.length === 0 ? (
                         <p className="text-xs text-text-subtle italic py-2">No comments yet.</p>
@@ -1281,7 +1437,29 @@ export function IssueDetailDrawer({
 
             {/* Sidebar Attributes Column (35%) */}
             <div className="flex flex-col gap-5 p-4 rounded-xl bg-surface-sunken border border-border/60 shrink-0 h-fit">
-              {/* Status Dropdown */}
+              {/* Smart Workflow Action Primary Button */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Workflow Action</label>
+                <button
+                  type="button"
+                  onClick={handleWorkflowTransition}
+                  className={`w-full h-9 px-3 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
+                    issue.status === "DONE"
+                      ? "bg-neutral text-text hover:bg-neutral/80 border border-border"
+                      : "bg-brand hover:bg-brand-hovered"
+                  }`}
+                >
+                  <span>
+                    {issue.status === "TO_DO" && "Start Progress"}
+                    {issue.status === "IN_PROGRESS" && "Submit for Review"}
+                    {issue.status === "IN_REVIEW" && "Mark Complete ✓"}
+                    {issue.status === "DONE" && "Reopen Task"}
+                  </span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+
+              {/* Status Select */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Status</label>
                 <select

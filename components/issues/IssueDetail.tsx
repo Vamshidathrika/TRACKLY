@@ -147,7 +147,7 @@ export function IssueDetail({
         showToast(res.error);
         return;
       }
-      showToast(`Ticket ${issue.key} deleted`);
+      showToast(`Task ${issue.key} deleted`);
       router.push(`/projects/${issue.project?.key || ""}`);
     });
   };
@@ -226,7 +226,7 @@ export function IssueDetail({
         showToast(res.error);
         return;
       }
-      showToast(next ? "Watching ticket updates" : "Stopped watching ticket");
+      showToast(next ? "Watching task updates" : "Stopped watching task");
       router.refresh();
     });
   };
@@ -331,7 +331,7 @@ export function IssueDetail({
         showToast(res.error);
         return;
       }
-      showToast("Work log deleted");
+      showToast("Time log deleted");
       router.refresh();
     });
   };
@@ -386,7 +386,7 @@ export function IssueDetail({
           {/* Copy issue key */}
           <button
             onClick={() => { navigator.clipboard.writeText(issue.key); showToast(`Copied ${issue.key} to clipboard`); }}
-            title="Copy issue key"
+            title="Copy task ID"
             className="ml-0.5 flex items-center justify-center h-5 w-5 rounded-[4px] text-subtlest hover:bg-neutral hover:text-default transition-all"
           >
             <ArrowLeft size={11} className="rotate-[135deg]" />
@@ -810,7 +810,7 @@ export function IssueDetail({
                       onClick={() => setShowTimeLog(true)}
                       className="text-right text-[11px] font-bold text-brand hover:underline cursor-pointer pt-0.5"
                     >
-                      + Log work
+                      + Log time
                     </button>
                   </div>
                 </div>

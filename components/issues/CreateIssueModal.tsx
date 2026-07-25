@@ -28,7 +28,7 @@ const ISSUE_TYPES: IssueTypeMeta[] = [
   },
   {
     value: "BUG",
-    label: "Bug",
+    label: "Bug Fix",
     color: "text-red-600 bg-red-50 border-red-200",
     icon: <Bug size={13} className="text-red-600" />,
   },

@@ -24,13 +24,13 @@ export default async function FilterSearchPage({
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto">
-      <Breadcrumbs items={[{ label: "Filters", href: "/filters/search" }, { label: "Search Issues" }]} />
+      <Breadcrumbs items={[{ label: "Filters", href: "/filters/search" }, { label: "Search Tasks" }]} />
       <div className="mt-2 mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text">Search Issues & JQL Navigator</h1>
-          <p className="text-xs text-text-subtle">Advanced issue search and filter management</p>
+          <h1 className="text-2xl font-semibold text-text">Search Tasks & Filter Navigator</h1>
+          <p className="text-xs text-text-subtle">Advanced task search and filter management</p>
         </div>
-        <CreateIssueModal trigger={<Button appearance="primary">Create issue</Button>} />
+        <CreateIssueModal trigger={<Button appearance="primary">Create task</Button>} />
       </div>
 
       <JQLNavigator

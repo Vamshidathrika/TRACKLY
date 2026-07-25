@@ -12,7 +12,7 @@ export type IssueTypeConfig = {
 export const ISSUE_TYPES: IssueTypeConfig[] = [
   { value: "STORY", label: "Story", color: "text-emerald-500 bg-emerald-500/10", icon: React.createElement(Bookmark, { size: 14 }) },
   { value: "TASK", label: "Task", color: "text-blue-500 bg-blue-500/10", icon: React.createElement(CheckSquare, { size: 14 }) },
-  { value: "BUG", label: "Bug", color: "text-rose-500 bg-rose-500/10", icon: React.createElement(Bug, { size: 14 }) },
+  { value: "BUG", label: "Bug Fix", color: "text-rose-500 bg-rose-500/10", icon: React.createElement(Bug, { size: 14 }) },
   { value: "EPIC", label: "Epic", color: "text-purple-500 bg-purple-500/10", icon: React.createElement(Zap, { size: 14 }) },
   { value: "SUBTASK", label: "Subtask", color: "text-sky-500 bg-sky-500/10", icon: React.createElement(CheckCircle2, { size: 14 }) },
 ];

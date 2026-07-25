@@ -10,7 +10,7 @@ export function TypeIcon({ type, size = 16 }: { type: IssueType; size?: number }
     case "TASK":
       return <span title="Task"><CheckSquare size={size} className="text-blue-500" /></span>;
     case "BUG":
-      return <span title="Bug"><Bug size={size} className="text-red-600" /></span>;
+      return <span title="Bug Fix"><Bug size={size} className="text-red-600" /></span>;
     case "SUBTASK":
       return <span title="Sub-task"><GitCommit size={size} className="text-slate-500" /></span>;
     default:

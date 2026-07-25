@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 export function ShortcutsHelp({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const shortcuts = [
     { keys: ["Cmd+K", "/"], description: "Open Command Palette" },
-    { keys: ["C"], description: "Create Issue" },
+    { keys: ["C"], description: "Create Task" },
     { keys: ["?"], description: "Open Keyboard Shortcuts Help" },
     { keys: ["G D"], description: "Go to Dashboards" },
     { keys: ["G P"], description: "Go to Projects" },

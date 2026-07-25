@@ -418,13 +418,13 @@ export function LinkedWorkItems({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link2 size={16} className="text-brand" />
-          <h3 className="text-sm font-bold text-text">Linked Work Items ({links.length})</h3>
+          <h3 className="text-sm font-bold text-text">Linked Tasks ({links.length})</h3>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="text-xs font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
         >
-          <Plus size={13} /> Link item
+          <Plus size={13} /> Link task
         </button>
       </div>
 
@@ -437,7 +437,7 @@ export function LinkedWorkItems({
       {/* Linked Items List */}
       <div className="flex flex-col gap-2">
         {links.length === 0 && (
-          <p className="text-xs text-text-subtle italic">No linked work items yet.</p>
+          <p className="text-xs text-text-subtle italic">No linked tasks yet.</p>
         )}
         {links.map((link) => {
           const item = link.targetIssue;
@@ -480,7 +480,7 @@ export function LinkedWorkItems({
       {showAddModal && (
         <div className="absolute top-12 left-0 right-0 z-30 p-4 rounded-lg border border-border bg-surface shadow-xl text-xs flex flex-col gap-3 animate-in fade-in duration-150">
           <div className="flex justify-between items-center font-bold text-text">
-            <span>Link Work Item</span>
+            <span>Link Task</span>
             <button onClick={() => setShowAddModal(false)} className="text-text-subtle hover:text-text">✕</button>
           </div>
           <form onSubmit={handleAddLink} className="flex flex-col gap-3">
@@ -594,7 +594,7 @@ export function ActivitySection({
               activeTab === "worklog" ? "border-b-2 border-brand text-brand font-bold" : "hover:text-text"
             }`}
           >
-            <Clock size={14} /> Work Log ({workLogs.length})
+            <Clock size={14} /> Time Log ({workLogs.length})
           </button>
         </div>
       </div>
@@ -717,14 +717,14 @@ export function ActivitySection({
                 onClick={onLogWork}
                 className="bg-brand text-white text-xs font-bold flex items-center gap-1.5"
               >
-                <Plus size={12} /> Log work
+                <Plus size={12} /> Log time
               </Button>
             </div>
           )}
 
           {workLogs.length === 0 ? (
             <p className="text-xs text-text-subtle italic py-2">
-              No work logged yet. Use “Log work” to record time against this ticket.
+              No time logged yet. Use “Log time” to record time against this task.
             </p>
           ) : (
             <div className="divide-y divide-border/40 text-xs">
@@ -750,7 +750,7 @@ export function ActivitySection({
                       <button
                         type="button"
                         onClick={() => onDeleteWorkLog(w.id)}
-                        title="Delete work log"
+                        title="Delete time log"
                         className="text-text-subtle hover:text-danger transition-colors"
                       >
                         <Trash2 size={13} />

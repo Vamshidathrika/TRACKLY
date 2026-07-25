@@ -107,7 +107,7 @@ export function IssueFilterToolbar({
                       ? "bg-slate-800 text-white border-slate-900 ring-2 ring-brand ring-offset-1 scale-110 shadow-md"
                       : "bg-neutral text-text-subtle border-border hover:bg-neutral-hovered hover:scale-105"
                   }`}
-                  title="Filter Unassigned Tickets"
+                  title="Filter Unassigned Tasks"
                 >
                   <User size={14} />
                 </button>
@@ -126,7 +126,7 @@ export function IssueFilterToolbar({
                         ? "ring-2 ring-brand ring-offset-2 border-brand scale-110 z-10 shadow-md"
                         : "hover:scale-105 hover:shadow-md opacity-90 hover:opacity-100"
                     }`}
-                    title={`Show tickets for ${usr.name}`}
+                    title={`Show tasks for ${usr.name}`}
                   >
                     {usr.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -180,7 +180,7 @@ export function IssueFilterToolbar({
               <Search size={14} className="absolute top-2.5 left-2.5 text-text-subtle" />
               <input
                 type="text"
-                placeholder="Filter tickets..."
+                placeholder="Filter tasks..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="h-8 w-44 rounded-md border border-border bg-surface pl-8 pr-2.5 text-xs outline-none transition-all focus:w-60 focus:border-brand"
@@ -237,7 +237,7 @@ export function IssueFilterToolbar({
               <option value="ALL">All Types</option>
               <option value="STORY">Story</option>
               <option value="TASK">Task</option>
-              <option value="BUG">Bug</option>
+              <option value="BUG">Bug Fix</option>
               <option value="EPIC">Epic</option>
             </select>
           )}

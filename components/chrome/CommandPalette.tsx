@@ -90,7 +90,7 @@ export function CommandPalette({
     {
       id: "action-create",
       type: "action",
-      label: "Create issue",
+      label: "Create task",
       sublabel: "Press C anywhere",
       icon: Zap,
       handler: () => { onCreateIssue(); close(); },
@@ -188,7 +188,7 @@ export function CommandPalette({
 
   if (issues.length > 0) {
     sections.push({
-      label: "Issues",
+      label: "Tasks",
       items: issues.map((issue) => ({
         id: `issue-${issue.id}`,
         type: "issue" as const,

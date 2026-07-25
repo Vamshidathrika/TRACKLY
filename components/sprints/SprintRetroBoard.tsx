@@ -80,7 +80,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
     setCards((prev) =>
       prev.map((c) => (c.id === id ? { ...c, convertedToIssue: true } : c))
     );
-    setToastMsg(`Converted Action Item to live backlog issue in ${projectKey}!`);
+    setToastMsg(`Converted Action Item to live backlog task in ${projectKey}!`);
     setTimeout(() => setToastMsg(null), 3500);
   };
 

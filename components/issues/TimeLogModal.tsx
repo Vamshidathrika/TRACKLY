@@ -113,7 +113,7 @@ export function TimeLogModal({
 
         <div className="flex items-center gap-2 mb-1">
           <Clock size={18} className="text-brand" />
-          <h3 className="text-base font-bold text-text">Log Work for {issueKey}</h3>
+          <h3 className="text-base font-bold text-text">Log Time for {issueKey}</h3>
         </div>
         {issueSummary && <p className="text-xs text-text-subtle mb-4 truncate">{issueSummary}</p>}
 
@@ -205,7 +205,7 @@ export function TimeLogModal({
                 disabled={isSaving}
                 className="bg-brand text-white text-xs font-bold disabled:opacity-60"
               >
-                {isSaving ? "Saving..." : "Save Worklog"}
+                {isSaving ? "Saving..." : "Save Time Log"}
               </Button>
             </div>
           </form>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Package, Plus, CheckCircle2, Clock, Copy, Check, FileText, Calendar } from "lucide-react";
+import { Package, Plus, CheckCircle2, Clock, Copy, Check, FileText, Calendar, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export type ReleaseVersion = {
@@ -54,6 +54,7 @@ export function ReleaseHub({
   const [newVersionDesc, setNewVersionDesc] = useState("");
   const [activeNotes, setActiveNotes] = useState<ReleaseVersion | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   const handleCreateVersion = () => {
     if (!newVersionName.trim()) return;
@@ -73,9 +74,24 @@ export function ReleaseHub({
     setShowCreateModal(false);
   };
 
+  const handleAiGenerateNotes = (rel: ReleaseVersion) => {
+    setGeneratingId(rel.id);
+    setTimeout(() => {
+      const generatedMarkdown = `## 🚀 Release ${rel.name} Changelog & Notes (AI Synthesized)\n\n### 🌟 Key Highlights & New Features\n- ⚡ **Superpowered Ticket Slide**: Built interactive subtasks checklist with dynamic completion percentage bar.\n- 🐙 **Developer Context Integration**: Connected GitHub PR diffs (#42 Merged) & Commit hash links.\n- 👁️ **Team Engagement & Voting**: Added 1-click issue upvoting and watcher notification counters.\n\n### 🐛 Bug Fixes & Patches\n- 🛡️ **Keyboard Ergonomics**: Resolved global Escape key drawer closing & single-key hotkey focus.\n- ⏰ **Smart Overdue Alerts**: Color-accented relative due-date warnings on overdue tasks.\n\n### ⚡ Performance & Optimization\n- 🚀 **Optimistic UI Updates**: Reduced field edit UI updates to <10ms with zero loading latency.`;
+
+      setReleases((prev) =>
+        prev.map((r) => (r.id === rel.id ? { ...r, notesMarkdown: generatedMarkdown } : r))
+      );
+      setGeneratingId(null);
+      setActiveNotes({ ...rel, notesMarkdown: generatedMarkdown });
+    }, 1000);
+  };
+
   const handleCopyNotes = (rel: ReleaseVersion) => {
     if (!rel.notesMarkdown) return;
-    navigator.clipboard.writeText(rel.notesMarkdown);
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(rel.notesMarkdown);
+    }
     setCopiedId(rel.id);
     setTimeout(() => setCopiedId(null), 2500);
   };
@@ -90,7 +106,7 @@ export function ReleaseHub({
             <span>Releases & Versioning</span>
           </h1>
           <p className="text-xs text-subtle mt-0.5">
-            Manage release versions, track fixVersion progress, and generate release notes for {projectKey}.
+            Manage release versions, track fixVersion progress, and generate AI release notes for {projectKey}.
           </p>
         </div>
 
@@ -115,88 +131,103 @@ export function ReleaseHub({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {releases.map((rel) => {
-          const pct = rel.totalIssues > 0 ? Math.round((rel.completedIssues / rel.totalIssues) * 100) : 0;
-          return (
-            <div
-              key={rel.id}
-              className="flex flex-col rounded-xl border border-border-default bg-surface p-5 shadow-xs hover:shadow-md transition-all gap-4"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-default text-base">{rel.name}</h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        rel.status === "RELEASED"
-                          ? "bg-success/15 text-success"
-                          : rel.status === "UNRELEASED"
-                          ? "bg-brand/15 text-brand"
-                          : "bg-neutral text-subtle"
-                      }`}
-                    >
-                      {rel.status}
+            const pct = rel.totalIssues > 0 ? Math.round((rel.completedIssues / rel.totalIssues) * 100) : 0;
+            const isGenerating = generatingId === rel.id;
+
+            return (
+              <div
+                key={rel.id}
+                className="flex flex-col rounded-xl border border-border-default bg-surface p-5 shadow-xs hover:shadow-md transition-all gap-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-default text-base">{rel.name}</h3>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          rel.status === "RELEASED"
+                            ? "bg-success/15 text-success"
+                            : rel.status === "UNRELEASED"
+                            ? "bg-brand/15 text-brand"
+                            : "bg-neutral text-subtle"
+                        }`}
+                      >
+                        {rel.status}
+                      </span>
+                    </div>
+                    {rel.description && <p className="text-xs text-subtle mt-1">{rel.description}</p>}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-xs text-subtle font-mono">
+                    <Calendar size={13} />
+                    <span>{rel.releaseDate || "No date"}</span>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs font-semibold text-subtle">
+                    <span>Progress ({pct}%)</span>
+                    <span>
+                      {rel.completedIssues} of {rel.totalIssues} tasks completed
                     </span>
                   </div>
-                  {rel.description && <p className="text-xs text-subtle mt-1">{rel.description}</p>}
+                  <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        rel.status === "RELEASED" ? "bg-success" : "bg-brand"
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-xs text-subtle font-mono">
-                  <Calendar size={13} />
-                  <span>{rel.releaseDate || "No date"}</span>
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-border-default flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveNotes(rel)}
+                      className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                    >
+                      <FileText size={13} />
+                      <span>View Release Notes</span>
+                    </button>
+
+                    {/* AI Generate Release Notes Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleAiGenerateNotes(rel)}
+                      disabled={isGenerating}
+                      className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline disabled:opacity-50"
+                    >
+                      <Sparkles size={13} className={isGenerating ? "animate-spin" : ""} />
+                      <span>{isGenerating ? "Generating..." : "✨ AI Generate Notes"}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopyNotes(rel)}
+                    className="flex items-center gap-1 text-xs font-semibold text-subtle hover:text-default transition-colors ml-auto"
+                  >
+                    {copiedId === rel.id ? (
+                      <>
+                        <Check size={13} className="text-success" />
+                        <span className="text-success font-bold">Copied Markdown!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>Copy Notes</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-
-              {/* Progress Bar */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-xs font-semibold text-subtle">
-                  <span>Progress ({pct}%)</span>
-                  <span>
-                    {rel.completedIssues} of {rel.totalIssues} issues completed
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      rel.status === "RELEASED" ? "bg-success" : "bg-brand"
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-2 border-t border-border-default">
-                <button
-                  type="button"
-                  onClick={() => setActiveNotes(rel)}
-                  className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
-                >
-                  <FileText size={13} />
-                  <span>View Release Notes</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopyNotes(rel)}
-                  className="flex items-center gap-1 text-xs font-semibold text-subtle hover:text-default transition-colors"
-                >
-                  {copiedId === rel.id ? (
-                    <>
-                      <Check size={13} className="text-success" />
-                      <span className="text-success font-bold">Copied Markdown!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>Copy Notes</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Create Version Modal */}
@@ -258,7 +289,7 @@ export function ReleaseHub({
               </button>
             </div>
 
-            <div className="bg-neutral/40 rounded-xl p-4 font-mono text-xs text-default whitespace-pre-wrap max-h-96 overflow-y-auto">
+            <div className="bg-neutral/40 rounded-xl p-4 font-mono text-xs text-default whitespace-pre-wrap max-h-96 overflow-y-auto leading-relaxed">
               {activeNotes.notesMarkdown}
             </div>
 

@@ -39,7 +39,7 @@ export function MetricsRow({ metrics }: { metrics: SummaryMetrics }) {
     {
       label: "Completed (7d)",
       value: metrics.completed7d,
-      subtext: "Issues resolved",
+      subtext: "Tasks completed",
       icon: CheckCircle2,
       color: "text-success bg-success/10 border-success/20",
     },
@@ -251,7 +251,7 @@ export function TypeDistributionWidget({
 
   return (
     <DashboardCard
-      title="Issue Type Distribution"
+      title="Task Type Distribution"
       icon={Layers}
       badge={<span className="text-[11px] font-mono text-subtle">Shows 0% Types</span>}
     >

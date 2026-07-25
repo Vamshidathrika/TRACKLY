@@ -235,7 +235,7 @@ export function JQLNavigator({
               </select>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-text-subtle uppercase block mb-1">Issue Type</label>
+              <label className="text-[11px] font-bold text-text-subtle uppercase block mb-1">Task Type</label>
               <select
                 value={visualType}
                 onChange={(e) => handleVisualChange("type", e.target.value)}
@@ -244,7 +244,7 @@ export function JQLNavigator({
                 <option value="">Any Type</option>
                 <option value="TASK">Task</option>
                 <option value="STORY">Story</option>
-                <option value="BUG">Bug</option>
+                <option value="BUG">Bug Fix</option>
                 <option value="EPIC">Epic</option>
               </select>
             </div>
@@ -395,7 +395,7 @@ export function JQLNavigator({
       <div className="rounded-xl border border-border bg-surface p-4 shadow-xs">
         <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
           <span className="text-sm font-bold text-text">
-            Matching Issues ({formattedIssues.length})
+            Matching Tasks ({formattedIssues.length})
           </span>
         </div>
 
