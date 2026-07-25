@@ -71,3 +71,64 @@ export async function toggleWatcher(issueId: string, userId: string) {
     return true; // Now watched
   }
 }
+
+export async function sendSlackNotification(
+  webhookUrl: string,
+  payload: { title: string; text: string; link?: string }
+) {
+  if (!webhookUrl) return { success: false, error: "No webhook URL provided" };
+  try {
+    const body = {
+      text: `*${payload.title}*\n${payload.text}${payload.link ? `\n<${payload.link}|View Task in Trackly>` : ""}`,
+    };
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { success: false, error: e.message };
+    return { success: false, error: "Failed to dispatch Slack notification" };
+  }
+}
+
+export async function sendTeamsNotification(
+  webhookUrl: string,
+  payload: { title: string; text: string; link?: string }
+) {
+  if (!webhookUrl) return { success: false, error: "No webhook URL provided" };
+  try {
+    const body = {
+      "@type": "MessageCard",
+      "@context": "http://schema.org/extensions",
+      themeColor: "4F46E5",
+      summary: payload.title,
+      sections: [
+        {
+          activityTitle: payload.title,
+          activitySubtitle: "Trackly Task Update",
+          text: payload.text,
+          potentialAction: payload.link
+            ? [
+                {
+                  "@type": "OpenUri",
+                  name: "View Task",
+                  targets: [{ os: "default", uri: payload.link }],
+                },
+              ]
+            : [],
+        },
+      ],
+    };
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { success: false, error: e.message };
+    return { success: false, error: "Failed to dispatch Teams notification" };
+  }
+}

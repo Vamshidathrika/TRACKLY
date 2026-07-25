@@ -7,7 +7,13 @@ vi.mock("./prisma", () => ({
   },
 }));
 import { prisma } from "./prisma";
-import { extractMentions, createNotification, markNotificationsAsRead } from "./notifications";
+import {
+  extractMentions,
+  createNotification,
+  markNotificationsAsRead,
+  sendSlackNotification,
+  sendTeamsNotification,
+} from "./notifications";
 
 describe("notifications lib", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -34,5 +40,13 @@ describe("notifications lib", () => {
     (prisma.notification.updateMany as any).mockResolvedValue({ count: 2 });
     const res = await markNotificationsAsRead("u1");
     expect(res.count).toBe(2);
+  });
+
+  it("handles empty webhook URL cleanly for Slack and Teams", async () => {
+    const slackRes = await sendSlackNotification("", { title: "Test", text: "Hello" });
+    expect(slackRes.success).toBe(false);
+
+    const teamsRes = await sendTeamsNotification("", { title: "Test", text: "Hello" });
+    expect(teamsRes.success).toBe(false);
   });
 });
