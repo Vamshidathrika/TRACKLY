@@ -9,44 +9,47 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
   connectGithubRepoAction: vi.fn().mockResolvedValue({ success: true }),
   fetchDevDashboardDataAction: vi.fn().mockResolvedValue({
-    hasConnectedRepo: true,
-    repos: [{ id: "repo-1", owner: "Vamshidathrika", repoName: "TRACKLY", createdAt: new Date() }],
-    stats: {
-      activeBranches: 14,
-      openPRs: 2,
-      mergedPRs: 5,
-      pipelineStatus: "Passing",
-      commits: [
-        {
-          hash: "8f3a12b",
-          message: "feat: add super navigation tabs",
-          author: "Antigravity",
-          committedAt: new Date().toISOString(),
-          url: "https://github.com/Vamshidathrika/TRACKLY/commit/8f3a12b",
-          taskKey: "VAM-1",
-        },
-      ],
-    },
+    hasConnectedRepo: false,
+    repos: [],
+    stats: { activeBranches: 0, openPRs: 0, mergedPRs: 0, pipelineStatus: "Idle", commits: [] },
   }),
 }));
 
 import { DevIntegrationsView } from "./DevIntegrationsView";
+import { fetchDevDashboardDataAction } from "@/app/(app)/projects/[key]/dev/actions";
 
 describe("DevIntegrationsView", () => {
-  it("renders Development & Git Integrations heading and stats cards", async () => {
+  it("renders Development & Git Integrations heading and empty state when no repo connected", async () => {
     render(<DevIntegrationsView projectId="proj-1" projectKey="VAM" />);
 
     expect(screen.getByText(/Development & Git Integrations/i)).toBeInTheDocument();
-    expect(screen.getByText(/Active Branches/i)).toBeInTheDocument();
-    expect(screen.getByText(/Open Pull Requests/i)).toBeInTheDocument();
+    expect(await screen.findAllByText(/No Repository Connected/i)).not.toHaveLength(0);
+  });
+
+  it("renders active branches stats card when repo is connected", async () => {
+    (fetchDevDashboardDataAction as any).mockResolvedValueOnce({
+      hasConnectedRepo: true,
+      repos: [{ id: "repo-1", owner: "Vamshidathrika", repoName: "TRACKLY", createdAt: new Date() }],
+      stats: {
+        activeBranches: 14,
+        openPRs: 2,
+        mergedPRs: 5,
+        pipelineStatus: "Passing",
+        commits: [],
+      },
+    });
+
+    render(<DevIntegrationsView projectId="proj-1" projectKey="VAM" />);
+
+    expect(await screen.findByText(/14 Branches/i)).toBeInTheDocument();
   });
 
   it("opens Connect Repository modal when button is clicked", () => {
     render(<DevIntegrationsView projectId="proj-1" projectKey="VAM" />);
 
-    const connectBtn = screen.getByRole("button", { name: /\+ Connect Repository/i });
+    const connectBtn = screen.getAllByRole("button", { name: /\+ Connect Repository|Connect GitHub Repository/i })[0];
     fireEvent.click(connectBtn);
 
-    expect(screen.getByText("Connect GitHub Repository")).toBeInTheDocument();
+    expect(screen.getByText(/Owner/i)).toBeInTheDocument();
   });
 });

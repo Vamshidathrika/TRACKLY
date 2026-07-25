@@ -43,35 +43,11 @@ export function DevIntegrationsView({
     pipelineStatus: "Passing" | "Failing" | "In Progress" | "Idle";
     commits: DevCommitItem[];
   }>({
-    activeBranches: 14,
-    openPRs: 2,
-    mergedPRs: 5,
-    pipelineStatus: "Passing",
-    commits: [
-      {
-        hash: "8f3a12b",
-        message: "feat: add super navigation tabs for space views",
-        author: "Antigravity",
-        committedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-        url: "https://github.com/Vamshidathrika/TRACKLY/commit/8f3a12b",
-        taskKey: `${projectKey}-1`,
-      },
-      {
-        hash: "7c41d9e",
-        message: "fix: update kanban board drag status handlers",
-        author: "Dev Team",
-        committedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-        url: "https://github.com/Vamshidathrika/TRACKLY/commit/7c41d9e",
-        taskKey: `${projectKey}-2`,
-      },
-      {
-        hash: "2b99a0f",
-        message: "chore: update dependencies and Prisma schemas",
-        author: "Dev Team",
-        committedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-        url: "https://github.com/Vamshidathrika/TRACKLY/commit/2b99a0f",
-      },
-    ],
+    activeBranches: 0,
+    openPRs: 0,
+    mergedPRs: 0,
+    pipelineStatus: "Idle",
+    commits: [],
   });
 
   const loadData = async () => {
@@ -108,8 +84,8 @@ export function DevIntegrationsView({
               Live GitHub Connected
             </span>
           ) : (
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 font-mono">
-              GitHub Sync Ready
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
+              No Repository Connected
             </span>
           )}
         </div>
@@ -137,6 +113,32 @@ export function DevIntegrationsView({
           />
         </div>
       </div>
+
+      {/* Empty State when no repository is connected */}
+      {!hasConnectedRepo ? (
+        <div className="rounded-[20px] border border-border bg-surface p-10 text-center flex flex-col items-center justify-center gap-4 shadow-xs">
+          <div className="h-16 w-16 rounded-full bg-brand/10 text-brand flex items-center justify-center">
+            <FolderGit2 size={32} />
+          </div>
+          <div className="max-w-md">
+            <h4 className="text-base font-extrabold text-text tracking-tight">No Repository Connected</h4>
+            <p className="text-xs text-text-subtle mt-1 leading-relaxed">
+              Connect your project&apos;s GitHub repository to view live active branches, pull request statuses, recent commit streams, and CI/CD build pipelines directly on this board.
+            </p>
+          </div>
+          <ConnectRepoModal
+            projectId={projectId}
+            onSuccess={loadData}
+            trigger={
+              <button className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand text-white text-xs font-extrabold hover:bg-brand-hovered transition-all shadow-md cursor-pointer">
+                <Plus size={16} />
+                <span>Connect GitHub Repository</span>
+              </button>
+            }
+          />
+        </div>
+      ) : (
+        <>
 
       {/* Summary Widgets Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -226,6 +228,8 @@ export function DevIntegrationsView({
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

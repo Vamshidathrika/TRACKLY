@@ -81,12 +81,16 @@ export async function fetchDevDashboardDataAction(projectId: string) {
     });
 
     if (repos.length === 0) {
-      // Return default live stats for the current project
-      const liveStats = await fetchGithubRepoStats("Vamshidathrika", "TRACKLY");
       return {
         hasConnectedRepo: false,
         repos: [],
-        stats: liveStats,
+        stats: {
+          activeBranches: 0,
+          openPRs: 0,
+          mergedPRs: 0,
+          pipelineStatus: "Idle",
+          commits: [],
+        },
       };
     }
 
@@ -123,11 +127,16 @@ export async function fetchDevDashboardDataAction(projectId: string) {
       },
     };
   } catch (e) {
-    const fallbackStats = await fetchGithubRepoStats("Vamshidathrika", "TRACKLY");
     return {
       hasConnectedRepo: false,
       repos: [],
-      stats: fallbackStats,
+      stats: {
+        activeBranches: 0,
+        openPRs: 0,
+        mergedPRs: 0,
+        pipelineStatus: "Idle",
+        commits: [],
+      },
     };
   }
 }
