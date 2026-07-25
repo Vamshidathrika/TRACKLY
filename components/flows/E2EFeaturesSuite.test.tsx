@@ -32,8 +32,8 @@ describe("E2E Core Features & Workflows Test Suite", () => {
       expect(screen.getByText("What Needs Improvement")).toBeInTheDocument();
       expect(screen.getByText("Action Items")).toBeInTheDocument();
 
-      // Convert action item to backlog issue
-      const convertBtns = screen.getAllByRole("button", { name: /Convert to Issue/i });
+      // Convert action item to backlog task
+      const convertBtns = screen.getAllByRole("button", { name: /Convert to Task/i });
       expect(convertBtns.length).toBeGreaterThan(0);
 
       fireEvent.click(convertBtns[0]);

@@ -523,21 +523,21 @@ export function BacklogView({
       {/* Header Actions */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-[18px] font-bold text-default tracking-tight">Sprint Planning & Backlog</h2>
-          <p className="text-[12px] text-subtle mt-0.5">Drag items between sprints, plan iterations, and organize work.</p>
+          <h2 className="text-xl font-extrabold text-text tracking-tight">Sprint Planning & Backlog</h2>
+          <p className="text-xs text-text-subtle mt-0.5">Drag tasks between sprints, plan iterations, and organize team backlog.</p>
         </div>
         <div className="flex items-center gap-2">
           {/* AI Backlog Groomer Button */}
           <button
             type="button"
             onClick={handleAiGroomBacklog}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer shadow-xs"
           >
             <Sparkles size={14} />
             <span>✨ AI Backlog Groomer</span>
           </button>
 
-          <Button appearance="primary" onClick={handleOpenCreateSprint} disabled={isCreatingSprint}>
+          <Button appearance="primary" onClick={handleOpenCreateSprint} disabled={isCreatingSprint} className="rounded-full px-4 py-1.5 font-bold">
             <Plus size={14} /> Create sprint
           </Button>
         </div>
@@ -591,42 +591,42 @@ export function BacklogView({
                 const issueId = e.dataTransfer.getData("text/plain");
                 if (issueId) handleMoveIssueToTarget(issueId, sprint.id);
               }}
-              className={`rounded-[14px] border bg-surface p-4 shadow-xs transition-all ${
+              className={`rounded-[16px] border bg-surface p-4.5 shadow-xs transition-all ${
                 isDragTarget
                   ? "border-brand bg-brand/5 ring-2 ring-brand/30"
-                  : "border-border-default hover:border-border-strong"
+                  : "border-border hover:border-brand/40"
               }`}
             >
               {/* Sprint Card Header */}
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-border-default">
+              <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-border">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-[15px] text-default tracking-tight">{sprint.name}</span>
+                    <span className="font-extrabold text-base text-text tracking-tight">{sprint.name}</span>
                     <button
                       onClick={() => handleOpenEditSprint(sprint)}
-                      className="p-1 text-subtlest hover:text-brand rounded-[4px] hover:bg-neutral transition-colors"
+                      className="p-1 text-text-subtle hover:text-brand rounded-md hover:bg-neutral transition-colors"
                       title="Edit sprint details & goal"
                     >
                       <Edit2 size={13} />
                     </button>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase ${
+                      className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full tracking-wider uppercase border ${
                         sprint.status === "ACTIVE"
-                          ? "bg-brand/10 text-brand"
+                          ? "bg-brand/10 text-brand border-brand/20"
                           : sprint.status === "CLOSED"
-                          ? "bg-success/10 text-success"
-                          : "bg-neutral text-subtle"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          : "bg-neutral text-text-subtle border-border/50"
                       }`}
                     >
                       {sprint.status}
                     </span>
-                    <span className="text-[12px] font-medium text-subtlest">
-                      • {sprintFilteredIssues.length} issues • {donePoints}/{totalPoints} pts
+                    <span className="text-xs font-semibold text-text-subtle font-mono">
+                      • {sprintFilteredIssues.length} tasks • {donePoints}/{totalPoints} pts
                     </span>
                   </div>
 
                   {sprint.goal && (
-                    <p className="text-[12px] text-subtle flex items-center gap-1.5 font-medium italic">
+                    <p className="text-xs text-text-subtle flex items-center gap-1.5 font-medium italic">
                       <Target size={12} className="text-brand shrink-0" /> Goal: {sprint.goal}
                     </p>
                   )}
@@ -635,7 +635,7 @@ export function BacklogView({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleOpenEditSprint(sprint)}
-                    className="h-8 px-3 rounded-[8px] border border-border-default bg-surface text-[12px] font-medium text-subtle hover:bg-neutral hover:text-default transition-all"
+                    className="h-8 px-3.5 rounded-full border border-border bg-surface text-xs font-semibold text-text-subtle hover:bg-neutral hover:text-text transition-all"
                   >
                     Edit
                   </button>
@@ -643,7 +643,7 @@ export function BacklogView({
                   {sprint.status === "FUTURE" && (
                     <button
                       onClick={() => handleStartSprint(sprint.id)}
-                      className="h-8 px-3 rounded-[8px] bg-brand text-white text-[12px] font-semibold hover:bg-brand-hovered transition-all flex items-center gap-1 shadow-sm active:scale-[0.97]"
+                      className="h-8 px-4 rounded-full bg-brand text-white text-xs font-bold hover:bg-brand-hovered transition-all flex items-center gap-1.5 shadow-xs active:scale-[0.97]"
                     >
                       <Play size={12} /> Start sprint
                     </button>
@@ -652,19 +652,19 @@ export function BacklogView({
                   {sprint.status === "ACTIVE" && (
                     <button
                       onClick={() => handleCompleteSprint(sprint.id)}
-                      className="h-8 px-3 rounded-[8px] border border-border-default bg-surface text-[12px] font-semibold text-success hover:bg-success/10 transition-all flex items-center gap-1"
+                      className="h-8 px-4 rounded-full border border-emerald-500/30 bg-surface text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 transition-all flex items-center gap-1.5"
                     >
-                      <CheckCircle2 size={13} className="text-success" /> Complete sprint
+                      <CheckCircle2 size={13} className="text-emerald-500" /> Complete sprint
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Sprint Issue List */}
+              {/* Sprint Task List */}
               <div className="flex flex-col gap-1.5">
                 {sprintFilteredIssues.length === 0 ? (
-                  <div className="py-6 text-center text-[12px] text-subtlest border border-dashed border-border-default rounded-[10px] bg-neutral/30">
-                    Drag issues here to plan this sprint.
+                  <div className="py-6 text-center text-xs font-medium text-text-subtle border border-dashed border-border rounded-xl bg-neutral/30">
+                    Drag tasks here to plan this sprint.
                   </div>
                 ) : (
                   sprintFilteredIssues.map((issue) => (
@@ -838,22 +838,22 @@ export function BacklogView({
             const issueId = e.dataTransfer.getData("text/plain");
             if (issueId) handleMoveIssueToTarget(issueId, null);
           }}
-          className={`rounded-[14px] border bg-surface p-4 shadow-xs transition-all ${
+          className={`rounded-[16px] border bg-surface p-4.5 shadow-xs transition-all ${
             dragOverTargetId === "backlog"
               ? "border-brand bg-brand/5 ring-2 ring-brand/30"
-              : "border-border-default hover:border-border-strong"
+              : "border-border hover:border-brand/40"
           }`}
         >
-          <div className="flex items-center justify-between mb-3 pb-3 border-b border-border-default">
-            <span className="font-bold text-[15px] text-default tracking-tight">
-              Backlog ({filteredBacklog.length} issues)
+          <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-border">
+            <span className="font-extrabold text-base text-text tracking-tight font-mono">
+              Backlog ({filteredBacklog.length} tasks)
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
             {filteredBacklog.length === 0 ? (
-              <div className="py-6 text-center text-[12px] text-subtlest border border-dashed border-border-default rounded-[10px] bg-neutral/30">
-                Backlog is empty or no issues match filters.
+              <div className="py-6 text-center text-xs font-medium text-text-subtle border border-dashed border-border rounded-xl bg-neutral/30">
+                Backlog is empty or no tasks match filters.
               </div>
             ) : (
               filteredBacklog.map((issue) => (

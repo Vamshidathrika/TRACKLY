@@ -251,7 +251,7 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       expect(screen.getByText("Action Items")).toBeInTheDocument();
 
       // Locate convert button for Action Item card
-      const convertBtn = screen.getByRole("button", { name: /Convert to Issue/i });
+      const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
       expect(convertBtn).toBeInTheDocument();
 
       await userEvent.click(convertBtn);
@@ -303,7 +303,7 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
 
       // Touchpoint 5: Retro Action Item Conversion
       rerender(<SprintRetroBoard projectKey="PROJ" />);
-      const convertBtn = screen.getByRole("button", { name: /Convert to Issue/i });
+      const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
       await userEvent.click(convertBtn);
       expect(screen.getByText("Converted Action Item to live backlog task in PROJ!")).toBeInTheDocument();
     });

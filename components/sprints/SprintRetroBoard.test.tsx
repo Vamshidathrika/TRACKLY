@@ -18,7 +18,7 @@ describe("SprintRetroBoard", () => {
 
     expect(screen.getByText("Great velocity in sprint!")).toBeInTheDocument();
 
-    const convertBtn = screen.getByRole("button", { name: /convert to issue/i });
+    const convertBtn = screen.getByRole("button", { name: /convert to task/i });
     fireEvent.click(convertBtn);
 
     expect(screen.getByText("In Backlog")).toBeInTheDocument();

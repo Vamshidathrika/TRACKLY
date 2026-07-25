@@ -124,8 +124,8 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
             <Sparkles className="h-6 w-6 text-brand" />
             <span>Sprint Retrospective Suite</span>
           </h1>
-          <p className="text-xs text-subtle mt-0.5">
-            Collaborative team retro board for {projectKey}. Convert action items into project backlog issues with 1-click.
+          <p className="text-xs text-text-subtle mt-0.5">
+            Collaborative team retro board for {projectKey}. Convert action items into project backlog tasks with 1-click.
           </p>
         </div>
       </div>
@@ -215,7 +215,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
                             ) : (
                               <>
                                 <ArrowRight size={12} />
-                                <span>Convert to Issue</span>
+                                <span>Convert to Task</span>
                               </>
                             )}
                           </button>
