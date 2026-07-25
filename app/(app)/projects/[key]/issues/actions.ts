@@ -565,3 +565,51 @@ export async function deleteCommentAction(commentId: string) {
     throw e;
   }
 }
+
+export async function getIssueDevelopmentDataAction(issueId: string) {
+  await getAuthUser();
+  try {
+    const [commits, pullRequests, branches] = await Promise.all([
+      prisma.gitCommit.findMany({
+        where: { issueId },
+        orderBy: { committedAt: "desc" },
+        take: 10,
+      }),
+      prisma.pullRequest.findMany({
+        where: { issueId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      prisma.gitBranch.findMany({
+        where: { issueId },
+        take: 10,
+      }),
+    ]);
+
+    return {
+      commits: commits.map((c) => ({
+        id: c.id,
+        hash: c.hash,
+        message: c.message,
+        authorName: c.authorName,
+        committedAt: c.committedAt.toISOString(),
+        url: c.url,
+      })),
+      pullRequests: pullRequests.map((p) => ({
+        id: p.id,
+        prNumber: p.prNumber,
+        title: p.title,
+        status: p.status,
+        authorName: p.authorName,
+        url: p.url,
+      })),
+      branches: branches.map((b) => ({
+        id: b.id,
+        name: b.name,
+        lastCommitHash: b.lastCommitHash,
+      })),
+    };
+  } catch (e) {
+    return { commits: [], pullRequests: [], branches: [] };
+  }
+}

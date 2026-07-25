@@ -31,4 +31,9 @@ describe("DevelopmentPanel Component", () => {
     expect(screen.getByText(/#99 MERGED/i)).toBeInTheDocument();
     expect(screen.getByText("fix(TRK-123): resolve login redirect loop")).toBeInTheDocument();
   });
+
+  it("renders Copy Branch Cmd button", () => {
+    render(<DevelopmentPanel issueKey="TRK-123" />);
+    expect(screen.getByText(/Copy Branch Cmd/i)).toBeInTheDocument();
+  });
 });

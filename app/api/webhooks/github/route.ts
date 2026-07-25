@@ -65,6 +65,18 @@ export async function POST(req: Request) {
       await processBranchEvent(payload, siteId, "delete");
     }
 
+    // 4. Log Webhook Execution
+    await prisma.gitWebhookLog.create({
+      data: {
+        siteId,
+        event: event || "unknown",
+        action: payload.action || null,
+        repositoryName: payload.repository?.full_name || payload.repository?.name || null,
+        senderName: payload.sender?.login || null,
+        status: "PROCESSED",
+      },
+    }).catch(() => {});
+
     return NextResponse.json({ success: true, event });
   } catch (error) {
     if (error instanceof Error) {

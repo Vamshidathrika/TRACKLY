@@ -6,6 +6,7 @@ vi.mock("@/app/(app)/projects/[key]/issues/actions", () => ({
   deleteIssueAction: vi.fn(),
   logWorkAction: vi.fn(),
   postCommentAction: vi.fn(),
+  getIssueDevelopmentDataAction: vi.fn().mockResolvedValue({ commits: [], pullRequests: [], branches: [] }),
 }));
 
 import { IssueDetailDrawer } from "./IssueDetailDrawer";

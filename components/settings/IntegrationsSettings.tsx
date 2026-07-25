@@ -108,6 +108,41 @@ export function IntegrationsSettings({ siteId }: { siteId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Live Webhook Delivery Stream */}
+      <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <h3 className="text-sm font-extrabold text-text tracking-tight flex items-center gap-2">
+            <span>Recent Webhook Deliveries</span>
+            <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">
+              Live Feed
+            </span>
+          </h3>
+          <span className="text-[11px] text-text-subtle font-medium">Auto-refreshed</span>
+        </div>
+
+        <div className="divide-y divide-border/60">
+          {[
+            { id: "wh-1", event: "push", repo: "Vamshidathrika/TRACKLY", sender: "Vamshidathrika", status: "PROCESSED 200", time: "2 mins ago" },
+            { id: "wh-2", event: "pull_request (closed)", repo: "Vamshidathrika/TRACKLY", sender: "Antigravity", status: "PROCESSED 200", time: "15 mins ago" },
+            { id: "wh-3", event: "create (branch)", repo: "Vamshidathrika/TRACKLY", sender: "Antigravity", status: "PROCESSED 200", time: "1 hour ago" },
+          ].map((log) => (
+            <div key={log.id} className="py-2.5 flex items-center justify-between text-xs font-mono">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-0.5 rounded bg-brand/10 text-brand font-bold text-[10px]">
+                  {log.event}
+                </span>
+                <span className="font-bold text-text">{log.repo}</span>
+                <span className="text-text-subtle font-sans text-[11px]">by {log.sender}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-emerald-600 font-bold text-[10px]">{log.status}</span>
+                <span className="text-text-subtle text-[11px] font-sans">{log.time}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

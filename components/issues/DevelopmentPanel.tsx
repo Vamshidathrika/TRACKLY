@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   FolderGit2,
   GitBranch,
@@ -8,6 +9,8 @@ import {
   CheckCircle2,
   ExternalLink,
   Zap,
+  Copy,
+  Check,
 } from "lucide-react";
 
 export type LinkedBranch = {
@@ -47,6 +50,17 @@ export function DevelopmentPanel({
   commits?: LinkedCommit[];
   pipelineStatus?: string;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyBranchCommand = () => {
+    const cmd = `git checkout -b feature/${issueKey.toLowerCase()}-task-branch`;
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(cmd);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
   const defaultBranches: LinkedBranch[] = branches.length > 0
     ? branches
     : [
@@ -152,9 +166,20 @@ export function DevelopmentPanel({
 
       {/* Branches Section */}
       <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
-          <GitBranch size={13} className="text-purple-600" /> Active Branches
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
+            <GitBranch size={13} className="text-purple-600" /> Active Branches
+          </span>
+          <button
+            type="button"
+            onClick={handleCopyBranchCommand}
+            className="text-[10px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
+            title="Copy git checkout -b command"
+          >
+            {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+            <span>{copied ? "Copied!" : "Copy Branch Cmd"}</span>
+          </button>
+        </div>
         {defaultBranches.map((b) => (
           <div key={b.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs font-mono">
             <span className="font-bold text-brand truncate">{b.name}</span>

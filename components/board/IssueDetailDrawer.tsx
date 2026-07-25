@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition, useRef } from "react";
 import Link from "next/link";
 import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
+import { getIssueDevelopmentDataAction } from "@/app/(app)/projects/[key]/issues/actions";
 import {
   X,
   User,
@@ -181,6 +182,7 @@ export function IssueDetailDrawer({
 
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [devData, setDevData] = useState<{ commits?: any[]; pullRequests?: any[]; branches?: any[] }>({});
 
   // Keyboard Shortcuts: Global Escape key & Hotkeys
   useEffect(() => {
@@ -292,6 +294,12 @@ export function IssueDetailDrawer({
       setHistoryList(issue.history || []);
       const totalLogged = issue.loggedHours ?? logs.reduce((sum, w) => sum + Number(w.hours || 0), 0);
       setLoggedHours(totalLogged);
+
+      if (issue.id && !issue.id.startsWith("demo-")) {
+        getIssueDevelopmentDataAction(issue.id).then((res) => {
+          if (res) setDevData(res);
+        });
+      }
     }
   }, [issue]);
 
@@ -1704,7 +1712,12 @@ export function IssueDetailDrawer({
 
               {/* Development Panel (Jira-style GitHub activity linking) */}
               <div className="pt-3 border-t border-border">
-                <DevelopmentPanel issueKey={issue.key} />
+                <DevelopmentPanel
+                  issueKey={issue.key}
+                  branches={devData.branches}
+                  pullRequests={devData.pullRequests}
+                  commits={devData.commits}
+                />
               </div>
             </div>
           </div>

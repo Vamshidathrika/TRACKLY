@@ -107,6 +107,7 @@ model Site {
   gitCommits       GitCommit[]
   pullRequests     PullRequest[]
   gitBranches      GitBranch[]
+  gitWebhookLogs   GitWebhookLog[]
 }
 
 model Membership {
@@ -492,4 +493,18 @@ model GitBranch {
   @@index([siteId])
   @@index([repositoryId])
   @@index([issueId])
+}
+
+model GitWebhookLog {
+  id             String   @id @default(cuid())
+  siteId         String
+  event          String   // push, pull_request, create, delete
+  action         String?
+  repositoryName String?
+  senderName     String?
+  status         String   @default("PROCESSED") // PROCESSED, FAILED
+  createdAt      DateTime @default(now())
+  site           Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, createdAt])
 }
