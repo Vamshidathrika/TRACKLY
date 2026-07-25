@@ -153,6 +153,7 @@ model Project {
   stars           Star[]
   members         ProjectMember[]
   invites         Invite[]
+  gitRepositories GitRepository[]
 
   @@unique([siteId, key])
 }
@@ -221,6 +222,9 @@ model Issue {
   attachments Attachment[]
   linksOut    IssueLink[]   @relation("LinkSource")
   linksIn     IssueLink[]   @relation("LinkTarget")
+  gitCommits  GitCommit[]
+  pullRequests PullRequest[]
+  gitBranches GitBranch[]
 
   @@unique([projectId, number])
   @@unique([projectId, key])
@@ -386,4 +390,70 @@ model Star {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([userId, projectId])
+}
+
+model GitRepository {
+  id            String        @id @default(cuid())
+  projectId     String
+  owner         String
+  repoName      String
+  accessToken   String?
+  webhookSecret String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  commits       GitCommit[]
+  pullRequests  PullRequest[]
+  branches      GitBranch[]
+
+  @@unique([projectId, owner, repoName])
+  @@index([projectId])
+}
+
+model GitCommit {
+  id           String        @id @default(cuid())
+  repositoryId String
+  hash         String
+  message      String
+  authorName   String
+  authorAvatar String?
+  committedAt  DateTime
+  issueId      String?
+  url          String?
+  repository   GitRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  issue        Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@index([repositoryId])
+  @@index([issueId])
+}
+
+model PullRequest {
+  id           String        @id @default(cuid())
+  repositoryId String
+  prNumber     Int
+  title        String
+  status       String        // OPEN, MERGED, CLOSED
+  authorName   String
+  authorAvatar String?
+  issueId      String?
+  url          String?
+  createdAt    DateTime      @default(now())
+  repository   GitRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  issue        Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@index([repositoryId])
+  @@index([issueId])
+}
+
+model GitBranch {
+  id             String        @id @default(cuid())
+  repositoryId   String
+  name           String
+  lastCommitHash String?
+  issueId        String?
+  repository     GitRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  issue          Issue?        @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@index([repositoryId])
+  @@index([issueId])
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DevIntegrationsView } from "@/components/dev/DevIntegrationsView";
 import {
   CheckCircle2,
   Clock,
@@ -397,75 +398,8 @@ export function FormsView({
 }
 
 // 5. Development View Component
-export function DevView() {
-  return (
-    <div className="flex flex-col gap-6 py-4 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-text flex items-center gap-2">
-          <FolderGit2 size={16} className="text-brand" /> Development & Git Integrations
-        </h3>
-        <Button appearance="subtle" className="text-xs flex items-center gap-1">
-          <Plus size={13} /> Connect Repository
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded bg-purple-100 text-purple-700">
-            <GitBranch size={18} />
-          </div>
-          <div>
-            <span className="text-xs text-text-subtle uppercase font-semibold">Active Branches</span>
-            <p className="text-xl font-bold text-text">14 Branches</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded bg-emerald-100 text-emerald-700">
-            <GitPullRequest size={18} />
-          </div>
-          <div>
-            <span className="text-xs text-text-subtle uppercase font-semibold">Open Pull Requests</span>
-            <p className="text-xl font-bold text-text">5 Merged / 2 Pending</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded bg-sky-100 text-sky-700">
-            <GitCommit size={18} />
-          </div>
-          <div>
-            <span className="text-xs text-text-subtle uppercase font-semibold">CI/CD Pipeline Status</span>
-            <p className="text-xl font-bold text-emerald-600 flex items-center gap-1">
-              <CheckCircle2 size={16} /> Passing (main)
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-border bg-surface p-5 shadow-xs">
-        <h4 className="text-xs font-bold text-text uppercase tracking-wider mb-3">Recent Git Commits</h4>
-        <div className="divide-y divide-border">
-          {[
-            { hash: "8f3a12b", msg: "feat: add super navigation tabs for space views", author: "Antigravity", time: "10 mins ago" },
-            { hash: "7c41d9e", msg: "fix: update kanban board drag status handlers", author: "Dev Team", time: "1 hour ago" },
-            { hash: "2b99a0f", msg: "chore: update dependencies and Prisma schemas", author: "Dev Team", time: "3 hours ago" },
-          ].map((c) => (
-            <div key={c.hash} className="py-2.5 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-brand font-semibold">{c.hash}</span>
-                <span className="font-medium text-text">{c.msg}</span>
-              </div>
-              <div className="flex items-center gap-3 text-text-subtle">
-                <span>{c.author}</span>
-                <span>{c.time}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+export function DevView({ projectId = "demo-proj", projectKey = "VAM" }: { projectId?: string; projectKey?: string }) {
+  return <DevIntegrationsView projectId={projectId} projectKey={projectKey} />;
 }
 
 // 6. Code View Component
