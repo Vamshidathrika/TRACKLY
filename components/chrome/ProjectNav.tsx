@@ -125,6 +125,6 @@ export function ProjectNav({
           );
         })}
       </nav>
-    </header>
+    </div>
   );
 }

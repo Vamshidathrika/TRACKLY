@@ -23,6 +23,7 @@ describe("issues lib", () => {
           update: vi.fn().mockResolvedValue({ id: "p1", issueCounter: 1 }),
         },
         issue: {
+          findFirst: vi.fn().mockResolvedValue(null),
           create: vi.fn().mockResolvedValue({ id: "i1", key: "TRK-1", number: 1, summary: "Test Issue" }),
         },
         issueHistory: {
@@ -87,7 +88,7 @@ describe("issues lib", () => {
           findUnique: vi.fn().mockResolvedValue({ id: "p1", key: "TRK", issueCounter: 1 }),
           update: vi.fn().mockResolvedValue({ id: "p1", issueCounter: 2 }),
         },
-        issue: { create: mockTxCreate },
+        issue: { findFirst: vi.fn().mockResolvedValue(null), create: mockTxCreate },
         issueHistory: { create: vi.fn().mockResolvedValue({ id: "h2" }) },
       })
     );

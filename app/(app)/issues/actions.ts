@@ -9,15 +9,15 @@ import type { IssueType, IssuePriority, IssueStatus } from "@prisma/client";
 const createIssueSchema = z.object({
   projectId: z.string().min(1, "Project is required"),
   summary: z.string().min(1, "Summary is required"),
-  description: z.string().optional(),
+  description: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
   type: z.enum(["EPIC", "STORY", "TASK", "BUG", "SUBTASK"]).optional(),
   priority: z.enum(["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"]).optional(),
   status: z.enum(["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"]).optional(),
-  sprintId: z.string().optional(),
-  storyPoints: z.coerce.number().optional(),
-  originalEstimate: z.coerce.number().optional(),
-  assigneeId: z.string().optional(),
-  dueDate: z.string().optional(),
+  sprintId: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+  storyPoints: z.preprocess((val) => (val === "" || val === null || isNaN(Number(val)) ? undefined : val), z.coerce.number().optional()),
+  originalEstimate: z.preprocess((val) => (val === "" || val === null || isNaN(Number(val)) ? undefined : val), z.coerce.number().optional()),
+  assigneeId: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
+  dueDate: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
 });
 
 export async function createIssueAction(

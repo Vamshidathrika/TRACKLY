@@ -96,16 +96,24 @@ export function CreateIssueModal({
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<{ id: string; name: string; key: string }[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(defaultProjectId || "");
   const [selectedType, setSelectedType] = useState(defaultType || "STORY");
   const [state, action, pending] = useActionState(createIssueAction, {} as { error?: string; success?: boolean });
 
   useEffect(() => {
     if (open) {
       setSelectedType(defaultType || "STORY");
-      fetchUserProjectsAction().then(setProjects);
+      fetchUserProjectsAction().then((projs) => {
+        setProjects(projs);
+        if (defaultProjectId) {
+          setSelectedProjectId(defaultProjectId);
+        } else if (projs.length > 0) {
+          setSelectedProjectId((prev) => prev || projs[0].id);
+        }
+      });
       fetchWorkspaceMembersAction().then(setMembers);
     }
-  }, [open, defaultType]);
+  }, [open, defaultType, defaultProjectId]);
 
   useEffect(() => {
     if (state.success) {
@@ -171,7 +179,13 @@ export function CreateIssueModal({
             {/* Project */}
             <FieldInput>
               <FieldLabel label="Project" required />
-              <select name="projectId" defaultValue={defaultProjectId} required className={selectClass}>
+              <select
+                name="projectId"
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                required
+                className={selectClass}
+              >
                 {projects.length === 0 ? (
                   <option value="">No projects available — create one first</option>
                 ) : (

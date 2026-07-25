@@ -19,6 +19,7 @@ import {
   Flag,
   Activity,
   ShieldAlert,
+  FileText,
 } from "lucide-react";
 import { FigmaEmbedPanel } from "./FigmaEmbedPanel";
 import { LoomEmbedder } from "./LoomEmbedder";
@@ -28,6 +29,8 @@ import { AutonomousAICodeFixer } from "./AutonomousAICodeFixer";
 import { FeatureFlagToggleCard } from "./FeatureFlagToggleCard";
 import { PostHogAnalyticsWidget } from "./PostHogAnalyticsWidget";
 import { SnykSecurityCard } from "./SnykSecurityCard";
+import { SpecDocEditor } from "./SpecDocEditor";
+import { IncidentCommandCenter } from "./IncidentCommandCenter";
 
 export type LinkedBranch = {
   id: string;
@@ -53,7 +56,7 @@ export type LinkedCommit = {
   url?: string | null;
 };
 
-type DevTab = "GIT" | "AI" | "MEDIA" | "SUPPORT" | "FLAGS";
+type DevTab = "GIT" | "AI" | "SPEC" | "INCIDENT" | "MEDIA" | "SUPPORT" | "FLAGS";
 
 export function DevelopmentPanel({
   issueKey,
@@ -151,6 +154,8 @@ export function DevelopmentPanel({
         {[
           { id: "GIT", label: "Git & CI", icon: GitBranch },
           { id: "AI", label: "🤖 AI Fix", icon: Sparkles },
+          { id: "SPEC", label: "📄 Spec & PRD", icon: FileText },
+          { id: "INCIDENT", label: "🚨 Incident", icon: ShieldAlert },
           { id: "MEDIA", label: "🎨 Canvas", icon: LayoutGrid },
           { id: "SUPPORT", label: "🎧 Support", icon: Headphones },
           { id: "FLAGS", label: "🚩 Telemetry", icon: Flag },
@@ -293,7 +298,21 @@ export function DevelopmentPanel({
         </div>
       )}
 
-      {/* Tab 3: Designs & Media Embeds */}
+      {/* Tab 3: Confluence Spec Docs & PRD Canvas */}
+      {activeTab === "SPEC" && (
+        <div className="pt-1">
+          <SpecDocEditor issueKey={issueKey} />
+        </div>
+      )}
+
+      {/* Tab 4: Opsgenie Incident Command Center */}
+      {activeTab === "INCIDENT" && (
+        <div className="pt-1">
+          <IncidentCommandCenter issueKey={issueKey} />
+        </div>
+      )}
+
+      {/* Tab 5: Designs & Media Embeds */}
       {activeTab === "MEDIA" && (
         <div className="flex flex-col gap-3 pt-1">
           <FigmaEmbedPanel initialUrls={[]} />
@@ -302,7 +321,7 @@ export function DevelopmentPanel({
         </div>
       )}
 
-      {/* Tab 4: Customer Support & Incident Tickets */}
+      {/* Tab 6: Customer Support & Incident Tickets */}
       {activeTab === "SUPPORT" && (
         <div className="flex flex-col gap-3 pt-1">
           <ZendeskTicketsWidget />
@@ -310,7 +329,7 @@ export function DevelopmentPanel({
         </div>
       )}
 
-      {/* Tab 5: Feature Flags & Telemetry */}
+      {/* Tab 7: Feature Flags & Telemetry */}
       {activeTab === "FLAGS" && (
         <div className="flex flex-col gap-3 pt-1">
           <FeatureFlagToggleCard />
