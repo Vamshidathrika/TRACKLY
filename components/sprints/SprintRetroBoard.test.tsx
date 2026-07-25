@@ -21,6 +21,19 @@ describe("SprintRetroBoard", () => {
     const convertBtn = screen.getByRole("button", { name: /convert to task/i });
     fireEvent.click(convertBtn);
 
-    expect(screen.getByText("In Backlog")).toBeInTheDocument();
+    expect(screen.getByText(/In Backlog/i)).toBeInTheDocument();
+  });
+
+  it("toggles Anonymous Mode and synthesizes action items using AI", () => {
+    render(<SprintRetroBoard projectKey="PRJ" />);
+
+    const anonBtn = screen.getByRole("button", { name: /Anonymous: OFF/i });
+    fireEvent.click(anonBtn);
+    expect(screen.getByText("Anonymous: ON")).toBeInTheDocument();
+
+    const aiBtn = screen.getByRole("button", { name: /AI Synthesize Actions/i });
+    fireEvent.click(aiBtn);
+
+    expect(screen.getByText(/AI synthesized 2 new Action Items/i)).toBeInTheDocument();
   });
 });

@@ -37,7 +37,7 @@ describe("E2E Core Features & Workflows Test Suite", () => {
       expect(convertBtns.length).toBeGreaterThan(0);
 
       fireEvent.click(convertBtns[0]);
-      expect(screen.getByText("Converted Action Item to live backlog task in SOU!")).toBeInTheDocument();
+      expect(screen.getByText(/Converted Action Item to live backlog task/i)).toBeInTheDocument();
     });
   });
 

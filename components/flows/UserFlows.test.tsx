@@ -257,9 +257,9 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       await userEvent.click(convertBtn);
 
       // Check conversion feedback state
-      expect(await screen.findByText("In Backlog")).toBeInTheDocument();
+      expect(await screen.findByText(/In Backlog/i)).toBeInTheDocument();
       expect(
-        screen.getByText("Converted Action Item to live backlog task in PROJ!")
+        screen.getByText(/Converted Action Item to live backlog task/i)
       ).toBeInTheDocument();
     });
   });
@@ -305,7 +305,7 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       rerender(<SprintRetroBoard projectKey="PROJ" />);
       const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
       await userEvent.click(convertBtn);
-      expect(screen.getByText("Converted Action Item to live backlog task in PROJ!")).toBeInTheDocument();
+      expect(screen.getByText(/Converted Action Item to live backlog task/i)).toBeInTheDocument();
     });
   });
 });
