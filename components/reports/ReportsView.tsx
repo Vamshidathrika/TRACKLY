@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { LineChart, BarChart2, Layers } from "lucide-react";
+import { LineChart, BarChart2, Layers, Download, Printer, FileSpreadsheet } from "lucide-react";
 import { Tag } from "@/components/ui/Tag";
+import { formatReportCSV } from "@/lib/reports";
 
 export type BurndownData = {
   sprintName: string;
@@ -34,27 +35,71 @@ export function ReportsView({
 }) {
   const [activeTab, setActiveTab] = useState<"burndown" | "velocity" | "cumulative">("burndown");
 
+  const handleExportCSV = () => {
+    let rawData: any = burndown;
+    if (activeTab === "velocity") rawData = velocity;
+    if (activeTab === "cumulative") rawData = cumulative;
+
+    const csvContent = formatReportCSV(activeTab, rawData);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `report-${activeTab}-analytics.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-5xl">
-      {/* Report Switcher Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
-        {[
-          { id: "burndown", label: "Burndown Chart", icon: LineChart },
-          { id: "velocity", label: "Velocity Chart", icon: BarChart2 },
-          { id: "cumulative", label: "Cumulative Flow", icon: Layers },
-        ].map(({ id, label, icon: Icon }) => (
+      {/* Report Switcher Tabs & Export Actions */}
+      <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          {[
+            { id: "burndown", label: "Burndown Chart", icon: LineChart },
+            { id: "velocity", label: "Velocity Chart", icon: BarChart2 },
+            { id: "cumulative", label: "Cumulative Flow", icon: Layers },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id as any)}
+              className={`flex items-center gap-2 rounded-ds px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === id
+                  ? "bg-brand text-white"
+                  : "border border-border-default bg-surface text-default hover:bg-neutral-hovered"
+              }`}
+            >
+              <Icon size={14} /> {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
-            key={id}
-            onClick={() => setActiveTab(id as any)}
-            className={`flex items-center gap-2 rounded-ds px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeTab === id
-                ? "bg-brand text-white"
-                : "border border-border-default bg-surface text-default hover:bg-neutral-hovered"
-            }`}
+            type="button"
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs font-bold text-text hover:bg-neutral transition-all shadow-xs cursor-pointer"
           >
-            <Icon size={14} /> {label}
+            <FileSpreadsheet size={13} className="text-emerald-600" />
+            <span>Export CSV</span>
           </button>
-        ))}
+
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral text-xs font-bold text-text hover:bg-neutral/80 transition-all border border-border cursor-pointer shadow-xs"
+          >
+            <Printer size={13} className="text-text-subtle" />
+            <span>Print Report</span>
+          </button>
+        </div>
       </div>
 
       {/* BURNDOWN CHART TAB */}

@@ -86,3 +86,25 @@ export async function getProjectMetrics(projectId: string) {
     priorityCounts,
   };
 }
+
+export function formatReportCSV(type: "burndown" | "velocity" | "cumulative", data: any): string {
+  if (type === "burndown") {
+    const header = "Day,Ideal Story Points,Actual Remaining Points\n";
+    const rows = (data.timeline || []).map((t: any) => `${t.day},${t.ideal},${t.actual}`).join("\n");
+    return header + rows;
+  }
+
+  if (type === "velocity") {
+    const header = "Sprint Name,Committed Points,Completed Points\n";
+    const rows = (data || []).map((v: any) => `"${v.name}",${v.committed},${v.completed}`).join("\n");
+    return header + rows;
+  }
+
+  if (type === "cumulative") {
+    const header = "Status,Task Count\n";
+    const rows = (data || []).map((c: any) => `${c.status},${c.count}`).join("\n");
+    return header + rows;
+  }
+
+  return "";
+}

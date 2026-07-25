@@ -7,7 +7,7 @@ vi.mock("./prisma", () => ({
   },
 }));
 import { prisma } from "./prisma";
-import { getBurndownData, getVelocityData, getProjectMetrics } from "./reports";
+import { getBurndownData, getVelocityData, getProjectMetrics, formatReportCSV } from "./reports";
 
 describe("reports data layer", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -70,5 +70,13 @@ describe("reports data layer", () => {
     expect(metrics.statusCounts["IN_PROGRESS"]).toBe(1);
     expect(metrics.statusCounts["DONE"]).toBe(1);
     expect(metrics.priorityCounts["HIGH"]).toBe(2);
+  });
+
+  it("formats report data into valid CSV string", () => {
+    const csv = formatReportCSV("velocity", [
+      { name: "Sprint 1", committed: 10, completed: 8 },
+    ]);
+    expect(csv).toContain("Sprint Name,Committed Points,Completed Points");
+    expect(csv).toContain('"Sprint 1",10,8');
   });
 });
