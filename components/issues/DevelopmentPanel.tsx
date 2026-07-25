@@ -12,7 +12,9 @@ import {
   Copy,
   Check,
   Sparkles,
+  Triangle,
 } from "lucide-react";
+import { FigmaEmbedPanel } from "./FigmaEmbedPanel";
 
 export type LinkedBranch = {
   id: string;
@@ -261,12 +263,22 @@ export function DevelopmentPanel({
         ))}
       </div>
 
-      {/* CI/CD Deployment Badge */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
-        <span className="text-text-subtle font-medium">CI/CD Pipeline</span>
-        <span className="font-extrabold text-emerald-600 flex items-center gap-1 font-mono">
-          <CheckCircle2 size={13} /> {pipelineStatus} (main)
-        </span>
+      {/* CI/CD & Deployment Badges */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs flex-wrap gap-2">
+        <span className="text-text-subtle font-medium">CI/CD & Deployments</span>
+        <div className="flex items-center gap-2">
+          <span className="font-extrabold text-sky-600 flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
+            <Triangle size={11} /> Vercel: Ready
+          </span>
+          <span className="font-extrabold text-emerald-600 flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+            <CheckCircle2 size={11} /> {pipelineStatus} (main)
+          </span>
+        </div>
+      </div>
+
+      {/* Embedded Figma Panel */}
+      <div className="pt-2">
+        <FigmaEmbedPanel initialUrls={[]} />
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ describe("DevIntegrationsView", () => {
   it("renders Development & Git Integrations heading and empty state when no repo connected", async () => {
     render(<DevIntegrationsView projectId="proj-1" projectKey="VAM" />);
 
-    expect(screen.getByText(/Development & Git Integrations/i)).toBeInTheDocument();
+    expect(screen.getByText(/DevOps & Code Integrations Hub/i)).toBeInTheDocument();
     expect(await screen.findAllByText(/No Repository Connected/i)).not.toHaveLength(0);
   });
 
@@ -41,13 +41,13 @@ describe("DevIntegrationsView", () => {
 
     render(<DevIntegrationsView projectId="proj-1" projectKey="VAM" />);
 
-    expect(await screen.findByText(/14 Branches/i)).toBeInTheDocument();
+    expect(await screen.findByText("14")).toBeInTheDocument();
   });
 
   it("opens Connect Repository modal when button is clicked", () => {
     render(<DevIntegrationsView projectId="proj-1" projectKey="VAM" />);
 
-    const connectBtn = screen.getAllByRole("button", { name: /\+ Connect Repository|Connect GitHub Repository/i })[0];
+    const connectBtn = screen.getByText("Connect Repository");
     fireEvent.click(connectBtn);
 
     expect(screen.getByText(/Owner/i)).toBeInTheDocument();

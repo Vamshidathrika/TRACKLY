@@ -31,7 +31,7 @@ export async function resolveIssueByKey(siteId: string, key: string, projectId?:
   }
   return prisma.issue.findFirst({
     where: whereClause,
-    select: { id: true, status: true, key: true, projectId: true },
+    select: { id: true, status: true, key: true, projectId: true, description: true },
   });
 }
 
@@ -210,4 +210,18 @@ export async function processBranchEvent(payload: any, siteId: string, action: "
       data: { status: "IN_PROGRESS" },
     });
   }
+}
+
+export async function processGithubWebhook(headers: Headers, payload: any, siteId = "demo-site") {
+  const eventHeader = headers.get("x-github-event") || "push";
+  if (eventHeader === "push") {
+    await processPushEvent(payload, siteId);
+  } else if (eventHeader === "pull_request") {
+    await processPullRequestEvent(payload, siteId);
+  } else if (eventHeader === "create") {
+    await processBranchEvent(payload, siteId, "create");
+  } else if (eventHeader === "delete") {
+    await processBranchEvent(payload, siteId, "delete");
+  }
+  return { success: true, eventType: `github:${eventHeader}` };
 }
