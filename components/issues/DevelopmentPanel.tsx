@@ -18,6 +18,10 @@ import { FigmaEmbedPanel } from "./FigmaEmbedPanel";
 import { LoomEmbedder } from "./LoomEmbedder";
 import { MiroEmbedPanel } from "./MiroEmbedPanel";
 import { ZendeskTicketsWidget } from "./ZendeskTicketsWidget";
+import { AutonomousAICodeFixer } from "./AutonomousAICodeFixer";
+import { FeatureFlagToggleCard } from "./FeatureFlagToggleCard";
+import { PostHogAnalyticsWidget } from "./PostHogAnalyticsWidget";
+import { SnykSecurityCard } from "./SnykSecurityCard";
 
 export type LinkedBranch = {
   id: string;
@@ -281,6 +285,10 @@ export function DevelopmentPanel({
 
       {/* Embedded Figma & Media Specs */}
       <div className="flex flex-col gap-4 pt-2">
+        <AutonomousAICodeFixer />
+        <FeatureFlagToggleCard />
+        <PostHogAnalyticsWidget />
+        <SnykSecurityCard />
         <FigmaEmbedPanel initialUrls={[]} />
         <LoomEmbedder initialUrls={[]} />
         <MiroEmbedPanel initialUrls={[]} />
