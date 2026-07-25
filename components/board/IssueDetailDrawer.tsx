@@ -218,8 +218,14 @@ export function IssueDetailDrawer({
     if (issue) {
       setSummary(issue.summary);
       setDescription(issue.description || "");
-      setPoints(issue.storyPoints ?? "");
-      setEstimateHours(issue.estimatedHours ?? issue.originalEstimate ?? "");
+      setPoints(typeof issue.storyPoints === "number" && issue.storyPoints > 0 ? issue.storyPoints : (issue.storyPoints === 0 ? 0 : ""));
+      setEstimateHours(
+        typeof issue.estimatedHours === "number" && issue.estimatedHours > 0
+          ? issue.estimatedHours
+          : typeof issue.originalEstimate === "number" && issue.originalEstimate > 0
+          ? issue.originalEstimate
+          : ""
+      );
       setReporterId(issue.reporterId || issue.reporter?.id || "");
       setStartDate(toDateInput(issue.startDate));
       setDueDate(toDateInput(issue.dueDate));
@@ -1022,10 +1028,10 @@ export function IssueDetailDrawer({
 
                 {/* Subtask Progress Bar */}
                 {subtasks.length > 0 && (
-                  <div className="h-1.5 w-full bg-neutral rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-surface-sunken border border-border/40 rounded-full overflow-hidden p-0.5 shadow-inner">
                     <div
                       style={{ width: `${subtaskProgressPercent}%` }}
-                      className="h-full bg-emerald-500 transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-500 shadow-xs"
                     />
                   </div>
                 )}
@@ -1439,21 +1445,36 @@ export function IssueDetailDrawer({
             <div className="flex flex-col gap-5 p-4 rounded-xl bg-surface-sunken border border-border/60 shrink-0 h-fit">
               {/* Smart Workflow Action Primary Button */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Workflow Action</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Workflow Action</label>
+                  {isBlocked && (
+                    <span className="text-[10px] font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded border border-danger/20 flex items-center gap-1">
+                      <ShieldAlert size={10} /> Blocked
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleWorkflowTransition}
-                  className={`w-full h-9 px-3 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
-                    issue.status === "DONE"
+                  className={`w-full h-9 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
+                    isBlocked && issue.status !== "DONE"
+                      ? "bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20"
+                      : issue.status === "DONE"
                       ? "bg-neutral text-text hover:bg-neutral/80 border border-border"
-                      : "bg-brand hover:bg-brand-hovered"
+                      : "bg-brand text-white hover:bg-brand-hovered"
                   }`}
                 >
+                  {isBlocked && issue.status !== "DONE" && <ShieldAlert size={14} className="text-amber-500" />}
                   <span>
-                    {issue.status === "TO_DO" && "Start Progress"}
-                    {issue.status === "IN_PROGRESS" && "Submit for Review"}
-                    {issue.status === "IN_REVIEW" && "Mark Complete ✓"}
-                    {issue.status === "DONE" && "Reopen Task"}
+                    {isBlocked && issue.status !== "DONE"
+                      ? `Start Progress (${activeBlockers[0].key})`
+                      : issue.status === "TO_DO"
+                      ? "Start Progress"
+                      : issue.status === "IN_PROGRESS"
+                      ? "Submit for Review"
+                      : issue.status === "IN_REVIEW"
+                      ? "Mark Complete ✓"
+                      : "Reopen Task"}
                   </span>
                   <ArrowRight size={14} />
                 </button>
