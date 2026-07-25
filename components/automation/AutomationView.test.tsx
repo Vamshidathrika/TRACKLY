@@ -26,7 +26,7 @@ describe("AutomationView", () => {
   it("renders existing automation rules and toggles enable switch", () => {
     render(<AutomationView projectId="prj-1" rules={initialRules} />);
 
-    expect(screen.getByText("Automation Rules")).toBeInTheDocument();
+    expect(screen.getByText("No-Code Automation Engine")).toBeInTheDocument();
     expect(screen.getByText("Auto Assign On Create")).toBeInTheDocument();
 
     const toggleBtn = screen.getByRole("button", { name: "" }); // switch toggle
@@ -40,9 +40,9 @@ describe("AutomationView", () => {
     const createBtn = screen.getByRole("button", { name: /create rule/i });
     fireEvent.click(createBtn);
 
-    expect(screen.getByText("✨ AI Natural Language Rule Creator")).toBeInTheDocument();
+    expect(screen.getByText("✨ AI Natural Language Rule Compiler")).toBeInTheDocument();
 
-    const aiInput = screen.getByPlaceholderText(/When a high priority task is created/i);
+    const aiInput = screen.getByPlaceholderText(/When a high priority bug is created/i);
     fireEvent.change(aiInput, { target: { value: "When new issue created assign to Sarah" } });
 
     const compileBtn = screen.getByRole("button", { name: /compile rule/i });

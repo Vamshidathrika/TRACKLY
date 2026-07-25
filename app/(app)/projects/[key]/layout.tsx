@@ -41,6 +41,7 @@ export default async function ProjectLayout({
         projectKey={project.key}
         projectName={project.name}
         projectId={project.id}
+        projectType={project.type}
         initiallyStarred={!!star}
       />
       <RecentTracker projectKey={project.key} />

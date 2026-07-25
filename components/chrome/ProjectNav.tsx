@@ -26,16 +26,22 @@ export function ProjectNav({
   projectId,
   initiallyStarred,
   isStarred,
+  projectType,
 }: {
   projectKey: string;
   projectName: string;
   projectId?: string;
   initiallyStarred?: boolean;
   isStarred?: boolean;
+  projectType?: string;
 }) {
   const pathname = usePathname();
   const [starred, setStarred] = useState(isStarred ?? initiallyStarred ?? false);
   const [isPending, startTransition] = useTransition();
+
+  const formattedType = projectType
+    ? `${projectType.charAt(0).toUpperCase()}${projectType.slice(1).toLowerCase()} project`
+    : "Kanban project";
 
   const handleStarClick = () => {
     if (!projectId) return;
@@ -52,26 +58,28 @@ export function ProjectNav({
     });
   };
 
+  const basePath = `/projects/${projectKey}`;
+
   const navItems = [
-    { href: `/projects/${projectKey}/board`, label: "Board", icon: Columns3 },
-    { href: `/projects/${projectKey}/backlog`, label: "Backlog", icon: List },
-    { href: `/projects/${projectKey}/summary`, label: "Summary", icon: LayoutDashboard },
-    { href: `/projects/${projectKey}/timeline`, label: "Timeline", icon: Calendar },
-    { href: `/projects/${projectKey}/calendar`, label: "Calendar", icon: CalendarDays },
-    { href: `/projects/${projectKey}/dev`, label: "Dev", icon: GitBranch },
-    { href: `/projects/${projectKey}/code`, label: "Code", icon: Code2 },
-    { href: `/projects/${projectKey}/releases`, label: "Releases", icon: Package },
-    { href: `/projects/${projectKey}/retro`, label: "Retro", icon: Sparkles },
-    { href: `/projects/${projectKey}/reports`, label: "Reports", icon: BarChart3 },
-    { href: `/projects/${projectKey}/settings`, label: "Settings", icon: Settings },
+    { label: "Board", href: `${basePath}/board`, icon: Columns3 },
+    { label: "Backlog", href: `${basePath}/backlog`, icon: List },
+    { label: "Summary", href: `${basePath}/summary`, icon: LayoutDashboard },
+    { label: "Timeline", href: `${basePath}/timeline`, icon: CalendarDays },
+    { label: "Calendar", href: `${basePath}/calendar`, icon: Calendar },
+    { label: "Dev", href: `${basePath}/dev`, icon: GitBranch },
+    { label: "Code", href: `${basePath}/code`, icon: Code2 },
+    { label: "Releases", href: `${basePath}/releases`, icon: Package },
+    { label: "Retro", href: `${basePath}/retro`, icon: Sparkles },
+    { label: "Reports", href: `${basePath}/reports`, icon: BarChart3 },
+    { label: "Settings", href: `${basePath}/settings`, icon: Settings },
   ];
 
   return (
-    <header className="w-full border-b border-border-default bg-surface px-6 pt-3 pb-1 shadow-2xs flex flex-col gap-2 shrink-0">
-      {/* Top Header Row: Project Badge, Title & Star Button */}
+    <div className="flex flex-col border-b border-border bg-surface px-4 pt-3.5 pb-0 shadow-2xs gap-3">
+      {/* Top Header Row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-mono font-bold text-white uppercase select-none shadow-xs">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand font-mono text-xs font-bold text-white shadow-2xs">
             {projectKey.slice(0, 2)}
           </div>
           <div className="flex flex-col">
@@ -90,7 +98,7 @@ export function ProjectNav({
                 />
               </button>
             </div>
-            <span className="text-[11px] font-mono text-subtle">Software project</span>
+            <span className="text-[11px] font-mono text-subtle">{formattedType}</span>
           </div>
         </div>
       </div>
