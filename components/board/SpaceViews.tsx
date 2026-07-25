@@ -403,51 +403,8 @@ export function DevView({ projectId = "demo-proj", projectKey = "VAM" }: { proje
 }
 
 // 6. Code View Component
-export function CodeView() {
-  return (
-    <div className="flex flex-col gap-6 py-4 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-text flex items-center gap-2">
-          <Code2 size={16} className="text-brand" /> Code Repositories
-        </h3>
-        <Button appearance="primary" className="bg-brand text-white text-xs font-bold flex items-center gap-1.5">
-          <ExternalLink size={13} /> Open GitHub Repo
-        </Button>
-      </div>
-
-      <div className="rounded-lg border border-border bg-surface p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
-          <div className="flex items-center gap-3">
-            <FolderGit2 className="text-brand" size={24} />
-            <div>
-              <h4 className="text-sm font-bold text-text">trackly / main</h4>
-              <p className="text-xs text-text-subtle">Primary project codebase repository</p>
-            </div>
-          </div>
-          <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">Connected</span>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-          <div className="p-3 bg-neutral rounded-md">
-            <span className="text-text-subtle block mb-1">Language</span>
-            <span className="font-bold text-text">TypeScript / React</span>
-          </div>
-          <div className="p-3 bg-neutral rounded-md">
-            <span className="text-text-subtle block mb-1">Framework</span>
-            <span className="font-bold text-text">Next.js 15 App Router</span>
-          </div>
-          <div className="p-3 bg-neutral rounded-md">
-            <span className="text-text-subtle block mb-1">ORM / Database</span>
-            <span className="font-bold text-text">Prisma / PostgreSQL</span>
-          </div>
-          <div className="p-3 bg-neutral rounded-md">
-            <span className="text-text-subtle block mb-1">Styling</span>
-            <span className="font-bold text-text">Tailwind CSS</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+export function CodeView({ projectId = "demo-proj", projectKey = "VAM" }: { projectId?: string; projectKey?: string }) {
+  return <DevIntegrationsView projectId={projectId} projectKey={projectKey} />;
 }
 
 // 7. Modals: Automation Modal
