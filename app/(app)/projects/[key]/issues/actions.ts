@@ -53,50 +53,60 @@ export async function updateIssueFieldAction(
 
     await updateIssue(issueId, user.id, data);
 
-    // Notify watchers and trigger automation rules if status changed
-    if (field === "assigneeId" && strVal) {
-      const issue = await prisma.issue.findUnique({
-        where: { id: issueId },
-        include: { project: true },
-      });
-      if (issue && strVal !== user.id) {
-        await createNotification({
-          userId: strVal,
-          actorId: user.id,
-          type: "ASSIGNMENT",
-          title: `Assigned to ${issue.key}`,
-          message: `${user.name ?? "A teammate"} assigned ${issue.key} to you`,
-          link: `/projects/${issue.project.key}/issues/${issue.key}`,
-        });
-      }
-    }
+    revalidatePath("/projects");
 
-    if (field === "status") {
-      const issue = await prisma.issue.findUnique({
-        where: { id: issueId },
-        include: { watchers: true, project: true },
-      });
-      if (issue) {
-        for (const w of issue.watchers) {
-          await createNotification({
-            userId: w.userId,
-            actorId: user.id,
-            type: "STATUS_CHANGE",
-            title: `Status changed to ${value}`,
-            message: `${user.name} changed status of ${issue.key} to ${value}`,
-            link: `/projects/${issue.project.key}/issues/${issue.key}`,
+    // Fire-and-forget: notifications & automation run in background
+    // without blocking the client response for minimum latency.
+    const sideEffects = async () => {
+      try {
+        if (field === "assigneeId" && strVal) {
+          const issue = await prisma.issue.findUnique({
+            where: { id: issueId },
+            include: { project: true },
           });
+          if (issue && strVal !== user.id) {
+            await createNotification({
+              userId: strVal,
+              actorId: user.id,
+              type: "ASSIGNMENT",
+              title: `Assigned to ${issue.key}`,
+              message: `${user.name ?? "A teammate"} assigned ${issue.key} to you`,
+              link: `/projects/${issue.project.key}/issues/${issue.key}`,
+            });
+          }
         }
 
-        await evaluateAutomationTriggers("STATUS_CHANGED", {
-          issueId: issue.id,
-          projectId: issue.projectId,
-          authorId: user.id,
-        });
-      }
-    }
+        if (field === "status") {
+          const issue = await prisma.issue.findUnique({
+            where: { id: issueId },
+            include: { watchers: true, project: true },
+          });
+          if (issue) {
+            await Promise.all(
+              issue.watchers.map((w) =>
+                createNotification({
+                  userId: w.userId,
+                  actorId: user.id,
+                  type: "STATUS_CHANGE",
+                  title: `Status changed to ${value}`,
+                  message: `${user.name} changed status of ${issue.key} to ${value}`,
+                  link: `/projects/${issue.project.key}/issues/${issue.key}`,
+                })
+              )
+            );
 
-    revalidatePath("/projects");
+            await evaluateAutomationTriggers("STATUS_CHANGED", {
+              issueId: issue.id,
+              projectId: issue.projectId,
+              authorId: user.id,
+            });
+          }
+        }
+      } catch { /* best-effort side effects */ }
+    };
+    // Don't await — let it run in the background
+    void sideEffects();
+
     return { success: true };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
@@ -110,54 +120,65 @@ export async function postCommentAction(issueId: string, body: string) {
 
   try {
     await addComment({ issueId, authorId: user.id, body });
-    const issue = await prisma.issue.findUnique({
-      where: { id: issueId },
-      include: { project: true },
-    });
-
-    if (issue) {
-      // Notify assignee & reporter if not self
-      const notifyUsers = new Set<string>();
-      if (issue.assigneeId && issue.assigneeId !== user.id) notifyUsers.add(issue.assigneeId);
-      if (issue.reporterId && issue.reporterId !== user.id) notifyUsers.add(issue.reporterId);
-
-      for (const recipientId of notifyUsers) {
-        await createNotification({
-          userId: recipientId,
-          actorId: user.id,
-          type: "COMMENT",
-          title: `New comment on ${issue.key}`,
-          message: `${user.name ?? "Teammate"}: "${body.slice(0, 50)}..."`,
-          link: `/projects/${issue.project.key}/issues/${issue.key}`,
-        });
-      }
-
-      // Check for @mentions
-      const mentionNames = extractMentions(body);
-      for (const name of mentionNames) {
-        const mentionedUser = await prisma.user.findFirst({
-          where: { name: { contains: name, mode: "insensitive" } },
-        });
-        if (mentionedUser && mentionedUser.id !== user.id) {
-          await createNotification({
-            userId: mentionedUser.id,
-            actorId: user.id,
-            type: "MENTION",
-            title: `Mentioned on ${issue.key}`,
-            message: `${user.name} mentioned you: "${body.slice(0, 50)}..."`,
-            link: `/projects/${issue.project.key}/issues/${issue.key}`,
-          });
-        }
-      }
-
-      await evaluateAutomationTriggers("COMMENT_ADDED", {
-        issueId: issue.id,
-        projectId: issue.projectId,
-        authorId: user.id,
-      });
-    }
 
     revalidatePath("/projects");
+
+    // Fire-and-forget: notifications, mentions & automation run in background
+    const sideEffects = async () => {
+      try {
+        const issue = await prisma.issue.findUnique({
+          where: { id: issueId },
+          include: { project: true },
+        });
+        if (!issue) return;
+
+        // Notify assignee & reporter if not self
+        const notifyUsers = new Set<string>();
+        if (issue.assigneeId && issue.assigneeId !== user.id) notifyUsers.add(issue.assigneeId);
+        if (issue.reporterId && issue.reporterId !== user.id) notifyUsers.add(issue.reporterId);
+
+        const notificationPromises = Array.from(notifyUsers).map((recipientId) =>
+          createNotification({
+            userId: recipientId,
+            actorId: user.id,
+            type: "COMMENT",
+            title: `New comment on ${issue.key}`,
+            message: `${user.name ?? "Teammate"}: "${body.slice(0, 50)}..."`,
+            link: `/projects/${issue.project.key}/issues/${issue.key}`,
+          })
+        );
+
+        // Check for @mentions
+        const mentionNames = extractMentions(body);
+        for (const name of mentionNames) {
+          const mentionedUser = await prisma.user.findFirst({
+            where: { name: { contains: name, mode: "insensitive" } },
+          });
+          if (mentionedUser && mentionedUser.id !== user.id) {
+            notificationPromises.push(
+              createNotification({
+                userId: mentionedUser.id,
+                actorId: user.id,
+                type: "MENTION",
+                title: `Mentioned on ${issue.key}`,
+                message: `${user.name} mentioned you: "${body.slice(0, 50)}..."`,
+                link: `/projects/${issue.project.key}/issues/${issue.key}`,
+              })
+            );
+          }
+        }
+
+        await Promise.all(notificationPromises);
+
+        await evaluateAutomationTriggers("COMMENT_ADDED", {
+          issueId: issue.id,
+          projectId: issue.projectId,
+          authorId: user.id,
+        });
+      } catch { /* best-effort side effects */ }
+    };
+    void sideEffects();
+
     return { success: true };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
@@ -195,20 +216,25 @@ export async function logWorkAction(
       include: { author: { select: { id: true, name: true, avatarUrl: true } } },
     });
 
-    for (const w of issue.watchers) {
-      if (w.userId === user.id) continue;
-      await createNotification({
-        userId: w.userId,
-        actorId: user.id,
-        type: "STATUS_CHANGE",
-        title: `Work logged on ${issue.key}`,
-        message: `${user.name} logged ${hours}h on ${issue.key}`,
-        link: `/projects/${issue.project.key}/issues/${issue.key}`,
-      });
-    }
-
     revalidatePath(`/projects/${issue.project.key}/issues/${issue.key}`);
     revalidatePath("/projects");
+
+    // Fire-and-forget: watcher notifications run in background
+    void Promise.all(
+      issue.watchers
+        .filter((w) => w.userId !== user.id)
+        .map((w) =>
+          createNotification({
+            userId: w.userId,
+            actorId: user.id,
+            type: "STATUS_CHANGE",
+            title: `Work logged on ${issue.key}`,
+            message: `${user.name} logged ${hours}h on ${issue.key}`,
+            link: `/projects/${issue.project.key}/issues/${issue.key}`,
+          })
+        )
+    ).catch(() => {});
+
     return { success: true, log };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };

@@ -227,7 +227,6 @@ export function IssueDetail({
         return;
       }
       showToast(next ? "Watching task updates" : "Stopped watching task");
-      router.refresh();
     });
   };
 
@@ -245,7 +244,6 @@ export function IssueDetail({
         return;
       }
       showToast(successMessage);
-      router.refresh();
     });
   };
 

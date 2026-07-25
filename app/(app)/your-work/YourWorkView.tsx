@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { CheckCircle2, Clock, Folder, UserCheck, Plus, AlertCircle, Layout, Layers, Calendar, Sparkles, Zap, ArrowRight } from "lucide-react";
 import { IssueTable, type IssueListItem } from "@/components/issues/IssueTable";
@@ -83,33 +83,43 @@ export function YourWorkView({
     setTypeFilter("ALL");
   };
 
-  const formattedAssigned: IssueListItem[] = filterIssues(assignedIssues).map((i) => ({
-    id: i.id,
-    key: i.key,
-    summary: i.summary,
-    type: i.type,
-    status: i.status,
-    priority: i.priority,
-    projectKey: i.project?.key ?? "PRJ",
-    assignee: i.assignee,
-  }));
+  // Memoize heavy computed values to prevent re-computation on every render
+  const formattedAssigned: IssueListItem[] = useMemo(
+    () =>
+      filterIssues(assignedIssues).map((i) => ({
+        id: i.id,
+        key: i.key,
+        summary: i.summary,
+        type: i.type,
+        status: i.status,
+        priority: i.priority,
+        projectKey: i.project?.key ?? "PRJ",
+        assignee: i.assignee,
+      })),
+    [assignedIssues, searchQuery, selectedUserId, filterUnassigned, statusFilter, priorityFilter, typeFilter]
+  );
 
-  const formattedReported: IssueListItem[] = filterIssues(reportedIssues).map((i) => ({
-    id: i.id,
-    key: i.key,
-    summary: i.summary,
-    type: i.type,
-    status: i.status,
-    priority: i.priority,
-    projectKey: i.project?.key ?? "PRJ",
-    assignee: i.assignee,
-  }));
+  const formattedReported: IssueListItem[] = useMemo(
+    () =>
+      filterIssues(reportedIssues).map((i) => ({
+        id: i.id,
+        key: i.key,
+        summary: i.summary,
+        type: i.type,
+        status: i.status,
+        priority: i.priority,
+        projectKey: i.project?.key ?? "PRJ",
+        assignee: i.assignee,
+      })),
+    [reportedIssues, searchQuery, selectedUserId, filterUnassigned, statusFilter, priorityFilter, typeFilter]
+  );
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  const highPriorityCount = assignedIssues.filter(
-    (i) => i.priority === "HIGHEST" || i.priority === "HIGH"
-  ).length;
+  const highPriorityCount = useMemo(
+    () => assignedIssues.filter((i) => i.priority === "HIGHEST" || i.priority === "HIGH").length,
+    [assignedIssues]
+  );
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto max-w-6xl mx-auto w-full gap-6">
