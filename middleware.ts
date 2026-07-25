@@ -1,7 +1,25 @@
 import NextAuth from "next-auth";
 import { authConfig } from "./lib/auth.config";
+import { NextResponse } from "next/server";
 
-export default NextAuth(authConfig).auth;
+const authMiddleware = NextAuth(authConfig).auth;
+
+export default authMiddleware((req) => {
+  const { pathname } = req.nextUrl;
+  const requestHeaders = new Headers(req.headers);
+
+  const match = pathname.match(/^\/([^\/]+)/);
+  if (match) {
+    const slug = match[1];
+    if (!["api", "_next", "favicon.ico", "auth"].includes(slug)) {
+      requestHeaders.set("x-tenant-slug", slug);
+    }
+  }
+
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+});
 
 export const config = {
   matcher: [
@@ -21,3 +39,4 @@ export const config = {
     "/teams/:path*",
   ],
 };
+
