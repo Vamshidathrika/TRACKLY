@@ -14,32 +14,40 @@ type WorkflowScheme = {
 };
 
 export function WorkflowSchemesView() {
-  const [schemes, setSchemes] = useState<WorkflowScheme[]>([
-    {
-      id: "wf-1",
-      name: "Software Kanban Workflow",
-      description: "Standard 4-stage pipeline for fast iterative product development",
-      statuses: ["Backlog", "In Progress", "Code Review", "Done"],
-      isDefault: true,
-      rules: ["Auto-assign issue to active user on transition to 'In Progress'", "Require PR link before transitioning to 'Code Review'", "Require Resolution Code when moving to 'Done'"],
-    },
-    {
-      id: "wf-2",
-      name: "Scrum Sprint Pipeline",
-      description: "Sprint-based workflow with QA testing & acceptance verification",
-      statuses: ["To Do", "In Progress", "In QA Test", "Accepted", "Done"],
-      isDefault: false,
-      rules: ["Require Story Point estimate before moving to Sprint To Do", "Auto-notify QA leads when status changes to 'In QA Test'"],
-    },
-    {
-      id: "wf-3",
-      name: "Incident Response War Room",
-      description: "High-urgency triage pipeline for production incident management",
-      statuses: ["Reported", "Investigating", "Mitigated", "Resolved"],
-      isDefault: false,
-      rules: ["Auto-generate Opsgenie war room link on 'Investigating'", "Post PostHog error metrics to Slack channel on 'Reported'"],
-    },
-  ]);
+  const [schemes, setSchemes] = useState<WorkflowScheme[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("trackly_workflow_schemes");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      {
+        id: "wf-1",
+        name: "Software Kanban Workflow",
+        description: "Standard 4-stage pipeline for fast iterative product development",
+        statuses: ["Backlog", "In Progress", "Code Review", "Done"],
+        isDefault: true,
+        rules: ["Auto-assign issue to active user on transition to 'In Progress'", "Require PR link before transitioning to 'Code Review'", "Require Resolution Code when moving to 'Done'"],
+      },
+      {
+        id: "wf-2",
+        name: "Scrum Sprint Pipeline",
+        description: "Sprint-based workflow with QA testing & acceptance verification",
+        statuses: ["To Do", "In Progress", "In QA Test", "Accepted", "Done"],
+        isDefault: false,
+        rules: ["Require Story Point estimate before moving to Sprint To Do", "Auto-notify QA leads when status changes to 'In QA Test'"],
+      },
+      {
+        id: "wf-3",
+        name: "Incident Response War Room",
+        description: "High-urgency triage pipeline for production incident management",
+        statuses: ["Reported", "Investigating", "Mitigated", "Resolved"],
+        isDefault: false,
+        rules: ["Auto-generate Opsgenie war room link on 'Investigating'", "Post PostHog error metrics to Slack channel on 'Reported'"],
+      },
+    ];
+  });
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -49,7 +57,11 @@ export function WorkflowSchemesView() {
   };
 
   const handleSetDefault = (id: string, name: string) => {
-    setSchemes((prev) => prev.map((s) => ({ ...s, isDefault: s.id === id })));
+    const next = schemes.map((s) => ({ ...s, isDefault: s.id === id }));
+    setSchemes(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("trackly_workflow_schemes", JSON.stringify(next));
+    }
     showToast(`"${name}" is now the default workflow scheme.`);
   };
 

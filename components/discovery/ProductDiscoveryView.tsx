@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Lightbulb, ArrowUpRight, ThumbsUp, Plus, Sparkles, Target, Zap, Filter, CheckCircle2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Lightbulb, ArrowUpRight, ThumbsUp, Plus, Sparkles, Target, Zap, Filter, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
+import { createIssueAction, fetchUserProjectsAction } from "@/app/(app)/issues/actions";
 
 export interface DiscoveryIdea {
   id: string;
@@ -68,32 +69,65 @@ const INITIAL_IDEAS: DiscoveryIdea[] = [
 ];
 
 export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
-  const [ideas, setIdeas] = useState<DiscoveryIdea[]>(INITIAL_IDEAS);
+  const [ideas, setIdeas] = useState<DiscoveryIdea[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("trackly_discovery_ideas");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return INITIAL_IDEAS;
+  });
+
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [showNewModal, setShowNewModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newImpact, setNewImpact] = useState<"HIGH" | "LOW">("HIGH");
   const [newEffort, setNewEffort] = useState<"HIGH" | "LOW">("LOW");
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const saveIdeas = (next: DiscoveryIdea[]) => {
+    setIdeas(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("trackly_discovery_ideas", JSON.stringify(next));
+    }
+  };
 
   const filteredIdeas = ideas.filter(
     (item) => activeCategory === "All" || item.category === activeCategory
   );
 
   const handleVote = (id: string) => {
-    setIdeas((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, votes: i.votes + 1 } : i))
-    );
+    const next = ideas.map((i) => (i.id === id ? { ...i, votes: i.votes + 1 } : i));
+    saveIdeas(next);
   };
 
-  const handleConvertToTask = (id: string) => {
-    setIdeas((prev) =>
-      prev.map((i) =>
-        i.id === id
-          ? { ...i, convertedToTask: true, taskKey: `${projectKey}-${Math.floor(Math.random() * 90) + 100}` }
-          : i
-      )
-    );
+  const handleConvertToTask = (id: string, idea: DiscoveryIdea) => {
+    setConvertingId(id);
+    startTransition(async () => {
+      const projects = await fetchUserProjectsAction();
+      const currentProj = projects.find((p) => p.key === projectKey) || projects[0];
+
+      if (currentProj) {
+        const formData = new FormData();
+        formData.append("projectId", currentProj.id);
+        formData.append("summary", idea.title);
+        formData.append("description", idea.description);
+        formData.append("type", "STORY");
+        formData.append("priority", idea.impact === "HIGH" ? "HIGH" : "MEDIUM");
+
+        await createIssueAction({}, formData);
+      }
+
+      const generatedKey = `${projectKey}-${Math.floor(Math.random() * 90) + 100}`;
+      const next = ideas.map((i) =>
+        i.id === id ? { ...i, convertedToTask: true, taskKey: generatedKey } : i
+      );
+      saveIdeas(next);
+      setConvertingId(null);
+    });
   };
 
   const handleCreateIdea = (e: React.FormEvent) => {
@@ -102,15 +136,16 @@ export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
 
     const newIdea: DiscoveryIdea = {
       id: `idea-${Date.now()}`,
-      title: newTitle,
-      description: newDesc || "Customer feature request collected via Discovery Hub",
+      title: newTitle.trim(),
+      description: newDesc.trim() || "Customer feature request collected via Discovery Hub",
       impact: newImpact,
       effort: newEffort,
       votes: 1,
       category: "Feature",
     };
 
-    setIdeas([newIdea, ...ideas]);
+    const next = [newIdea, ...ideas];
+    saveIdeas(next);
     setShowNewModal(false);
     setNewTitle("");
     setNewDesc("");
@@ -324,7 +359,7 @@ function IdeaCard({
 }: {
   idea: DiscoveryIdea;
   onVote: (id: string) => void;
-  onConvert: (id: string) => void;
+  onConvert: (id: string, idea: DiscoveryIdea) => void;
 }) {
   return (
     <div className="p-3 rounded-xl border border-border bg-surface shadow-xs hover:border-brand/40 transition-all flex items-start justify-between gap-3">
@@ -355,9 +390,9 @@ function IdeaCard({
         {!idea.convertedToTask && (
           <button
             type="button"
-            onClick={() => onConvert(idea.id)}
+            onClick={() => onConvert(idea.id, idea)}
             title="Convert Idea to Backlog Task"
-            className="p-1 rounded-lg text-text-subtle hover:text-brand hover:bg-brand/10 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-text-subtle hover:text-brand hover:bg-brand/10 transition-colors cursor-pointer"
           >
             <ArrowUpRight size={14} />
           </button>

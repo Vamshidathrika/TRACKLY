@@ -1,40 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Upload, ShieldCheck, Database, FileText, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Download, Upload, ShieldCheck, Database, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { exportWorkspaceDataAction, importWorkspaceDataAction } from "@/app/(app)/settings/export/actions";
 
 export function WorkspaceExportView({ siteName }: { siteName: string }) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<any>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreSuccess, setRestoreSuccess] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; summary?: string; error?: string } | null>(null);
 
-  const handleDownloadBackup = () => {
+  const handleDownloadBackup = async () => {
     setIsExporting(true);
     setExportComplete(false);
 
-    setTimeout(() => {
-      const backupData = {
-        version: "1.0",
-        exportedAt: new Date().toISOString(),
-        workspace: {
-          name: siteName,
-          domain: `${siteName.toLowerCase().replace(/\s+/g, "-")}.trackly.dev`,
-        },
-        entityCounts: {
-          projects: 3,
-          issues: 42,
-          members: 5,
-          automationRules: 8,
-          customFields: 4,
-          issueTypes: 5,
-        },
-        schemaVersion: "2026-07-v1",
-      };
+    const res = await exportWorkspaceDataAction();
+    setIsExporting(false);
 
-      const jsonStr = JSON.stringify(backupData, null, 2);
+    if (res.success && res.backupData) {
+      const jsonStr = JSON.stringify(res.backupData, null, 2);
       const blob = new Blob([jsonStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -44,10 +33,11 @@ export function WorkspaceExportView({ siteName }: { siteName: string }) {
       a.click();
       document.body.removeChild(a);
 
-      setIsExporting(false);
       setExportComplete(true);
       setTimeout(() => setExportComplete(false), 4000);
-    }, 1200);
+    } else {
+      alert(`Export failed: ${res.error}`);
+    }
   };
 
   const handleValidateImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,21 +47,23 @@ export function WorkspaceExportView({ siteName }: { siteName: string }) {
     setImportFile(file);
     setIsValidating(true);
     setValidationResult(null);
+    setRestoreSuccess(false);
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
+        setParsedData(json);
         setIsValidating(false);
-        if (json.version || json.exportedAt || json.entities) {
+        if (json.version || json.exportedAt || json.entityCounts || json.projects) {
           setValidationResult({
             valid: true,
-            summary: `Valid backup file! Contains ${json.entityCounts?.issues || 42} issues, ${json.entityCounts?.projects || 3} projects, and ${json.entityCounts?.members || 5} members. Ready to restore.`,
+            summary: `Valid backup file! Contains ${json.entityCounts?.issues || json.issues?.length || 0} issues, ${json.entityCounts?.projects || json.projects?.length || 0} projects, and ${json.entityCounts?.members || json.members?.length || 0} members. Ready to restore.`,
           });
         } else {
           setValidationResult({
             valid: false,
-            error: "File lacks valid Trackly/Jira schema metadata.",
+            error: "File lacks valid Trackly schema metadata.",
           });
         }
       } catch {
@@ -83,6 +75,18 @@ export function WorkspaceExportView({ siteName }: { siteName: string }) {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleExecuteRestore = async () => {
+    if (!parsedData || !validationResult?.valid) return;
+    setIsRestoring(true);
+    const res = await importWorkspaceDataAction(parsedData);
+    setIsRestoring(false);
+    if (res.success) {
+      setRestoreSuccess(true);
+    } else {
+      alert(`Restore failed: ${res.error}`);
+    }
   };
 
   return (
@@ -160,20 +164,41 @@ export function WorkspaceExportView({ siteName }: { siteName: string }) {
             )}
 
             {validationResult && (
-              <div
-                className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
-                  validationResult.valid
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
-                    : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
-                }`}
-              >
-                {validationResult.valid ? <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> : <AlertTriangle size={16} className="shrink-0 mt-0.5" />}
-                <div>
-                  <span className="font-bold block">
-                    {validationResult.valid ? "Validation Succeeded" : "Validation Failed"}
-                  </span>
-                  <span>{validationResult.summary || validationResult.error}</span>
+              <div className="flex flex-col gap-2">
+                <div
+                  className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+                    validationResult.valid
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                      : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                  }`}
+                >
+                  {validationResult.valid ? <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> : <AlertTriangle size={16} className="shrink-0 mt-0.5" />}
+                  <div>
+                    <span className="font-bold block">
+                      {validationResult.valid ? "Validation Succeeded" : "Validation Failed"}
+                    </span>
+                    <span>{validationResult.summary || validationResult.error}</span>
+                  </div>
                 </div>
+
+                {validationResult.valid && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      appearance="primary"
+                      onClick={handleExecuteRestore}
+                      disabled={isRestoring}
+                      className="flex items-center gap-2 text-xs"
+                    >
+                      {isRestoring ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      <span>{isRestoring ? "Restoring Workspace Data..." : "Restore / Import Workspace Data"}</span>
+                    </Button>
+                    {restoreSuccess && (
+                      <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 size={14} /> Workspace data restored successfully!
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

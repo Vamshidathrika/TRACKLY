@@ -65,10 +65,6 @@ function BoardColumnComponent({
     const issueId = e.dataTransfer.getData("text/plain");
     if (!issueId) return;
 
-    const targetIssue = issues.find((i) => i.id === issueId);
-    const canEdit = isAdmin || (targetIssue ? targetIssue.assignee?.id === currentUserId : true);
-    if (!canEdit) return;
-
     onStatusChange(issueId, status);
   };
 

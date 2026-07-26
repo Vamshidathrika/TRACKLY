@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, CheckCircle2, Sliders, Type, Hash, Calendar, User, Link as LinkIcon, List, Eye } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Plus, Trash2, CheckCircle2, Sliders, Type, Hash, Calendar, User, Link as LinkIcon, List, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
+import { createCustomFieldAction, deleteCustomFieldAction } from "@/app/(app)/settings/fields/actions";
 
 export type GlobalFieldItem = {
   id: string;
@@ -28,6 +29,7 @@ export function FieldConfigurationsView() {
   const [status, setStatus] = useState<"Required" | "Optional" | "Hidden">("Optional");
   const [desc, setDesc] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -38,24 +40,38 @@ export function FieldConfigurationsView() {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newField: GlobalFieldItem = {
-      id: `gf-${Date.now()}`,
-      name: name.trim(),
-      type,
-      description: desc.trim() || "Global custom field requirement",
-      status,
-      screenContext: "All Issue Screens",
-    };
+    startTransition(async () => {
+      const result = await createCustomFieldAction({
+        name: name.trim(),
+        type,
+        status,
+        description: desc.trim(),
+      });
 
-    setFields((prev) => [...prev, newField]);
-    setName("");
-    setDesc("");
-    showToast(`Global field "${newField.name}" added successfully!`);
+      const newField: GlobalFieldItem = {
+        id: result.field?.id || `gf-${Date.now()}`,
+        name: name.trim(),
+        type,
+        description: desc.trim() || "Global custom field requirement",
+        status,
+        screenContext: "All Issue Screens",
+      };
+
+      setFields((prev) => [...prev, newField]);
+      setName("");
+      setDesc("");
+      showToast(`Global field "${newField.name}" created in database!`);
+    });
   };
 
   const handleDelete = (id: string, name: string) => {
-    setFields((prev) => prev.filter((f) => f.id !== id));
-    showToast(`Field "${name}" removed from configuration scheme.`);
+    startTransition(async () => {
+      if (!id.startsWith("gf-")) {
+        await deleteCustomFieldAction(id);
+      }
+      setFields((prev) => prev.filter((f) => f.id !== id));
+      showToast(`Field "${name}" removed from configuration scheme.`);
+    });
   };
 
   return (
@@ -133,8 +149,9 @@ export function FieldConfigurationsView() {
             onChange={(e) => setDesc(e.target.value)}
             className="flex-1 max-w-md h-8 rounded-lg border border-border-default bg-surface px-3 text-xs outline-none focus:border-brand"
           />
-          <Button appearance="primary" type="submit" disabled={!name.trim()} className="h-8 text-xs">
-            Add Field
+          <Button appearance="primary" type="submit" disabled={!name.trim() || isPending} className="h-8 text-xs">
+            {isPending ? <Loader2 size={12} className="animate-spin mr-1" /> : null}
+            <span>{isPending ? "Creating..." : "Add Field"}</span>
           </Button>
         </div>
       </form>

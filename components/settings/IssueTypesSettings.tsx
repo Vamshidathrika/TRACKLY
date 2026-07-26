@@ -16,19 +16,34 @@ export type IssueTypeScheme = {
 };
 
 export function IssueTypesSettings() {
-  const [types, setTypes] = useState<IssueTypeScheme[]>([
-    { id: "it-1", name: "Story", description: "User functionality requirement or user story", badgeColor: "green", iconName: "Bookmark", isSubtask: false, fields: ["Summary", "Description", "Assignee", "Priority", "Sprint"] },
-    { id: "it-2", name: "Bug", description: "Problem or error impairing system function", badgeColor: "red", iconName: "Bug", isSubtask: false, fields: ["Summary", "Description", "Environment", "Stacktrace", "Severity"] },
-    { id: "it-3", name: "Task", description: "General work item or technical chore", badgeColor: "blue", iconName: "CheckSquare", isSubtask: false, fields: ["Summary", "Description", "Assignee", "Due Date"] },
-    { id: "it-4", name: "Epic", description: "Large body of work encompassing multiple stories", badgeColor: "purple", iconName: "Layers", isSubtask: false, fields: ["Summary", "Description", "Target Date", "Epic Color"] },
-    { id: "it-5", name: "Sub-task", description: "Smaller piece of work belonging to a parent issue", badgeColor: "teal", iconName: "Bookmark", isSubtask: true, fields: ["Summary", "Parent Issue", "Assignee"] },
-  ]);
+  const [types, setTypes] = useState<IssueTypeScheme[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("trackly_issue_types_scheme");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      { id: "it-1", name: "Story", description: "User functionality requirement or user story", badgeColor: "green", iconName: "Bookmark", isSubtask: false, fields: ["Summary", "Description", "Assignee", "Priority", "Sprint"] },
+      { id: "it-2", name: "Bug", description: "Problem or error impairing system function", badgeColor: "red", iconName: "Bug", isSubtask: false, fields: ["Summary", "Description", "Environment", "Stacktrace", "Severity"] },
+      { id: "it-3", name: "Task", description: "General work item or technical chore", badgeColor: "blue", iconName: "CheckSquare", isSubtask: false, fields: ["Summary", "Description", "Assignee", "Due Date"] },
+      { id: "it-4", name: "Epic", description: "Large body of work encompassing multiple stories", badgeColor: "purple", iconName: "Layers", isSubtask: false, fields: ["Summary", "Description", "Target Date", "Epic Color"] },
+      { id: "it-5", name: "Sub-task", description: "Smaller piece of work belonging to a parent issue", badgeColor: "teal", iconName: "Bookmark", isSubtask: true, fields: ["Summary", "Parent Issue", "Assignee"] },
+    ];
+  });
 
   const [typeName, setTypeName] = useState("");
   const [typeDesc, setTypeDesc] = useState("");
   const [color, setColor] = useState("blue");
   const [isSubtask, setIsSubtask] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const saveTypes = (next: IssueTypeScheme[]) => {
+    setTypes(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("trackly_issue_types_scheme", JSON.stringify(next));
+    }
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -49,15 +64,17 @@ export function IssueTypesSettings() {
       fields: ["Summary", "Description", "Assignee", "Priority"],
     };
 
-    setTypes((prev) => [...prev, newType]);
+    const next = [...types, newType];
+    saveTypes(next);
     setTypeName("");
     setTypeDesc("");
-    showToast(`Issue type "${newType.name}" created successfully!`);
+    showToast(`Issue type "${newType.name}" created and saved!`);
   };
 
   const handleDelete = (id: string, name: string) => {
     if (!confirm(`Delete issue type "${name}"? Existing tasks will be migrated to Task.`)) return;
-    setTypes((prev) => prev.filter((t) => t.id !== id));
+    const next = types.filter((t) => t.id !== id);
+    saveTypes(next);
     showToast(`Issue type "${name}" removed.`);
   };
 

@@ -244,12 +244,17 @@ export function IssueDetailDrawer({
       setIsWatching(issue.isWatching ?? false);
 
       // Subtasks
-      setSubtasks(
-        issue.subtasks || [
-          { id: "st-1", key: `${issue.key}-1`, summary: "API schema definition & validations", status: "DONE" },
-          { id: "st-2", key: `${issue.key}-2`, summary: "UI component unit tests & storybook", status: "IN_PROGRESS" },
-        ]
-      );
+      let initialSts = issue.subtasks || [
+        { id: "st-1", key: `${issue.key}-1`, summary: "API schema definition & validations", status: "DONE" },
+        { id: "st-2", key: `${issue.key}-2`, summary: "UI component unit tests & storybook", status: "IN_PROGRESS" },
+      ];
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+        const savedSts = localStorage.getItem(`trackly_subtasks_${issue.id}`);
+        if (savedSts) {
+          try { initialSts = JSON.parse(savedSts); } catch {}
+        }
+      }
+      setSubtasks(initialSts);
 
       // Dev Context
       setPullRequests(
@@ -495,7 +500,7 @@ export function IssueDetailDrawer({
         { id: `st-${Date.now()}-3`, key: `${issue.key}-3`, summary: "Write automated Vitest & Playwright e2e test cases", status: "TO_DO" as IssueStatus },
         { id: `st-${Date.now()}-4`, key: `${issue.key}-4`, summary: "Verify cross-browser responsive accessibility", status: "TO_DO" as IssueStatus },
       ];
-      setSubtasks(generatedSts);
+      saveSubtasks(generatedSts);
       setIsGeneratingAiSubtasks(false);
       showToast("✨ AI successfully decomposed task into 4 subtasks!");
     }, 1200);
@@ -539,13 +544,19 @@ export function IssueDetailDrawer({
     }
   };
 
+  const saveSubtasks = (next: { id: string; key: string; summary: string; status: IssueStatus }[]) => {
+    setSubtasks(next);
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined" && issue?.id) {
+      localStorage.setItem(`trackly_subtasks_${issue.id}`, JSON.stringify(next));
+    }
+  };
+
   // Subtask handlers
   const handleToggleSubtask = (stId: string) => {
-    setSubtasks((prev) =>
-      prev.map((st) =>
-        st.id === stId ? { ...st, status: (st.status === "DONE" ? "IN_PROGRESS" : "DONE") as IssueStatus } : st
-      )
+    const next = subtasks.map((st) =>
+      st.id === stId ? { ...st, status: (st.status === "DONE" ? "IN_PROGRESS" : "DONE") as IssueStatus } : st
     );
+    saveSubtasks(next);
   };
 
   const handleAddSubtask = (e: React.FormEvent) => {
@@ -557,9 +568,10 @@ export function IssueDetailDrawer({
       summary: newSubtaskTitle.trim(),
       status: "TO_DO" as IssueStatus,
     };
-    setSubtasks((prev) => [...prev, newSt]);
+    const next = [...subtasks, newSt];
+    saveSubtasks(next);
     setNewSubtaskTitle("");
-    showToast("Subtask added");
+    showToast("Subtask added & saved");
   };
 
   // Upvote / Watch Handlers

@@ -21,7 +21,7 @@ export type ResolutionItem = {
 };
 
 export function PrioritiesSettings() {
-  const [priorities, setPriorities] = useState<PriorityItem[]>([
+  const [priorities] = useState<PriorityItem[]>([
     { id: "p-1", name: "Highest", level: 1, badgeColor: "red", description: "Blocks production or critical release path" },
     { id: "p-2", name: "High", level: 2, badgeColor: "orange", description: "Major impact on functionality or user experience" },
     { id: "p-3", name: "Medium", level: 3, badgeColor: "blue", description: "Normal work item with moderate impact" },
@@ -29,17 +29,32 @@ export function PrioritiesSettings() {
     { id: "p-5", name: "Lowest", level: 5, badgeColor: "teal", description: "Trivial tweak or optional enhancement" },
   ]);
 
-  const [resolutions, setResolutions] = useState<ResolutionItem[]>([
-    { id: "r-1", name: "Fixed", description: "A fix for this issue has been checked in and verified.", isDefault: true },
-    { id: "r-2", name: "Won't Fix", description: "The problem described will not be fixed.", isDefault: false },
-    { id: "r-3", name: "Duplicate", description: "The problem is a duplicate of an existing issue.", isDefault: false },
-    { id: "r-4", name: "Cannot Reproduce", description: "All attempts to reproduce this issue failed.", isDefault: false },
-    { id: "r-5", name: "Incomplete", description: "The description lacks required information to act upon.", isDefault: false },
-  ]);
+  const [resolutions, setResolutions] = useState<ResolutionItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("trackly_resolution_codes");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      { id: "r-1", name: "Fixed", description: "A fix for this issue has been checked in and verified.", isDefault: true },
+      { id: "r-2", name: "Won't Fix", description: "The problem described will not be fixed.", isDefault: false },
+      { id: "r-3", name: "Duplicate", description: "The problem is a duplicate of an existing issue.", isDefault: false },
+      { id: "r-4", name: "Cannot Reproduce", description: "All attempts to reproduce this issue failed.", isDefault: false },
+      { id: "r-5", name: "Incomplete", description: "The description lacks required information to act upon.", isDefault: false },
+    ];
+  });
 
   const [resName, setResName] = useState("");
   const [resDesc, setResDesc] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+
+  const saveResolutions = (next: ResolutionItem[]) => {
+    setResolutions(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("trackly_resolution_codes", JSON.stringify(next));
+    }
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -57,14 +72,16 @@ export function PrioritiesSettings() {
       isDefault: false,
     };
 
-    setResolutions((prev) => [...prev, newRes]);
+    const next = [...resolutions, newRes];
+    saveResolutions(next);
     setResName("");
     setResDesc("");
-    showToast(`Resolution code "${newRes.name}" added successfully!`);
+    showToast(`Resolution code "${newRes.name}" added and saved!`);
   };
 
   const handleDeleteResolution = (id: string, name: string) => {
-    setResolutions((prev) => prev.filter((r) => r.id !== id));
+    const next = resolutions.filter((r) => r.id !== id);
+    saveResolutions(next);
     showToast(`Resolution code "${name}" removed.`);
   };
 

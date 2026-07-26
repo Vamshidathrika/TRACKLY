@@ -65,9 +65,12 @@ export function CommandPalette({
     }
   }, [open]);
 
+  const [serverProjects, setServerProjects] = useState<{ id: string; name: string; key: string }[]>([]);
+
   useEffect(() => {
     if (!query.trim()) {
       setIssues([]);
+      setServerProjects([]);
       return;
     }
     setIsLoading(true);
@@ -75,8 +78,10 @@ export function CommandPalette({
       try {
         const res = await quickSearchAction(query);
         setIssues(res.issues);
+        setServerProjects(res.projects || []);
       } catch {
         setIssues([]);
+        setServerProjects([]);
       } finally {
         setIsLoading(false);
       }
@@ -140,8 +145,11 @@ export function CommandPalette({
     ? actionsList.filter((a) => a.label.toLowerCase().includes(query.toLowerCase()))
     : actionsList;
 
+  const allProjList = [...projects, ...serverProjects];
+  const uniqueProjs = Array.from(new Map(allProjList.map((p) => [p.id, p])).values());
+
   const filteredProjects = query.trim()
-    ? projects.filter(
+    ? uniqueProjs.filter(
         (p) =>
           p.name.toLowerCase().includes(query.toLowerCase()) ||
           p.key.toLowerCase().includes(query.toLowerCase())

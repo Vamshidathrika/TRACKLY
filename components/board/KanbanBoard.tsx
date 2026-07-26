@@ -184,6 +184,23 @@ export function KanbanBoard({
     setSelectedIssue(updated);
   }, []);
 
+  // Quick Create Issue Handler (replaces temp issue with server persisted issue)
+  const handleQuickCreated = useCallback((newIssue: BoardIssue) => {
+    setIssues((prev) => {
+      const exists = prev.some(
+        (i) => i.id === newIssue.id || (i.id.startsWith("temp-") && i.summary === newIssue.summary)
+      );
+      if (exists) {
+        return prev.map((i) =>
+          i.id === newIssue.id || (i.id.startsWith("temp-") && i.summary === newIssue.summary)
+            ? newIssue
+            : i
+        );
+      }
+      return [newIssue, ...prev];
+    });
+  }, []);
+
   // Delete issue from Slide Drawer
   const handleDeleteIssue = useCallback((issueId: string) => {
     setIssues((prev) => prev.filter((i) => i.id !== issueId));
@@ -345,7 +362,7 @@ export function KanbanBoard({
                     currentUserId={currentUserId}
                     projectId={projectId}
                     projectKey={projectKey}
-                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                    onQuickCreated={handleQuickCreated}
                   />
                   <BoardColumn
                     status="IN_PROGRESS"
@@ -358,7 +375,7 @@ export function KanbanBoard({
                     currentUserId={currentUserId}
                     projectId={projectId}
                     projectKey={projectKey}
-                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                    onQuickCreated={handleQuickCreated}
                   />
                   <BoardColumn
                     status="IN_REVIEW"
@@ -371,7 +388,7 @@ export function KanbanBoard({
                     currentUserId={currentUserId}
                     projectId={projectId}
                     projectKey={projectKey}
-                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                    onQuickCreated={handleQuickCreated}
                   />
                   <BoardColumn
                     status="DONE"
@@ -383,7 +400,7 @@ export function KanbanBoard({
                     currentUserId={currentUserId}
                     projectId={projectId}
                     projectKey={projectKey}
-                    onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
+                    onQuickCreated={handleQuickCreated}
                   />
                 </div>
               ) : (

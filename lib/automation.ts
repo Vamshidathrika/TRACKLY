@@ -126,13 +126,28 @@ export async function evaluateAutomationTriggers(
     const actionStartTime = Date.now();
     try {
       if (rule.action === "ADD_COMMENT" && payload.issueId) {
-        await prisma.comment.create({
-          data: {
-            issueId: payload.issueId,
-            authorId: payload.authorId || "system-automation-bot",
-            body: rule.targetValue,
-          },
-        });
+        let authorId = payload.authorId;
+        if (!authorId) {
+          const issue = await prisma.issue.findUnique({
+            where: { id: payload.issueId },
+            select: { reporterId: true },
+          });
+          authorId = issue?.reporterId;
+        }
+        if (!authorId) {
+          const firstUser = await prisma.user.findFirst({ select: { id: true } });
+          authorId = firstUser?.id;
+        }
+
+        if (authorId) {
+          await prisma.comment.create({
+            data: {
+              issueId: payload.issueId,
+              authorId,
+              body: rule.targetValue,
+            },
+          });
+        }
       } else if (rule.action === "UPDATE_STATUS" && payload.issueId) {
         await prisma.issue.update({
           where: { id: payload.issueId },

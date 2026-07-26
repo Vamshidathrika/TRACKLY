@@ -16,23 +16,26 @@ type PermissionRow = {
 };
 
 export function PermissionMatrixView() {
-  const [permissions, setPermissions] = useState<PermissionRow[]>([
-    // Project Permissions
-    { id: "p1", category: "PROJECT", capability: "Browse Projects", description: "View workspace project boards and backlogs", admin: true, member: true, viewer: true, guest: true },
-    { id: "p2", category: "PROJECT", capability: "Create Projects", description: "Create new project boards and select template presets", admin: true, member: true, viewer: false, guest: false },
-    { id: "p3", category: "PROJECT", capability: "Delete Projects", description: "Permanently delete projects and purge issue history", admin: true, member: false, viewer: false, guest: false },
-
-    // Issue Permissions
-    { id: "i1", category: "ISSUE", capability: "Create Issues", description: "File new tasks, bugs, stories, and epics", admin: true, member: true, viewer: false, guest: false },
-    { id: "i2", category: "ISSUE", capability: "Transition Issues", description: "Drag cards across board status columns", admin: true, member: true, viewer: false, guest: false },
-    { id: "i3", category: "ISSUE", capability: "Delete Issues", description: "Delete tasks or remove attachments", admin: true, member: false, viewer: false, guest: false },
-    { id: "i4", category: "ISSUE", capability: "Add Comments & Retros", description: "Post comments, upvote retro cards, and synthesize action items", admin: true, member: true, viewer: true, guest: false },
-
-    // Admin Permissions
-    { id: "a1", category: "ADMIN", capability: "Manage Workspace Members", description: "Invite members, change roles, or deactivate access", admin: true, member: false, viewer: false, guest: false },
-    { id: "a2", category: "ADMIN", capability: "Generate API Tokens (PAT)", description: "Create personal access tokens for CI/CD runners", admin: true, member: true, viewer: false, guest: false },
-    { id: "a3", category: "ADMIN", capability: "Export Workspace Backup", description: "Download full workspace JSON data snapshots", admin: true, member: false, viewer: false, guest: false },
-  ]);
+  const [permissions, setPermissions] = useState<PermissionRow[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("trackly_permission_matrix");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      { id: "p1", category: "PROJECT", capability: "Browse Projects", description: "View workspace project boards and backlogs", admin: true, member: true, viewer: true, guest: true },
+      { id: "p2", category: "PROJECT", capability: "Create Projects", description: "Create new project boards and select template presets", admin: true, member: true, viewer: false, guest: false },
+      { id: "p3", category: "PROJECT", capability: "Delete Projects", description: "Permanently delete projects and purge issue history", admin: true, member: false, viewer: false, guest: false },
+      { id: "i1", category: "ISSUE", capability: "Create Issues", description: "File new tasks, bugs, stories, and epics", admin: true, member: true, viewer: false, guest: false },
+      { id: "i2", category: "ISSUE", capability: "Transition Issues", description: "Drag cards across board status columns", admin: true, member: true, viewer: false, guest: false },
+      { id: "i3", category: "ISSUE", capability: "Delete Issues", description: "Delete tasks or remove attachments", admin: true, member: false, viewer: false, guest: false },
+      { id: "i4", category: "ISSUE", capability: "Add Comments & Retros", description: "Post comments, upvote retro cards, and synthesize action items", admin: true, member: true, viewer: true, guest: false },
+      { id: "a1", category: "ADMIN", capability: "Manage Workspace Members", description: "Invite members, change roles, or deactivate access", admin: true, member: false, viewer: false, guest: false },
+      { id: "a2", category: "ADMIN", capability: "Generate API Tokens (PAT)", description: "Create personal access tokens for CI/CD runners", admin: true, member: true, viewer: false, guest: false },
+      { id: "a3", category: "ADMIN", capability: "Export Workspace Backup", description: "Download full workspace JSON data snapshots", admin: true, member: false, viewer: false, guest: false },
+    ];
+  });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -43,6 +46,9 @@ export function PermissionMatrixView() {
   };
 
   const handleSave = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("trackly_permission_matrix", JSON.stringify(permissions));
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };

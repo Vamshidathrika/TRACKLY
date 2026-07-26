@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Palette, CheckCircle2, Globe, Sparkles, Check } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Palette, CheckCircle2, Globe, Sparkles, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { updateWorkspaceBrandingAction } from "@/app/(app)/settings/branding/actions";
 
 export function WorkspaceBrandingView({ siteName }: { siteName: string }) {
   const [name, setName] = useState(siteName);
   const [subdomain, setSubdomain] = useState(siteName.toLowerCase().replace(/\s+/g, "-"));
-  const [selectedTheme, setSelectedTheme] = useState("jira_blue");
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("trackly_theme_accent") || "jira_blue";
+    }
+    return "jira_blue";
+  });
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const themes = [
     { id: "jira_blue", name: "Jira Classic Blue", brandHex: "#0052CC", bgHex: "#091E42", badge: "Default Jira Theme" },
@@ -19,8 +27,26 @@ export function WorkspaceBrandingView({ siteName }: { siteName: string }) {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    if (!name.trim()) return;
+
+    setErrorMsg(null);
+    startTransition(async () => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("trackly_theme_accent", selectedTheme);
+      }
+
+      const result = await updateWorkspaceBrandingAction({
+        name: name.trim(),
+        slug: subdomain.trim(),
+      });
+
+      if (result.success) {
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 3000);
+      } else {
+        setErrorMsg(result.error || "Failed to update workspace branding");
+      }
+    });
   };
 
   return (
@@ -109,13 +135,20 @@ export function WorkspaceBrandingView({ siteName }: { siteName: string }) {
           </div>
         </div>
 
+        {errorMsg && (
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-600 font-medium">
+            {errorMsg}
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
-          <Button appearance="primary" type="submit">
-            Save Branding Changes
+          <Button appearance="primary" type="submit" disabled={isPending}>
+            {isPending ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+            <span>{isPending ? "Saving..." : "Save Branding Changes"}</span>
           </Button>
           {savedSuccess && (
             <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-              <CheckCircle2 size={16} /> Branding updated successfully!
+              <CheckCircle2 size={16} /> Workspace branding updated in database!
             </span>
           )}
         </div>

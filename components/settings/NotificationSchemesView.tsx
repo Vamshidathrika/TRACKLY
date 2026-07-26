@@ -15,14 +15,22 @@ type NotificationRule = {
 };
 
 export function NotificationSchemesView() {
-  const [rules, setRules] = useState<NotificationRule[]>([
-    { id: "nr-1", event: "Issue Created", description: "Triggered when a new task or bug is filed", assignee: true, reporter: true, projectLead: true, watchers: false },
-    { id: "nr-2", event: "Issue Assigned", description: "Triggered when assignee ownership changes", assignee: true, reporter: true, projectLead: false, watchers: true },
-    { id: "nr-3", event: "Status Transitioned", description: "Triggered when board status changes (e.g. Code Review ➔ Done)", assignee: true, reporter: true, projectLead: true, watchers: true },
-    { id: "nr-4", event: "Comment Added", description: "Triggered when team members reply or mention a user", assignee: true, reporter: true, projectLead: false, watchers: true },
-    { id: "nr-5", event: "Sprint Started / Completed", description: "Triggered when a sprint is launched or closed", assignee: false, reporter: false, projectLead: true, watchers: true },
-    { id: "nr-6", event: "Release Version Deployed", description: "Triggered when release notes & tags are published", assignee: true, reporter: true, projectLead: true, watchers: true },
-  ]);
+  const [rules, setRules] = useState<NotificationRule[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("trackly_notification_scheme_matrix");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      { id: "nr-1", event: "Issue Created", description: "Triggered when a new task or bug is filed", assignee: true, reporter: true, projectLead: true, watchers: false },
+      { id: "nr-2", event: "Issue Assigned", description: "Triggered when assignee ownership changes", assignee: true, reporter: true, projectLead: false, watchers: true },
+      { id: "nr-3", event: "Status Transitioned", description: "Triggered when board status changes (e.g. Code Review ➔ Done)", assignee: true, reporter: true, projectLead: true, watchers: true },
+      { id: "nr-4", event: "Comment Added", description: "Triggered when team members reply or mention a user", assignee: true, reporter: true, projectLead: false, watchers: true },
+      { id: "nr-5", event: "Sprint Started / Completed", description: "Triggered when a sprint is launched or closed", assignee: false, reporter: false, projectLead: true, watchers: true },
+      { id: "nr-6", event: "Release Version Deployed", description: "Triggered when release notes & tags are published", assignee: true, reporter: true, projectLead: true, watchers: true },
+    ];
+  });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -33,6 +41,9 @@ export function NotificationSchemesView() {
   };
 
   const handleSave = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("trackly_notification_scheme_matrix", JSON.stringify(rules));
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };

@@ -34,8 +34,14 @@ export function ReleaseHub({
       setHasConnectedRepo(res?.hasConnectedRepo ?? false);
     });
   }, [projectId]);
-  const [releases, setReleases] = useState<ReleaseVersion[]>(
-    initialReleases.length > 0
+  const [releases, setReleases] = useState<ReleaseVersion[]>(() => {
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      const saved = localStorage.getItem(`trackly_release_hub_versions_${projectKey}`);
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return initialReleases.length > 0
       ? initialReleases
       : [
           {
@@ -58,8 +64,15 @@ export function ReleaseHub({
             totalIssues: 8,
             notesMarkdown: `## 🚀 Release v1.1.0 Notes (Draft)\n\n### New Features\n- 📦 **Release Versioning Hub**: Version progress tracking and 1-click Markdown release notes.\n- ❇️ **Sprint Retrospective Board**: 3-column retro suite with 1-click issue conversion.`,
           },
-        ]
-  );
+        ];
+  });
+
+  const saveReleases = (next: ReleaseVersion[]) => {
+    setReleases(next);
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      localStorage.setItem(`trackly_release_hub_versions_${projectKey}`, JSON.stringify(next));
+    }
+  };
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newVersionName, setNewVersionName] = useState("");
@@ -80,7 +93,8 @@ export function ReleaseHub({
       totalIssues: 0,
       notesMarkdown: `## 🚀 Release ${newVersionName.trim()} Notes\n\n### New Features\n- Initial feature work under development.`,
     };
-    setReleases((prev) => [newRel, ...prev]);
+    const next = [newRel, ...releases];
+    saveReleases(next);
     setNewVersionName("");
     setNewVersionDesc("");
     setShowCreateModal(false);
@@ -91,9 +105,8 @@ export function ReleaseHub({
     setTimeout(() => {
       const generatedMarkdown = `## 🚀 Release ${rel.name} Changelog & Notes (AI Synthesized)\n\n### 🌟 Key Highlights & New Features\n- ⚡ **Superpowered Ticket Slide**: Built interactive subtasks checklist with dynamic completion percentage bar.\n- 🐙 **Developer Context Integration**: Connected GitHub PR diffs (#42 Merged) & Commit hash links.\n- 👁️ **Team Engagement & Voting**: Added 1-click issue upvoting and watcher notification counters.\n\n### 🐛 Bug Fixes & Patches\n- 🛡️ **Keyboard Ergonomics**: Resolved global Escape key drawer closing & single-key hotkey focus.\n- ⏰ **Smart Overdue Alerts**: Color-accented relative due-date warnings on overdue tasks.\n\n### ⚡ Performance & Optimization\n- 🚀 **Optimistic UI Updates**: Reduced field edit UI updates to <10ms with zero loading latency.`;
 
-      setReleases((prev) =>
-        prev.map((r) => (r.id === rel.id ? { ...r, notesMarkdown: generatedMarkdown } : r))
-      );
+      const next = releases.map((r) => (r.id === rel.id ? { ...r, notesMarkdown: generatedMarkdown } : r));
+      saveReleases(next);
       setGeneratingId(null);
       setActiveNotes({ ...rel, notesMarkdown: generatedMarkdown });
     }, 1000);
