@@ -6,6 +6,8 @@ import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
 import { ShieldCheck, Activity, Terminal } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardsPage() {
   const { userId, siteId } = await requireMembership();
 
