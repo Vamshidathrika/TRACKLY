@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FolderKanban,
@@ -7,10 +8,27 @@ import {
   ArrowRight,
   TrendingUp,
   CheckSquare,
+  Plus,
+  LayoutGrid,
+  RefreshCw,
+  Share2,
+  X,
+  PieChart,
+  Sparkles,
+  ShieldAlert,
+  Filter,
+  CheckCircle2,
 } from "lucide-react";
 import { TypeIcon } from "@/components/ui/TypeIcon";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { DashboardCard } from "./DashboardCard";
+import { PieChartGadget } from "./PieChartGadget";
+import { CreatedVsResolvedGadget } from "./CreatedVsResolvedGadget";
+import { SprintHealthGadget } from "./SprintHealthGadget";
+import { AIRiskDetectorGadget } from "./AIRiskDetectorGadget";
+import { JQLFilterResultsGadget } from "./JQLFilterResultsGadget";
+
 import {
   MetricsRow,
   StatusDonutWidget,
@@ -20,7 +38,6 @@ import {
   EpicProgressWidget,
   PageFeedbackFooter,
   AuditTelemetryFeedWidget,
-  type AuditLogItem,
 } from "./SummaryWidgets";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -69,6 +86,8 @@ export type EpicProgressItem = {
   doneChildIssues: number;
 };
 
+type LayoutFormat = "FULL" | "HALF" | "SPLIT" | "TRIPLE";
+
 function getStatusBadgeClass(status: string): string {
   const map: Record<string, string> = {
     DONE: "text-success bg-success/10 border-success/20",
@@ -77,18 +96,6 @@ function getStatusBadgeClass(status: string): string {
     TO_DO: "text-subtle bg-neutral border-border-default",
   };
   return map[status] ?? "text-subtle bg-neutral border-border-default";
-}
-
-function formatTime(date: Date): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function DashboardView({
@@ -114,13 +121,38 @@ export function DashboardView({
   unassignedCount?: number;
   projectKey?: string;
 }) {
+  const [layout, setLayout] = useState<LayoutFormat>("HALF");
+  const [autoRefresh, setAutoRefresh] = useState<number>(0);
+  const [showGadgetDrawer, setShowGadgetDrawer] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Active Enabled Gadgets
+  const [enabledGadgets, setEnabledGadgets] = useState<Record<string, boolean>>({
+    pie_chart: true,
+    created_vs_resolved: true,
+    sprint_health: true,
+    ai_risks: true,
+    jql_filter: true,
+  });
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // Auto-refresh timer simulation
+  useEffect(() => {
+    if (autoRefresh === 0) return;
+    const interval = setInterval(() => {
+      showToast("Dashboard data auto-refreshed!");
+    }, autoRefresh * 1000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
   const totalIssues = Object.values(statusCounts).reduce((a, b) => a + b, 0);
   const doneCount = statusCounts["DONE"] ?? 0;
-  const inProgressCount = statusCounts["IN_PROGRESS"] ?? 0;
-  const inReviewCount = statusCounts["IN_REVIEW"] ?? 0;
-  const todoCount = statusCounts["TO_DO"] ?? 0;
 
-  // Compute 7-day metric indicators
   const metrics = {
     completed7d: doneCount,
     updated7d: recentActivity.length,
@@ -128,23 +160,104 @@ export function DashboardView({
     dueSoon7d: priorityCounts["HIGHEST"] || 0,
   };
 
+  const getGridClass = () => {
+    if (layout === "FULL") return "grid grid-cols-1 gap-6";
+    if (layout === "SPLIT") return "grid grid-cols-1 lg:grid-cols-3 gap-6"; // 1st col span-2
+    if (layout === "TRIPLE") return "grid grid-cols-1 md:grid-cols-3 gap-6";
+    return "grid grid-cols-1 lg:grid-cols-2 gap-6"; // HALF (50/50)
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-7xl">
-      {/* 1. Metric Header Cards (Completed, Updated, Created, Due soon) */}
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-brand px-4 py-2.5 text-xs font-bold text-white shadow-lg animate-fade-in-up flex items-center gap-2">
+          <RefreshCw size={14} className="animate-spin" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
+      {/* Workspace Dashboard Controls Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border border-border-default bg-surface shadow-2xs">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-extrabold text-default">Main Engineering Dashboard</h2>
+          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
+            Default View
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+          {/* Add Gadget Button */}
+          <Button
+            appearance="primary"
+            onClick={() => setShowGadgetDrawer(true)}
+            className="flex items-center gap-1.5 text-xs h-8"
+          >
+            <Plus size={14} />
+            Add Gadget
+          </Button>
+
+          {/* Layout Selector */}
+          <div className="flex items-center gap-1 bg-neutral p-1 rounded-lg border border-border-default">
+            {[
+              { id: "FULL", label: "1 Col" },
+              { id: "HALF", label: "2 Col 50/50" },
+              { id: "SPLIT", label: "2 Col 70/30" },
+              { id: "TRIPLE", label: "3 Col 33/33/33" },
+            ].map((l) => (
+              <button
+                key={l.id}
+                onClick={() => setLayout(l.id as LayoutFormat)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                  layout === l.id ? "bg-surface text-brand shadow-2xs" : "text-subtle hover:text-default"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Auto Refresh Interval */}
+          <select
+            value={autoRefresh}
+            onChange={(e) => setAutoRefresh(Number(e.target.value))}
+            className="h-8 rounded-lg border border-border-default bg-surface px-2.5 text-xs font-bold text-default outline-none focus:border-brand cursor-pointer"
+          >
+            <option value={0}>Auto Refresh: Off</option>
+            <option value={60}>Refresh Every 1 Min</option>
+            <option value={300}>Refresh Every 5 Mins</option>
+            <option value={900}>Refresh Every 15 Mins</option>
+          </select>
+
+          {/* Share Button */}
+          <Button
+            appearance="subtle"
+            onClick={() => setShowShareModal(true)}
+            className="flex items-center gap-1.5 text-xs h-8 hover:bg-neutral"
+          >
+            <Share2 size={14} className="text-subtle" />
+            Share
+          </Button>
+        </div>
+      </div>
+
+      {/* 1. Metric Header Cards */}
       <MetricsRow metrics={metrics} />
 
-      {/* 2. Primary 2x2 Analytics Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Overview Donut Widget */}
+      {/* 2. Superpowers Jira Gadgets Row */}
+      <div className={getGridClass()}>
+        {enabledGadgets.pie_chart && <PieChartGadget />}
+        {enabledGadgets.created_vs_resolved && <CreatedVsResolvedGadget />}
+        {enabledGadgets.sprint_health && <SprintHealthGadget />}
+        {enabledGadgets.ai_risks && <AIRiskDetectorGadget />}
+        {enabledGadgets.jql_filter && <JQLFilterResultsGadget />}
+      </div>
+
+      {/* 3. Primary 2x2 Analytics Grid */}
+      <div className={getGridClass()}>
         <StatusDonutWidget statusCounts={statusCounts} />
-
-        {/* Priority Breakdown Bar Widget */}
         <PriorityBarWidget priorityCounts={priorityCounts} />
-
-        {/* Type Distribution Widget (showing 0% types) */}
         <TypeDistributionWidget typeCounts={typeCounts} />
-
-        {/* Team Workload Widget (with Unassigned bucket & Reassign trigger) */}
         <TeamWorkloadWidget
           members={memberWorkloads}
           unassignedCount={unassignedCount}
@@ -152,12 +265,10 @@ export function DashboardView({
         />
       </div>
 
-      {/* 3. Epic Progress & Project Health Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Epic Progress Widget (with educational empty state) */}
+      {/* 4. Epic Progress & Project Health Section */}
+      <div className={getGridClass()}>
         <EpicProgressWidget epics={epics} />
 
-        {/* Project Health Radar */}
         <DashboardCard
           title="Project Health Radar"
           icon={FolderKanban}
@@ -200,9 +311,8 @@ export function DashboardView({
         </DashboardCard>
       </div>
 
-      {/* 4. Assigned Tasks & Activity Stream */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Assigned Tasks Card */}
+      {/* 5. Assigned Tasks & Activity Stream */}
+      <div className={getGridClass()}>
         <DashboardCard
           title={`Assigned Tasks (${assignedIssues.length})`}
           icon={CheckSquare}
@@ -242,7 +352,6 @@ export function DashboardView({
           )}
         </DashboardCard>
 
-        {/* Live Activity & Audit Telemetry Feed (Who Created, Who Updated, Who Deleted) */}
         <AuditTelemetryFeedWidget
           items={recentActivity.map((act) => {
             let type: "CREATED" | "UPDATED" | "DELETED" = "UPDATED";
@@ -262,6 +371,106 @@ export function DashboardView({
           })}
         />
       </div>
+
+      {/* Gadget Library Drawer Modal */}
+      {showGadgetDrawer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-border-default bg-surface p-6 shadow-xl flex flex-col gap-4 animate-fade-in-down">
+            <div className="flex items-center justify-between border-b border-border-default pb-3">
+              <h3 className="text-base font-bold text-default flex items-center gap-2">
+                <LayoutGrid className="text-brand" size={18} />
+                Add Gadgets to Dashboard
+              </h3>
+              <button
+                onClick={() => setShowGadgetDrawer(false)}
+                className="p-1 rounded-lg text-subtlest hover:bg-neutral"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {[
+                { id: "pie_chart", title: "Pie Chart Distribution", desc: "Breakdown of tasks by priority, status, or assignee", icon: PieChart },
+                { id: "created_vs_resolved", title: "Created vs Resolved Velocity", desc: "Dual bar comparison graph over 7d, 30d, 90d", icon: TrendingUp },
+                { id: "sprint_health", title: "Active Sprint Health & Velocity", desc: "Real-time scope progress bar and story point tally", icon: Sparkles },
+                { id: "ai_risks", title: "AI Risk & SLA Bottleneck Detector", desc: "AI audit flagging blocked tickets and SLA breaches", icon: ShieldAlert },
+                { id: "jql_filter", title: "Saved JQL Filter Query Results", desc: "Embedded live table of custom JQL searches", icon: Filter },
+              ].map((g) => {
+                const isEnabled = enabledGadgets[g.id];
+                const Icon = g.icon;
+
+                return (
+                  <div
+                    key={g.id}
+                    className="p-3.5 rounded-xl border border-border-default bg-neutral/30 flex items-center justify-between gap-3 hover:bg-neutral/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand font-bold">
+                        <Icon size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-default">{g.title}</h4>
+                        <p className="text-[11px] text-subtle">{g.desc}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnabledGadgets((prev) => ({ ...prev, [g.id]: !prev[g.id] }));
+                        showToast(`Gadget "${g.title}" ${isEnabled ? "removed" : "added"}!`);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        isEnabled
+                          ? "bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500/20"
+                          : "bg-brand text-white shadow-2xs hover:bg-brand-hovered"
+                      }`}
+                    >
+                      {isEnabled ? "Remove" : "+ Add"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Dashboard Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border-default bg-surface p-6 shadow-xl flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-border-default pb-3">
+              <h3 className="text-sm font-bold text-default">Share Engineering Dashboard</h3>
+              <button onClick={() => setShowShareModal(false)} className="p-1 text-subtlest hover:bg-neutral">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 text-xs">
+              <p className="text-subtle">Choose dashboard access permissions across your team or generate a public link.</p>
+
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 p-2.5 rounded-lg border border-border-default bg-neutral/30 cursor-pointer font-bold">
+                  <input type="radio" name="perm" defaultChecked className="accent-brand" />
+                  Shared with Workspace Team Members
+                </label>
+                <label className="flex items-center gap-2 p-2.5 rounded-lg border border-border-default bg-neutral/30 cursor-pointer font-bold">
+                  <input type="radio" name="perm" className="accent-brand" />
+                  Private (Only Me)
+                </label>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button appearance="primary" onClick={() => { setShowShareModal(false); showToast("Dashboard permissions updated!"); }}>
+                  Save Share Settings
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 5. Page Feedback Footer Widget */}
       <PageFeedbackFooter />

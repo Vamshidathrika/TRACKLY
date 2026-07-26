@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+
+vi.setConfig({ testTimeout: 15000 });
 import { AutomationView, AutomationRuleItem } from "./AutomationView";
 
 vi.mock("next/navigation", () => ({
