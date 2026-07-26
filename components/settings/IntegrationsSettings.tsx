@@ -619,7 +619,7 @@ function PersonalAccessTokensSection({ showToast }: { showToast: (msg: string) =
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
           <div className="min-w-0">
             <span className="font-bold text-amber-600 dark:text-amber-400 block">
-              Save your token now — it won't be shown again!
+              Save your token now — it won&apos;t be shown again!
             </span>
             <code className="font-mono text-[11px] text-text font-bold truncate block mt-0.5">
               {newlyCreatedToken}
