@@ -13,16 +13,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const clientId = process.env.SLACK_CLIENT_ID;
   if (!clientId) {
-    return NextResponse.json(
-      { error: "Slack OAuth not configured. Set SLACK_CLIENT_ID in environment variables." },
-      { status: 503 }
-    );
+    return NextResponse.redirect(`${appUrl}/settings/integrations?error=slack_not_configured`);
   }
 
   const state = crypto.randomBytes(16).toString("hex");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   const redirectUrl = new URL("https://slack.com/oauth/v2/authorize");
   redirectUrl.searchParams.set("client_id", clientId);

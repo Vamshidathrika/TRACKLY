@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import {
   FolderGit2, GitPullRequest, GitBranch, AlertOctagon, Triangle,
   CheckCircle2, Zap, Shield, Key, Copy, Check, Eye, EyeOff,
@@ -64,24 +64,28 @@ const PROVIDERS: ProviderDef[] = [
     id: "GITHUB", name: "GitHub", category: "DEVOPS", categoryName: "Code & Version Control",
     icon: FolderGit2, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-500/10",
     description: "Auto-link commit messages, branch names, and PRs using task keys (e.g. VAM-14).",
-    badges: ["OAuth2", "Smart PR Transitions"], connectType: "OAUTH", oauthPath: "/api/integrations/connect/github",
-    docsUrl: "https://docs.github.com/apps",
+    badges: ["Personal Access Token", "Smart PR Transitions"], connectType: "APIKEY",
+    apiKeyLabel: "GitHub Personal Access Token (PAT)", apiKeyPlaceholder: "ghp_... or github_pat_...",
+    apiKeyHint: "Create at github.com → Settings → Developer Settings → Personal Access Tokens (repo & read:org scopes)",
+    docsUrl: "https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
   },
   {
     id: "GITLAB", name: "GitLab", category: "DEVOPS", categoryName: "Self-Hosted & Cloud DevOps",
     icon: GitBranch, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-500/10",
     description: "Sync Merge Requests, pipeline build statuses, and branch auto-transitions.",
-    badges: ["Merge Requests", "CI/CD Sync"], connectType: "WEBHOOK_ONLY",
-    webhookNote: "Point your GitLab Webhook → the URL below with a signing token.",
-    docsUrl: "https://docs.gitlab.com/ee/user/project/integrations/webhooks.html",
+    badges: ["Merge Requests", "CI/CD Sync"], connectType: "APIKEY",
+    apiKeyLabel: "GitLab Personal Access Token", apiKeyPlaceholder: "glpat-...",
+    apiKeyHint: "Create at gitlab.com → Profile → Access Tokens (api & read_user scopes)",
+    docsUrl: "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
   },
   {
     id: "BITBUCKET", name: "Bitbucket", category: "DEVOPS", categoryName: "Atlassian DevOps Suite",
     icon: GitPullRequest, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-500/10",
     description: "Bitbucket Pull Request state sync and automated pipeline status badges.",
-    badges: ["Pipelines", "PR Approvals"], connectType: "WEBHOOK_ONLY",
-    webhookNote: "Point your Bitbucket Webhook → the URL below.",
-    docsUrl: "https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/",
+    badges: ["Pipelines", "PR Approvals"], connectType: "APIKEY",
+    apiKeyLabel: "Bitbucket Access Token / App Password", apiKeyPlaceholder: "AT...",
+    apiKeyHint: "Create at bitbucket.org → Personal Settings → App Passwords",
+    docsUrl: "https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/",
   },
   {
     id: "VERCEL", name: "Vercel", category: "DEVOPS", categoryName: "Hosting & Frontend Cloud",
@@ -114,7 +118,9 @@ const PROVIDERS: ProviderDef[] = [
     id: "SLACK", name: "Slack", category: "COMMUNICATION", categoryName: "Team Chat & Dispatcher",
     icon: MessageSquare, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-500/10",
     description: "Interactive message unfurling cards, slash commands, and 1-click task creation.",
-    badges: ["Block Kit Unfurl", "Channel Dispatch"], connectType: "OAUTH", oauthPath: "/api/integrations/connect/slack",
+    badges: ["Bot Token", "Channel Dispatch"], connectType: "APIKEY",
+    apiKeyLabel: "Slack Bot User OAuth Token", apiKeyPlaceholder: "xoxb-...",
+    apiKeyHint: "Create at api.slack.com/apps → OAuth & Permissions (xoxb- token)",
     docsUrl: "https://api.slack.com/authentication/oauth-v2",
   },
   {
@@ -228,7 +234,10 @@ function ApiKeyModal({ provider, onClose, onSaved }: ApiKeyModalProps) {
         provider.id,
         apiKey.trim(),
         webhookSecret || undefined,
-        { accountName: testResult.accountName || provider.name }
+        {
+          accountName: testResult.accountName || provider.name,
+          accountAvatar: testResult.accountAvatar,
+        }
       );
 
       if (saveResult.success) {
@@ -501,10 +510,35 @@ export function IntegrationsSettings({ siteId, initialConnections = [] }: Props)
     return map;
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    const connected = params.get("connected");
+
+    if (err === "github_not_configured" || err === "github_denied" || err === "github_token") {
+      showToast("GitHub OAuth not configured or denied. Connect using a Personal Access Token (PAT) below!", "error");
+      const githubProv = PROVIDERS.find((p) => p.id === "GITHUB");
+      if (githubProv) {
+        setModalProvider(githubProv);
+        setModalType("apikey");
+      }
+    } else if (err === "slack_not_configured" || err === "slack_denied") {
+      showToast("Slack OAuth not configured or denied. Connect using a Bot Token (xoxb-...) below!", "error");
+      const slackProv = PROVIDERS.find((p) => p.id === "SLACK");
+      if (slackProv) {
+        setModalProvider(slackProv);
+        setModalType("apikey");
+      }
+    } else if (connected) {
+      showToast(`${connected.toUpperCase()} connected successfully!`, "success");
+    }
+  }, []);
+
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToastMsg(msg);
     setToastType(type);
-    setTimeout(() => setToastMsg(null), 4000);
+    setTimeout(() => setToastMsg(null), 5000);
   };
 
   const getConnection = (providerId: string): IntegrationConnection | undefined =>

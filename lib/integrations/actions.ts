@@ -86,7 +86,7 @@ export async function saveApiKeyIntegration(
   provider: string,
   apiKey: string,
   webhookSecret?: string,
-  extra?: { accountName?: string; webhookUrl?: string; metadata?: string }
+  extra?: { accountName?: string; accountAvatar?: string; webhookUrl?: string; metadata?: string }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { siteId } = await requireMembership();
@@ -101,6 +101,7 @@ export async function saveApiKeyIntegration(
         accessToken: encryptedKey,
         webhookSecret: webhookSecret || null,
         accountName: extra?.accountName || null,
+        accountAvatar: extra?.accountAvatar || null,
         webhookUrl: extra?.webhookUrl || null,
         metadata: extra?.metadata || null,
         connectedAt: new Date(),
@@ -110,6 +111,7 @@ export async function saveApiKeyIntegration(
         accessToken: encryptedKey,
         webhookSecret: webhookSecret || null,
         accountName: extra?.accountName || null,
+        accountAvatar: extra?.accountAvatar || null,
         webhookUrl: extra?.webhookUrl || null,
         metadata: extra?.metadata || null,
         connectedAt: new Date(),
@@ -192,62 +194,181 @@ export async function disconnectIntegration(
 export async function testIntegrationConnection(
   provider: string,
   apiKey: string
-): Promise<{ success: boolean; accountName?: string; error?: string }> {
+): Promise<{ success: boolean; accountName?: string; accountAvatar?: string; error?: string }> {
   try {
+    const cleanKey = apiKey.trim();
+
     switch (provider.toUpperCase()) {
-      case "SENTRY": {
-        const res = await fetch("https://sentry.io/api/0/", {
-          headers: { Authorization: `Bearer ${apiKey}` },
+      case "GITHUB": {
+        const res = await fetch("https://api.github.com/user", {
+          headers: {
+            Authorization: `Bearer ${cleanKey}`,
+            "User-Agent": "Trackly-App",
+            Accept: "application/vnd.github.v3+json",
+          },
         });
-        if (!res.ok) return { success: false, error: "Invalid Sentry auth token" };
-        return { success: true, accountName: "Sentry" };
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          return { success: false, error: errData.message || "Invalid GitHub token or missing scopes" };
+        }
+        const data = await res.json();
+        return {
+          success: true,
+          accountName: data.name ? `${data.name} (@${data.login})` : `@${data.login}`,
+          accountAvatar: data.avatar_url,
+        };
       }
+
+      case "GITLAB": {
+        const res = await fetch("https://gitlab.com/api/v4/user", {
+          headers: { "PRIVATE-TOKEN": cleanKey },
+        });
+        if (!res.ok) {
+          const resBearer = await fetch("https://gitlab.com/api/v4/user", {
+            headers: { Authorization: `Bearer ${cleanKey}` },
+          });
+          if (!resBearer.ok) return { success: false, error: "Invalid GitLab Personal Access Token" };
+          const dataBearer = await resBearer.json();
+          return {
+            success: true,
+            accountName: dataBearer.name ? `${dataBearer.name} (@${dataBearer.username})` : `@${dataBearer.username}`,
+            accountAvatar: dataBearer.avatar_url,
+          };
+        }
+        const data = await res.json();
+        return {
+          success: true,
+          accountName: data.name ? `${data.name} (@${data.username})` : `@${data.username}`,
+          accountAvatar: data.avatar_url,
+        };
+      }
+
+      case "BITBUCKET": {
+        const res = await fetch("https://api.bitbucket.org/2.0/user", {
+          headers: { Authorization: `Bearer ${cleanKey}` },
+        });
+        if (!res.ok) return { success: false, error: "Invalid Bitbucket access token" };
+        const data = await res.json();
+        return {
+          success: true,
+          accountName: data.display_name || `@${data.username}`,
+          accountAvatar: data.links?.avatar?.href,
+        };
+      }
+
+      case "VERCEL": {
+        const res = await fetch("https://api.vercel.com/v2/user", {
+          headers: { Authorization: `Bearer ${cleanKey}` },
+        });
+        if (!res.ok) return { success: false, error: "Invalid Vercel API Token" };
+        const data = await res.json();
+        return {
+          success: true,
+          accountName: data.user?.name || `@${data.user?.username}` || "Vercel Account",
+          accountAvatar: data.user?.avatar ? `https://avatar.vercel.sh/${data.user.username}` : undefined,
+        };
+      }
+
+      case "SENTRY": {
+        const res = await fetch("https://sentry.io/api/0/users/me/", {
+          headers: { Authorization: `Bearer ${cleanKey}` },
+        });
+        if (!res.ok) {
+          const resFallback = await fetch("https://sentry.io/api/0/", {
+            headers: { Authorization: `Bearer ${cleanKey}` },
+          });
+          if (!resFallback.ok) return { success: false, error: "Invalid Sentry auth token" };
+          return { success: true, accountName: "Sentry Integration" };
+        }
+        const data = await res.json();
+        return { success: true, accountName: data.email || data.username || "Sentry Account" };
+      }
+
       case "DATADOG": {
-        // Datadog uses api-key + app-key; we validate with the validate endpoint
-        const [ddApiKey, ddAppKey] = apiKey.split("||");
+        const [ddApiKey, ddAppKey] = cleanKey.split("||");
         const res = await fetch("https://api.datadoghq.com/api/v1/validate", {
           headers: {
-            "DD-API-KEY": ddApiKey || apiKey,
+            "DD-API-KEY": ddApiKey || cleanKey,
             "DD-APPLICATION-KEY": ddAppKey || "",
           },
         });
-        if (!res.ok) return { success: false, error: "Invalid Datadog API key" };
-        return { success: true, accountName: "Datadog" };
+        if (!res.ok) return { success: false, error: "Invalid Datadog API / App Key" };
+        return { success: true, accountName: "Datadog Workspace" };
       }
-      case "VERCEL": {
-        const res = await fetch("https://api.vercel.com/v2/user", {
-          headers: { Authorization: `Bearer ${apiKey}` },
+
+      case "SLACK": {
+        const res = await fetch("https://slack.com/api/auth.test", {
+          headers: { Authorization: `Bearer ${cleanKey}` },
         });
-        if (!res.ok) return { success: false, error: "Invalid Vercel token" };
+        if (!res.ok) return { success: false, error: "Invalid Slack token" };
         const data = await res.json();
-        return { success: true, accountName: data.user?.name || data.user?.username || "Vercel" };
+        if (!data.ok) return { success: false, error: data.error || "Slack token invalid" };
+        return { success: true, accountName: `${data.team} (${data.user})` };
       }
+
+      case "DISCORD": {
+        if (!cleanKey.startsWith("https://discord.com/api/webhooks/")) {
+          return { success: false, error: "Must be a valid Discord Webhook URL starting with https://discord.com/api/webhooks/" };
+        }
+        const res = await fetch(cleanKey);
+        if (!res.ok) return { success: false, error: "Discord Webhook URL invalid or not found" };
+        const data = await res.json();
+        return { success: true, accountName: `#${data.name || "Discord Channel"}` };
+      }
+
+      case "FIGMA": {
+        const res = await fetch("https://api.figma.com/v1/me", {
+          headers: { "X-Figma-Token": cleanKey },
+        });
+        if (!res.ok) return { success: false, error: "Invalid Figma Personal Access Token" };
+        const data = await res.json();
+        return {
+          success: true,
+          accountName: data.handle || data.email || "Figma Account",
+          accountAvatar: data.img_url,
+        };
+      }
+
+      case "LOOM": {
+        if (cleanKey.length < 10) return { success: false, error: "Loom API Key must be at least 10 characters" };
+        return { success: true, accountName: "Loom Workspace" };
+      }
+
+      case "MIRO": {
+        const res = await fetch("https://api.miro.com/v1/users/me", {
+          headers: { Authorization: `Bearer ${cleanKey}` },
+        });
+        if (!res.ok) return { success: false, error: "Invalid Miro Access Token" };
+        const data = await res.json();
+        return { success: true, accountName: data.name || "Miro Account" };
+      }
+
       case "ZENDESK": {
-        // API key format: subdomain||email/token:apikey
-        const [subdomain] = apiKey.split("||");
+        const [subdomain] = cleanKey.split("||");
         if (!subdomain) return { success: false, error: "Format: subdomain||email/token:apitoken" };
-        const creds = apiKey.split("||")[1] || "";
+        const creds = cleanKey.split("||")[1] || "";
         const res = await fetch(`https://${subdomain}.zendesk.com/api/v2/users/me.json`, {
           headers: { Authorization: `Basic ${Buffer.from(creds).toString("base64")}` },
         });
-        if (!res.ok) return { success: false, error: "Invalid Zendesk credentials" };
+        if (!res.ok) return { success: false, error: "Invalid Zendesk subdomain or API token" };
         const data = await res.json();
         return { success: true, accountName: data.user?.name || subdomain };
       }
+
       case "INTERCOM": {
         const res = await fetch("https://api.intercom.io/me", {
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${cleanKey}`,
             Accept: "application/json",
           },
         });
         if (!res.ok) return { success: false, error: "Invalid Intercom token" };
         const data = await res.json();
-        return { success: true, accountName: data.app?.name || "Intercom" };
+        return { success: true, accountName: data.app?.name || data.name || "Intercom App" };
       }
+
       default:
-        // For webhook-only providers (Sentry inbound, Zapier, etc.) just mark as connected
-        return { success: true, accountName: provider };
+        return { success: true, accountName: `${provider} Account` };
     }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Connection test failed" };

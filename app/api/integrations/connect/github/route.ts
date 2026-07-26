@@ -14,12 +14,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const clientId = process.env.GITHUB_CLIENT_ID;
   if (!clientId) {
-    return NextResponse.json(
-      { error: "GitHub OAuth not configured. Set GITHUB_CLIENT_ID in environment variables." },
-      { status: 503 }
-    );
+    return NextResponse.redirect(`${appUrl}/settings/integrations?error=github_not_configured`);
   }
 
   // CSRF state token
