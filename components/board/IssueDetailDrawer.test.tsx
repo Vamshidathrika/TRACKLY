@@ -9,6 +9,15 @@ vi.mock("@/app/(app)/projects/[key]/issues/actions", () => ({
   getIssueDevelopmentDataAction: vi.fn().mockResolvedValue({ commits: [], pullRequests: [], branches: [] }),
 }));
 
+vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
+  fetchDevDashboardDataAction: vi.fn().mockResolvedValue({
+    hasConnectedRepo: true,
+    repos: [{ owner: "Vamshidathrika", repoName: "TRACKLY" }],
+    stats: { commits: [] },
+  }),
+  connectGithubRepoAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 import { IssueDetailDrawer } from "./IssueDetailDrawer";
 import type { BoardIssue } from "./IssueCard";
 

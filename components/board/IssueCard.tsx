@@ -38,6 +38,7 @@ export type BoardIssue = {
   createdAt?: Date | string;
   updatedAt?: Date | string;
   project?: { key: string; name: string };
+  projectId?: string;
   projectKey: string;
   loggedHours?: number;
   estimatedHours?: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FolderGit2,
   GitBranch,
@@ -20,6 +20,8 @@ import {
   Activity,
   ShieldAlert,
   FileText,
+  AlertCircle,
+  Plus,
 } from "lucide-react";
 import { FigmaEmbedPanel } from "./FigmaEmbedPanel";
 import { LoomEmbedder } from "./LoomEmbedder";
@@ -31,6 +33,8 @@ import { PostHogAnalyticsWidget } from "./PostHogAnalyticsWidget";
 import { SnykSecurityCard } from "./SnykSecurityCard";
 import { SpecDocEditor } from "./SpecDocEditor";
 import { IncidentCommandCenter } from "./IncidentCommandCenter";
+import { ConnectRepoModal } from "@/components/dev/ConnectRepoModal";
+import { fetchDevDashboardDataAction } from "@/app/(app)/projects/[key]/dev/actions";
 
 export type LinkedBranch = {
   id: string;
@@ -59,12 +63,14 @@ export type LinkedCommit = {
 type DevTab = "GIT" | "AI" | "SPEC" | "INCIDENT" | "MEDIA" | "SUPPORT" | "FLAGS";
 
 export function DevelopmentPanel({
+  projectId,
   issueKey,
   branches = [],
   pullRequests = [],
   commits = [],
   pipelineStatus = "Passing",
 }: {
+  projectId?: string;
   issueKey: string;
   branches?: LinkedBranch[];
   pullRequests?: LinkedPullRequest[];
@@ -75,6 +81,38 @@ export function DevelopmentPanel({
   const [copiedBranch, setCopiedBranch] = useState(false);
   const [copiedCommit, setCopiedCommit] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
+
+  const [connectedRepo, setConnectedRepo] = useState<{ owner: string; repoName: string } | null>(null);
+  const [liveCommits, setLiveCommits] = useState<LinkedCommit[]>(commits);
+  const [isLoadingRepo, setIsLoadingRepo] = useState(false);
+
+  const loadRepoData = async () => {
+    if (!projectId) return;
+    setIsLoadingRepo(true);
+    const res = await fetchDevDashboardDataAction(projectId);
+    setIsLoadingRepo(false);
+    if (res?.hasConnectedRepo && res.repos && res.repos.length > 0) {
+      setConnectedRepo(res.repos[0]);
+      if (res.stats?.commits && res.stats.commits.length > 0) {
+        setLiveCommits(
+          res.stats.commits.map((c: any, idx: number) => ({
+            id: `lc-${idx}`,
+            hash: c.hash,
+            message: c.message,
+            authorName: c.author,
+            committedAt: c.committedAt,
+            url: c.url,
+          }))
+        );
+      }
+    } else {
+      setConnectedRepo(null);
+    }
+  };
+
+  useEffect(() => {
+    loadRepoData();
+  }, [projectId]);
 
   const handleCopyBranchCommand = () => {
     const cmd = `git checkout -b feature/${issueKey.toLowerCase()}-task-branch`;
@@ -95,7 +133,7 @@ export function DevelopmentPanel({
   };
 
   const handleGenerateAiReleaseNote = () => {
-    const commitsCount = (commits.length > 0 ? commits : defaultCommits).length;
+    const commitsCount = (liveCommits.length > 0 ? liveCommits : defaultCommits).length;
     const note = `🚀 Release Note (${issueKey}): Delivered ${commitsCount} verified git commits including automated pipeline updates.`;
     setAiNote(note);
   };
@@ -123,7 +161,9 @@ export function DevelopmentPanel({
         },
       ];
 
-  const defaultCommits: LinkedCommit[] = commits.length > 0
+  const defaultCommits: LinkedCommit[] = liveCommits.length > 0
+    ? liveCommits
+    : commits.length > 0
     ? commits
     : [
         {
@@ -139,14 +179,33 @@ export function DevelopmentPanel({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-neutral/20 p-3 text-xs w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border pb-2">
+      <div className="flex items-center justify-between border-b border-border pb-2 flex-wrap gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <FolderGit2 size={16} className="text-brand shrink-0" />
           <span className="font-extrabold text-text text-xs truncate">Development Activity</span>
         </div>
-        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand/10 text-brand shrink-0">
-          {issueKey}
-        </span>
+
+        <div className="flex items-center gap-2">
+          {connectedRepo ? (
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+              <CheckCircle2 size={11} /> {connectedRepo.owner}/{connectedRepo.repoName}
+            </span>
+          ) : projectId ? (
+            <ConnectRepoModal
+              projectId={projectId}
+              onSuccess={loadRepoData}
+              trigger={
+                <button type="button" className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand/10 text-brand hover:bg-brand/20 transition-all flex items-center gap-1">
+                  <Plus size={10} /> Connect Repo
+                </button>
+              }
+            />
+          ) : (
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand/10 text-brand shrink-0">
+              {issueKey}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Sub-Tabs Bar */}

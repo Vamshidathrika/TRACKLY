@@ -1,6 +1,15 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { DevelopmentPanel } from "./DevelopmentPanel";
+
+vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
+  fetchDevDashboardDataAction: vi.fn().mockResolvedValue({
+    hasConnectedRepo: true,
+    repos: [{ owner: "Vamshidathrika", repoName: "TRACKLY" }],
+    stats: { commits: [] },
+  }),
+  connectGithubRepoAction: vi.fn().mockResolvedValue({ success: true }),
+}));
 
 describe("DevelopmentPanel Component", () => {
   it("renders Development Activity header and summary counters", () => {
