@@ -95,10 +95,10 @@ model User {
 }
 
 model Site {
-  id               String            @id @default(cuid())
+  id               String             @id @default(cuid())
   name             String
-  slug             String            @unique
-  createdAt        DateTime          @default(now())
+  slug             String             @unique
+  createdAt        DateTime           @default(now())
   memberships      Membership[]
   invites          Invite[]
   projects         Project[]
@@ -108,6 +108,7 @@ model Site {
   pullRequests     PullRequest[]
   gitBranches      GitBranch[]
   gitWebhookLogs   GitWebhookLog[]
+  integrations     SiteIntegration[]
 }
 
 model Membership {
@@ -507,4 +508,26 @@ model GitWebhookLog {
   site           Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId, createdAt])
+}
+
+model SiteIntegration {
+  id            String    @id @default(cuid())
+  siteId        String
+  provider      String    // GITHUB | GITLAB | SLACK | SENTRY | DATADOG | VERCEL | ZENDESK | DISCORD | INTERCOM | FIGMA | LOOM | MIRO | ZAPIER | BITBUCKET
+  status        String    @default("DISCONNECTED") // CONNECTED | DISCONNECTED | ERROR
+  accessToken   String?   // Encrypted OAuth token or API key
+  refreshToken  String?
+  accountName   String?   // GitHub org / Slack workspace / Sentry org slug
+  accountAvatar String?
+  webhookSecret String?   // HMAC signing secret for inbound webhook verification
+  webhookUrl    String?   // Outbound webhook URL (Slack, Discord)
+  metadata      String?   // JSON: channelId, teamId, externalProjectId, etc.
+  connectedAt   DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  site          Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, provider])
+  @@index([siteId])
 }

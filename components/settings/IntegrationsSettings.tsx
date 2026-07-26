@@ -1,37 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
-  FolderGit2,
-  GitPullRequest,
-  GitBranch,
-  AlertOctagon,
-  Triangle,
-  CheckCircle2,
-  Zap,
-  Shield,
-  Key,
-  RefreshCw,
-  Copy,
-  Check,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  Plus,
-  Flame,
-  MessageSquare,
-  Headphones,
-  Video,
-  LayoutGrid,
-  Activity,
-  Layers,
-  Search,
+  FolderGit2, GitPullRequest, GitBranch, AlertOctagon, Triangle,
+  CheckCircle2, Zap, Shield, Key, Copy, Check, Eye, EyeOff,
+  ExternalLink, Plus, Flame, MessageSquare, Headphones, Video,
+  LayoutGrid, Activity, Layers, Search, X, Loader2, Wifi, WifiOff,
+  RefreshCw, ChevronDown, ChevronUp, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EditRepoModal } from "@/components/dev/EditRepoModal";
 import { WebhookNotificationBuilder } from "./WebhookNotificationBuilder";
+import {
+  saveApiKeyIntegration,
+  disconnectIntegration,
+  testIntegrationConnection,
+  generateWebhookSecret,
+} from "@/lib/integrations/actions";
 import type { IntegrationProvider, IntegrationCategory } from "@/lib/integrations/types";
+import type { IntegrationConnection } from "@/lib/integrations/actions";
 
+// ─────────────────────────────────────────────────────────────────
+// Figma SVG Icon
+// ─────────────────────────────────────────────────────────────────
 function FigmaIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -44,632 +35,942 @@ function FigmaIcon({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
-type ProviderCard = {
+// ─────────────────────────────────────────────────────────────────
+// Provider definitions
+// ─────────────────────────────────────────────────────────────────
+type ConnectType = "OAUTH" | "APIKEY" | "WEBHOOK_ONLY";
+
+type ProviderDef = {
   id: IntegrationProvider;
   name: string;
   category: IntegrationCategory;
   categoryName: string;
-  icon: any;
+  icon: React.ElementType | ((props: { className?: string }) => React.ReactElement);
   color: string;
   bgColor: string;
   description: string;
-  status: "Active" | "Disconnected" | "Configured";
   badges: string[];
+  connectType: ConnectType;
+  oauthPath?: string;
+  apiKeyLabel?: string;
+  apiKeyPlaceholder?: string;
+  apiKeyHint?: string;
+  webhookNote?: string;
+  docsUrl: string;
 };
 
-export function IntegrationsSettings({ siteId }: { siteId: string }) {
-  const [selectedCategory, setSelectedCategory] = useState<IntegrationCategory>("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [smartTransitions, setSmartTransitions] = useState(true);
-  const [sentryAutoBug, setSentryAutoBug] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<IntegrationProvider>("GITHUB");
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [showSecret, setShowSecret] = useState(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+const PROVIDERS: ProviderDef[] = [
+  {
+    id: "GITHUB", name: "GitHub", category: "DEVOPS", categoryName: "Code & Version Control",
+    icon: FolderGit2, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-500/10",
+    description: "Auto-link commit messages, branch names, and PRs using task keys (e.g. VAM-14).",
+    badges: ["OAuth2", "Smart PR Transitions"], connectType: "OAUTH", oauthPath: "/api/integrations/connect/github",
+    docsUrl: "https://docs.github.com/apps",
+  },
+  {
+    id: "GITLAB", name: "GitLab", category: "DEVOPS", categoryName: "Self-Hosted & Cloud DevOps",
+    icon: GitBranch, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-500/10",
+    description: "Sync Merge Requests, pipeline build statuses, and branch auto-transitions.",
+    badges: ["Merge Requests", "CI/CD Sync"], connectType: "WEBHOOK_ONLY",
+    webhookNote: "Point your GitLab Webhook → the URL below with a signing token.",
+    docsUrl: "https://docs.gitlab.com/ee/user/project/integrations/webhooks.html",
+  },
+  {
+    id: "BITBUCKET", name: "Bitbucket", category: "DEVOPS", categoryName: "Atlassian DevOps Suite",
+    icon: GitPullRequest, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-500/10",
+    description: "Bitbucket Pull Request state sync and automated pipeline status badges.",
+    badges: ["Pipelines", "PR Approvals"], connectType: "WEBHOOK_ONLY",
+    webhookNote: "Point your Bitbucket Webhook → the URL below.",
+    docsUrl: "https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/",
+  },
+  {
+    id: "VERCEL", name: "Vercel", category: "DEVOPS", categoryName: "Hosting & Frontend Cloud",
+    icon: Triangle, color: "text-sky-600 dark:text-sky-400", bgColor: "bg-sky-500/10",
+    description: "Render preview deployment status badges and direct preview links on Kanban cards.",
+    badges: ["Deployment Badges", "Preview Links"], connectType: "APIKEY",
+    apiKeyLabel: "Vercel API Token", apiKeyPlaceholder: "vc_...",
+    apiKeyHint: "Create at vercel.com → Account Settings → Tokens",
+    docsUrl: "https://vercel.com/docs/rest-api",
+  },
+  {
+    id: "SENTRY", name: "Sentry", category: "MONITORING", categoryName: "Crash & Error Monitoring",
+    icon: AlertOctagon, color: "text-rose-600 dark:text-rose-400", bgColor: "bg-rose-500/10",
+    description: "Automatically create BUG tasks in Trackly from production exception webhooks.",
+    badges: ["Auto-Bug Generator", "Stacktrace Parser"], connectType: "APIKEY",
+    apiKeyLabel: "Sentry Auth Token", apiKeyPlaceholder: "sntryu_...",
+    apiKeyHint: "Create at sentry.io → Settings → Auth Tokens",
+    docsUrl: "https://docs.sentry.io/product/integrations/",
+  },
+  {
+    id: "DATADOG", name: "Datadog", category: "MONITORING", categoryName: "APM & Infrastructure",
+    icon: Activity, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-500/10",
+    description: "Convert Datadog APM monitor alerts into urgent Trackly incident tasks.",
+    badges: ["APM Incident Tasks", "Deduplication"], connectType: "APIKEY",
+    apiKeyLabel: "API Key || App Key", apiKeyPlaceholder: "apikey||appkey",
+    apiKeyHint: "Format: <DD_API_KEY>||<DD_APP_KEY> — both from Datadog Organization Settings",
+    docsUrl: "https://docs.datadoghq.com/api/",
+  },
+  {
+    id: "SLACK", name: "Slack", category: "COMMUNICATION", categoryName: "Team Chat & Dispatcher",
+    icon: MessageSquare, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-500/10",
+    description: "Interactive message unfurling cards, slash commands, and 1-click task creation.",
+    badges: ["Block Kit Unfurl", "Channel Dispatch"], connectType: "OAUTH", oauthPath: "/api/integrations/connect/slack",
+    docsUrl: "https://api.slack.com/authentication/oauth-v2",
+  },
+  {
+    id: "DISCORD", name: "Discord", category: "COMMUNICATION", categoryName: "Dev Community & Chat",
+    icon: MessageSquare, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-500/10",
+    description: "Channel notification webhooks and rich embed cards for task status changes.",
+    badges: ["Embed Cards", "Interaction Bot"], connectType: "APIKEY",
+    apiKeyLabel: "Discord Webhook URL", apiKeyPlaceholder: "https://discord.com/api/webhooks/...",
+    apiKeyHint: "Server → Channel Settings → Integrations → Webhooks → Copy URL",
+    docsUrl: "https://discord.com/developers/docs/resources/webhook",
+  },
+  {
+    id: "ZENDESK", name: "Zendesk", category: "SUPPORT", categoryName: "Customer Support & Helpdesk",
+    icon: Headphones, color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-500/10",
+    description: "Convert customer helpdesk tickets into engineering tasks with resolution sync.",
+    badges: ["Customer Ticket Sync", "Resolution Notes"], connectType: "APIKEY",
+    apiKeyLabel: "Subdomain || Email/token:APIToken", apiKeyPlaceholder: "mycompany||admin@acme.com/token:abc123",
+    apiKeyHint: "Format: <subdomain>||<email>/token:<api_token>",
+    docsUrl: "https://developer.zendesk.com/api-reference/",
+  },
+  {
+    id: "INTERCOM", name: "Intercom", category: "SUPPORT", categoryName: "Live Customer Messaging",
+    icon: Headphones, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-500/10",
+    description: "Link customer feedback conversations to feature requests and bug tasks.",
+    badges: ["User Feedback", "Conversation Sync"], connectType: "APIKEY",
+    apiKeyLabel: "Intercom Access Token", apiKeyPlaceholder: "dG9rOjE...",
+    apiKeyHint: "Create at app.intercom.com → Settings → Developers → Your Apps",
+    docsUrl: "https://developers.intercom.com/docs/references/rest-api/",
+  },
+  {
+    id: "FIGMA", name: "Figma", category: "MEDIA_WHITEBOARDS", categoryName: "Design System & Canvas",
+    icon: FigmaIcon, color: "text-pink-600 dark:text-pink-400", bgColor: "bg-pink-500/10",
+    description: "Embed live interactive Figma canvas wireframes directly inside task drawers.",
+    badges: ["Live Canvas Embed", "Prototype Inspect"], connectType: "APIKEY",
+    apiKeyLabel: "Figma Personal Access Token", apiKeyPlaceholder: "figd_...",
+    apiKeyHint: "Figma → Account Settings → Personal Access Tokens → Create new token",
+    docsUrl: "https://www.figma.com/developers/api",
+  },
+  {
+    id: "LOOM", name: "Loom", category: "MEDIA_WHITEBOARDS", categoryName: "Screen Recording & Video",
+    icon: Video, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-500/10",
+    description: "Attach Loom screen recordings to bug tasks for video reproduction steps.",
+    badges: ["Video Bug Player", "Inline Embed"], connectType: "APIKEY",
+    apiKeyLabel: "Loom API Key", apiKeyPlaceholder: "loom_...",
+    apiKeyHint: "Loom workspace settings → Integrations → API",
+    docsUrl: "https://dev.loom.com/",
+  },
+  {
+    id: "MIRO", name: "Miro", category: "MEDIA_WHITEBOARDS", categoryName: "Agile Retros & Whiteboards",
+    icon: LayoutGrid, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-500/10",
+    description: "Embed live interactive Miro whiteboard canvases directly inside task drawers.",
+    badges: ["Canvas Embed", "Agile Retros"], connectType: "APIKEY",
+    apiKeyLabel: "Miro API Key", apiKeyPlaceholder: "eyJt...",
+    apiKeyHint: "miro.com → Profile → Your Apps → Create new app",
+    docsUrl: "https://developers.miro.com/",
+  },
+  {
+    id: "ZAPIER", name: "Zapier & Make", category: "DEVOPS", categoryName: "Universal Automation",
+    icon: Layers, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-500/10",
+    description: "Connect 5,000+ apps using custom outbound webhooks and automated event pings.",
+    badges: ["5,000+ App Triggers", "JSON Webhooks"], connectType: "WEBHOOK_ONLY",
+    webhookNote: "Copy your Trackly Webhook URL and paste it into your Zapier/Make trigger.",
+    docsUrl: "https://zapier.com/apps",
+  },
+];
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
+// ─────────────────────────────────────────────────────────────────
+// API Key Configure Modal
+// ─────────────────────────────────────────────────────────────────
+type ApiKeyModalProps = {
+  provider: ProviderDef;
+  onClose: () => void;
+  onSaved: (provider: string, accountName: string) => void;
+};
+
+function ApiKeyModal({ provider, onClose, onSaved }: ApiKeyModalProps) {
+  const [apiKey, setApiKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [status, setStatus] = useState<"idle" | "testing" | "saving" | "error" | "success">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleTest = () => {
+    if (!apiKey.trim()) return;
+    setStatus("testing");
+    setErrorMsg("");
+    startTransition(async () => {
+      const result = await testIntegrationConnection(provider.id, apiKey.trim());
+      if (result.success) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+        setErrorMsg(result.error || "Connection test failed");
+      }
+    });
   };
 
-  const providers: ProviderCard[] = [
-    {
-      id: "GITHUB",
-      name: "GitHub",
-      category: "DEVOPS",
-      categoryName: "Code & Version Control",
-      icon: FolderGit2,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-500/10",
-      description: "Auto-link commit messages, branch names, and PRs using task keys (e.g. VAM-14).",
-      status: "Active",
-      badges: ["OAuth2 Active", "Smart PR Transitions"],
-    },
-    {
-      id: "GITLAB",
-      name: "GitLab",
-      category: "DEVOPS",
-      categoryName: "Self-Hosted & Cloud DevOps",
-      icon: GitBranch,
-      color: "text-orange-600 dark:text-orange-400",
-      bgColor: "bg-orange-500/10",
-      description: "Sync Merge Requests, pipeline build statuses, and branch auto-transitions.",
-      status: "Configured",
-      badges: ["Merge Requests", "CI/CD Sync"],
-    },
-    {
-      id: "BITBUCKET",
-      name: "Bitbucket",
-      category: "DEVOPS",
-      categoryName: "Atlassian DevOps Suite",
-      icon: GitPullRequest,
-      color: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-500/10",
-      description: "Bitbucket Pull Request state sync and automated pipeline status badges.",
-      status: "Configured",
-      badges: ["Pipelines", "PR Approvals"],
-    },
-    {
-      id: "VERCEL",
-      name: "Vercel",
-      category: "DEVOPS",
-      categoryName: "Hosting & Frontend Cloud",
-      icon: Triangle,
-      color: "text-sky-600 dark:text-sky-400",
-      bgColor: "bg-sky-500/10",
-      description: "Render preview deployment status badges and direct preview links on Kanban cards.",
-      status: "Active",
-      badges: ["Deployment Badges", "Preview Links"],
-    },
-    {
-      id: "SENTRY",
-      name: "Sentry",
-      category: "MONITORING",
-      categoryName: "Crash & Error Monitoring",
-      icon: AlertOctagon,
-      color: "text-rose-600 dark:text-rose-400",
-      bgColor: "bg-rose-500/10",
-      description: "Automatically create BUG tasks in Trackly from production exception webhooks.",
-      status: "Active",
-      badges: ["Auto-Bug Generator", "Stacktrace Parser"],
-    },
-    {
-      id: "DATADOG",
-      name: "Datadog",
-      category: "MONITORING",
-      categoryName: "APM & Infrastructure Metrics",
-      icon: Activity,
-      color: "text-amber-600 dark:text-amber-400",
-      bgColor: "bg-amber-500/10",
-      description: "Automatically convert Datadog APM monitor alerts into urgent Trackly incident tasks.",
-      status: "Configured",
-      badges: ["APM Incident Tasks", "Deduplication Key"],
-    },
-    {
-      id: "SLACK",
-      name: "Slack",
-      category: "COMMUNICATION",
-      categoryName: "Team Chat & Dispatcher",
-      icon: MessageSquare,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-500/10",
-      description: "Interactive message unfurling cards, slash commands, and 1-click task creation.",
-      status: "Active",
-      badges: ["Block Kit Unfurl", "Channel Dispatch"],
-    },
-    {
-      id: "DISCORD",
-      name: "Discord",
-      category: "COMMUNICATION",
-      categoryName: "Dev Community & Chat",
-      icon: MessageSquare,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bgColor: "bg-indigo-500/10",
-      description: "Channel notification webhooks and rich embed cards for task status changes.",
-      status: "Configured",
-      badges: ["Embed Cards", "Interaction Bot"],
-    },
-    {
-      id: "ZENDESK",
-      name: "Zendesk",
-      category: "SUPPORT",
-      categoryName: "Customer Support & Helpdesk",
-      icon: Headphones,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bgColor: "bg-emerald-500/10",
-      description: "Convert customer helpdesk tickets into engineering tasks with resolution sync.",
-      status: "Active",
-      badges: ["Customer Ticket Sync", "Resolution Notes"],
-    },
-    {
-      id: "INTERCOM",
-      name: "Intercom",
-      category: "SUPPORT",
-      categoryName: "Live Customer Messaging",
-      icon: Headphones,
-      color: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-500/10",
-      description: "Link customer feedback conversations to feature requests and bug tasks.",
-      status: "Configured",
-      badges: ["User Feedback", "Conversation Sync"],
-    },
-    {
-      id: "LOOM",
-      name: "Loom",
-      category: "MEDIA_WHITEBOARDS",
-      categoryName: "Screen Recording & Video",
-      icon: Video,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bgColor: "bg-indigo-500/10",
-      description: "Attach Loom screen recordings to bug tasks for video reproduction steps.",
-      status: "Active",
-      badges: ["Video Bug Player", "Inline Embed"],
-    },
-    {
-      id: "MIRO",
-      name: "Miro",
-      category: "MEDIA_WHITEBOARDS",
-      categoryName: "Agile Retros & Whiteboards",
-      icon: LayoutGrid,
-      color: "text-amber-600 dark:text-amber-400",
-      bgColor: "bg-amber-500/10",
-      description: "Embed live interactive Miro whiteboard canvases directly inside task drawers.",
-      status: "Active",
-      badges: ["Canvas Embed", "Agile Retros"],
-    },
-    {
-      id: "FIGMA",
-      name: "Figma",
-      category: "MEDIA_WHITEBOARDS",
-      categoryName: "Design System & Canvas",
-      icon: FigmaIcon,
-      color: "text-pink-600 dark:text-pink-400",
-      bgColor: "bg-pink-500/10",
-      description: "Embed live interactive Figma canvas wireframes directly inside task drawers.",
-      status: "Active",
-      badges: ["Live Canvas Embed", "Prototype Inspect"],
-    },
-    {
-      id: "ZAPIER",
-      name: "Zapier & Make",
-      category: "DEVOPS",
-      categoryName: "Universal Automation Engine",
-      icon: Layers,
-      color: "text-orange-600 dark:text-orange-400",
-      bgColor: "bg-orange-500/10",
-      description: "Connect 5,000+ apps using custom outbound webhooks and automated event pings.",
-      status: "Configured",
-      badges: ["5,000+ App Triggers", "JSON Webhooks"],
-    },
-  ];
+  const handleSave = () => {
+    if (!apiKey.trim()) return;
+    setStatus("saving");
+    startTransition(async () => {
+      const testResult = await testIntegrationConnection(provider.id, apiKey.trim());
+      if (!testResult.success) {
+        setStatus("error");
+        setErrorMsg(testResult.error || "Failed to validate credentials");
+        return;
+      }
 
-  const filteredProviders = providers.filter((p) => {
-    const matchesCategory = selectedCategory === "ALL" || p.category === selectedCategory;
-    const matchesSearch =
-      searchQuery.trim() === "" ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+      const saveResult = await saveApiKeyIntegration(
+        provider.id,
+        apiKey.trim(),
+        webhookSecret || undefined,
+        { accountName: testResult.accountName || provider.name }
+      );
 
-  const webhookUrl = `https://api.trackly.dev/v1/webhooks/${selectedProvider.toLowerCase()}?siteId=${siteId}`;
-  const webhookSecret = `whsec_${selectedProvider.toLowerCase()}_live_89f7a6b5c4d3e2f1`;
-
-  const copyToClipboard = (text: string) => {
-    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
-    }
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
+      if (saveResult.success) {
+        onSaved(provider.id, testResult.accountName || provider.name);
+        onClose();
+      } else {
+        setStatus("error");
+        setErrorMsg(saveResult.error || "Failed to save");
+      }
+    });
   };
 
   return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md mx-4 rounded-2xl border border-border-default bg-surface shadow-2xl p-6 flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${provider.bgColor}`}>
+              <provider.icon className={`w-5 h-5 ${provider.color}`} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-default">Connect {provider.name}</p>
+              <p className="text-[11px] text-subtle">{provider.categoryName}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-subtlest hover:text-default p-1.5 rounded-lg">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* API Key field */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-default">{provider.apiKeyLabel}</label>
+          <div className="relative flex items-center">
+            <input
+              type={showKey ? "text" : "password"}
+              value={apiKey}
+              onChange={(e) => { setApiKey(e.target.value); setStatus("idle"); }}
+              placeholder={provider.apiKeyPlaceholder}
+              className="w-full h-9 rounded-lg border border-border-default bg-neutral px-3 pr-10 text-xs font-mono outline-none focus:border-brand"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-2.5 text-subtlest hover:text-default"
+            >
+              {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+          {provider.apiKeyHint && (
+            <p className="text-[11px] text-subtlest">{provider.apiKeyHint}</p>
+          )}
+        </div>
+
+        {/* Webhook signing secret (optional) */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-default">
+            Webhook Signing Secret <span className="text-subtlest font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={webhookSecret}
+            onChange={(e) => setWebhookSecret(e.target.value)}
+            placeholder="whsec_..."
+            className="h-9 rounded-lg border border-border-default bg-neutral px-3 text-xs font-mono outline-none focus:border-brand"
+          />
+          <p className="text-[11px] text-subtlest">
+            Used to verify inbound webhook HMAC signatures from {provider.name}.
+          </p>
+        </div>
+
+        {/* Status feedback */}
+        {status === "error" && (
+          <div className="flex items-center gap-2 rounded-lg bg-danger/10 border border-danger/30 px-3 py-2 text-xs text-danger font-medium">
+            <AlertTriangle size={13} /> {errorMsg}
+          </div>
+        )}
+        {status === "success" && (
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-xs text-emerald-600 font-medium">
+            <CheckCircle2 size={13} /> Connection verified! Click Save to connect.
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center justify-between pt-1">
+          <a
+            href={provider.docsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-brand flex items-center gap-1 hover:underline"
+          >
+            <ExternalLink size={12} /> API Docs
+          </a>
+          <div className="flex gap-2">
+            <Button appearance="subtle" onClick={handleTest} disabled={!apiKey.trim() || isPending} className="text-xs h-8">
+              {status === "testing" ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              <span className="ml-1">Test</span>
+            </Button>
+            <Button appearance="primary" onClick={handleSave} disabled={!apiKey.trim() || isPending} className="text-xs h-8">
+              {status === "saving" ? <Loader2 size={12} className="animate-spin" /> : null}
+              <span className="ml-1">Save & Connect</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Webhook-only Connect Modal
+// ─────────────────────────────────────────────────────────────────
+type WebhookOnlyModalProps = {
+  provider: ProviderDef;
+  siteId: string;
+  onClose: () => void;
+  onSaved: (provider: string) => void;
+};
+
+function WebhookOnlyModal({ provider, siteId, onClose, onSaved }: WebhookOnlyModalProps) {
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://trackly.vercel.app"}/api/webhooks/${provider.id.toLowerCase()}?siteId=${siteId}`;
+
+  const copyUrl = () => {
+    navigator.clipboard?.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const genSecret = () => {
+    startTransition(async () => {
+      const { secret } = await generateWebhookSecret(provider.id);
+      setWebhookSecret(secret);
+    });
+  };
+
+  const handleSave = () => {
+    startTransition(async () => {
+      await saveApiKeyIntegration(
+        provider.id,
+        webhookSecret || "webhook-only",
+        webhookSecret || undefined,
+        { accountName: `${provider.name} Webhook` }
+      );
+      onSaved(provider.id);
+      onClose();
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md mx-4 rounded-2xl border border-border-default bg-surface shadow-2xl p-6 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${provider.bgColor}`}>
+              <provider.icon className={`w-5 h-5 ${provider.color}`} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-default">Configure {provider.name}</p>
+              <p className="text-[11px] text-subtle">Webhook Integration</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-subtlest hover:text-default p-1.5 rounded-lg">
+            <X size={16} />
+          </button>
+        </div>
+
+        {provider.webhookNote && (
+          <div className="rounded-lg bg-brand/5 border border-brand/20 px-3 py-2 text-xs text-subtle">
+            {provider.webhookNote}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-default">Your Trackly Webhook URL</label>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={webhookUrl}
+              className="flex-1 h-9 rounded-lg border border-border-default bg-neutral px-3 text-[11px] font-mono text-subtle outline-none"
+            />
+            <button
+              onClick={copyUrl}
+              className="h-9 w-9 flex items-center justify-center rounded-lg border border-border-default bg-neutral hover:bg-neutral/70 text-subtle transition-colors"
+            >
+              {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-default">Signing Secret</label>
+            <button onClick={genSecret} className="text-[11px] text-brand hover:underline flex items-center gap-1">
+              <RefreshCw size={10} /> Generate
+            </button>
+          </div>
+          <input
+            readOnly
+            value={webhookSecret}
+            placeholder="Click Generate to create a new secret"
+            className="h-9 rounded-lg border border-border-default bg-neutral px-3 text-[11px] font-mono text-subtle outline-none"
+          />
+          <p className="text-[11px] text-subtlest">Paste this secret in {provider.name}&apos;s webhook configuration to verify payloads.</p>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button appearance="subtle" onClick={onClose} className="text-xs h-8">Cancel</Button>
+          <Button appearance="primary" onClick={handleSave} disabled={isPending} className="text-xs h-8">
+            {isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+            <span className="ml-1">Mark as Configured</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Connection Status Badge
+// ─────────────────────────────────────────────────────────────────
+function ConnectionBadge({ status }: { status: string }) {
+  if (status === "CONNECTED") return (
+    <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      Connected
+    </span>
+  );
+  if (status === "ERROR") return (
+    <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+      <AlertTriangle size={10} /> Error
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral text-subtlest border border-border-default">
+      <WifiOff size={10} /> Not Connected
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Main IntegrationsSettings Component
+// ─────────────────────────────────────────────────────────────────
+type Props = {
+  siteId: string;
+  initialConnections?: IntegrationConnection[];
+};
+
+export function IntegrationsSettings({ siteId, initialConnections = [] }: Props) {
+  const [selectedCategory, setSelectedCategory] = useState<IntegrationCategory>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const [modalProvider, setModalProvider] = useState<ProviderDef | null>(null);
+  const [modalType, setModalType] = useState<"apikey" | "webhook" | null>(null);
+  const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // Local connection state — seeded from DB, updated optimistically
+  const [connections, setConnections] = useState<Map<string, IntegrationConnection>>(() => {
+    const map = new Map<string, IntegrationConnection>();
+    for (const c of initialConnections) {
+      map.set(c.provider, c);
+    }
+    return map;
+  });
+
+  const showToast = (msg: string, type: "success" | "error" = "success") => {
+    setToastMsg(msg);
+    setToastType(type);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
+
+  const getConnection = (providerId: string): IntegrationConnection | undefined =>
+    connections.get(providerId);
+
+  const isConnected = (providerId: string) =>
+    connections.get(providerId)?.status === "CONNECTED";
+
+  const handleConnectOAuth = (path: string) => {
+    window.location.href = path;
+  };
+
+  const handleOpenModal = (provider: ProviderDef) => {
+    setModalProvider(provider);
+    setModalType(provider.connectType === "WEBHOOK_ONLY" ? "webhook" : "apikey");
+  };
+
+  const handleApiKeySaved = (providerId: string, accountName: string) => {
+    setConnections((prev) => {
+      const next = new Map(prev);
+      next.set(providerId, {
+        provider: providerId,
+        status: "CONNECTED",
+        accountName,
+        connectedAt: new Date(),
+      });
+      return next;
+    });
+    showToast(`${providerId} connected successfully!`);
+  };
+
+  const handleWebhookSaved = (providerId: string) => {
+    setConnections((prev) => {
+      const next = new Map(prev);
+      next.set(providerId, {
+        provider: providerId,
+        status: "CONNECTED",
+        accountName: `${providerId} Webhook`,
+        connectedAt: new Date(),
+      });
+      return next;
+    });
+    showToast(`${providerId} webhook configured!`);
+  };
+
+  const handleDisconnect = (providerId: string) => {
+    startTransition(async () => {
+      const result = await disconnectIntegration(providerId);
+      if (result.success) {
+        setConnections((prev) => {
+          const next = new Map(prev);
+          next.delete(providerId);
+          return next;
+        });
+        showToast(`${providerId} disconnected.`, "success");
+      } else {
+        showToast(`Failed to disconnect: ${result.error}`, "error");
+      }
+    });
+  };
+
+  const CATEGORIES: { id: IntegrationCategory; label: string }[] = [
+    { id: "ALL", label: "All" },
+    { id: "DEVOPS", label: "DevOps" },
+    { id: "COMMUNICATION", label: "Communication" },
+    { id: "MONITORING", label: "Monitoring" },
+    { id: "SUPPORT", label: "Support" },
+    { id: "MEDIA_WHITEBOARDS", label: "Media" },
+  ];
+
+  const connectedCount = Array.from(connections.values()).filter((c) => c.status === "CONNECTED").length;
+
+  const filtered = PROVIDERS.filter((p) => {
+    const catMatch = selectedCategory === "ALL" || p.category === selectedCategory;
+    const search = searchQuery.toLowerCase();
+    const textMatch = !search || p.name.toLowerCase().includes(search) || p.description.toLowerCase().includes(search);
+    return catMatch && textMatch;
+  });
+
+  return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-200">
-      {/* Toast Notice */}
+      {/* Toast */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900 text-white px-4 py-3 text-xs font-semibold shadow-2xl animate-bounce flex items-center gap-2">
+        <div className={`fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl flex items-center gap-2 ${
+          toastType === "error" ? "bg-danger text-white" : "bg-slate-900 text-white"
+        }`}>
           <CheckCircle2 size={16} className="text-emerald-400" />
-          <span>{toastMsg}</span>
+          {toastMsg}
         </div>
       )}
 
-      {/* Header Banner */}
+      {/* API Key Modal */}
+      {modalProvider && modalType === "apikey" && (
+        <ApiKeyModal
+          provider={modalProvider}
+          onClose={() => { setModalProvider(null); setModalType(null); }}
+          onSaved={handleApiKeySaved}
+        />
+      )}
+
+      {/* Webhook-only Modal */}
+      {modalProvider && modalType === "webhook" && (
+        <WebhookOnlyModal
+          provider={modalProvider}
+          siteId={siteId}
+          onClose={() => { setModalProvider(null); setModalType(null); }}
+          onSaved={handleWebhookSaved}
+        />
+      )}
+
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-3">
         <div>
           <h2 className="text-lg font-extrabold text-text tracking-tight flex items-center gap-2">
             <Zap className="text-brand" size={20} />
-            <span>Developer Ecosystem & Enterprise Integrations Hub</span>
+            Connected Apps
           </h2>
           <p className="text-xs text-text-subtle mt-0.5">
-            Connect developer tools, chat dispatchers, helpdesks, and live whiteboards across your workspace.
+            {connectedCount} of {PROVIDERS.length} integrations active
           </p>
         </div>
-
-        <div className="relative w-64">
-          <Search size={14} className="absolute left-3 top-2.5 text-text-subtle" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search 14 integrations..."
-            className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-border bg-surface text-xs focus:outline-none focus:border-brand"
-          />
+        <div className="flex items-center gap-2">
+          {/* Connection summary pills */}
+          <div className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">
+              <Wifi size={11} /> {connectedCount} Active
+            </span>
+            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-neutral text-subtlest font-semibold border border-border-default">
+              <WifiOff size={11} /> {PROVIDERS.length - connectedCount} Available
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Category Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border text-xs">
-        {[
-          { id: "ALL", label: "All Apps (14)" },
-          { id: "DEVOPS", label: "🛠️ DevOps & Cloud" },
-          { id: "COMMUNICATION", label: "💬 Chat & Comm" },
-          { id: "SUPPORT", label: "🎧 Customer Support" },
-          { id: "MEDIA_WHITEBOARDS", label: "🎨 Media & Canvas" },
-          { id: "MONITORING", label: "📊 Monitoring & Alerts" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setSelectedCategory(tab.id as IntegrationCategory)}
-            className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer whitespace-nowrap ${
-              selectedCategory === tab.id
-                ? "bg-brand text-white shadow-xs"
-                : "bg-surface text-text-subtle hover:text-text hover:bg-neutral border border-border"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Search + Category Filter */}
+      <div className="flex flex-col gap-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtlest" />
+          <input
+            type="text"
+            placeholder="Search integrations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-9 rounded-xl border border-border-default bg-surface pl-9 pr-3 text-xs outline-none focus:border-brand"
+          />
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                selectedCategory === cat.id
+                  ? "bg-brand text-white border-brand"
+                  : "bg-surface text-subtle border-border-default hover:bg-neutral"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Marketplace Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProviders.map((p) => {
-          const Icon = p.icon;
-          const isSelected = selectedProvider === p.id;
+      {/* Integration Cards Grid */}
+      <div className="grid grid-cols-1 gap-3">
+        {filtered.map((provider) => {
+          const conn = getConnection(provider.id);
+          const connected = conn?.status === "CONNECTED";
+          const expanded = expandedProvider === provider.id;
 
           return (
             <div
-              key={p.id}
-              onClick={() => setSelectedProvider(p.id)}
-              className={`rounded-[20px] border p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between gap-4 ${
-                isSelected
-                  ? "border-brand bg-brand/5 shadow-md ring-1 ring-brand/30"
-                  : "border-border bg-surface hover:border-brand/30 hover:shadow-sm"
+              key={provider.id}
+              className={`rounded-xl border transition-all ${
+                connected
+                  ? "border-emerald-500/30 bg-emerald-500/[0.02]"
+                  : "border-border-default bg-surface"
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`h-10 w-10 rounded-xl ${p.bgColor} ${p.color} flex items-center justify-center font-bold`}>
-                    <Icon className="w-5 h-5" />
+              {/* Card Header Row */}
+              <div className="flex items-center gap-3 p-4">
+                {/* Icon */}
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${provider.bgColor}`}>
+                  <provider.icon className={`w-5 h-5 ${provider.color}`} />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-default">{provider.name}</span>
+                    <ConnectionBadge status={conn?.status || "DISCONNECTED"} />
+                    {provider.badges.map((b) => (
+                      <span key={b} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral text-subtle border border-border-default">
+                        {b}
+                      </span>
+                    ))}
                   </div>
-                  <span
-                    className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full font-mono ${
-                      p.status === "Active"
-                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                        : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                    }`}
-                  >
-                    ● {p.status}
-                  </span>
+                  {connected && conn?.accountName && (
+                    <p className="text-[11px] text-emerald-600 font-medium mt-0.5">
+                      ✓ {conn.accountName}
+                      {conn.connectedAt && ` · Connected ${new Date(conn.connectedAt).toLocaleDateString()}`}
+                    </p>
+                  )}
+                  {!connected && (
+                    <p className="text-[11px] text-subtle truncate mt-0.5">{provider.description}</p>
+                  )}
                 </div>
 
-                <h3 className="font-extrabold text-text text-sm flex items-center gap-1.5">
-                  {p.name}
-                </h3>
-                <span className="text-[10px] font-semibold text-text-subtle block mb-2">{p.categoryName}</span>
-                <p className="text-xs text-text-subtle leading-relaxed">{p.description}</p>
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {connected ? (
+                    <>
+                      <button
+                        onClick={() => setExpandedProvider(expanded ? null : provider.id)}
+                        className="text-xs text-subtle hover:text-default flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border-default hover:bg-neutral transition-colors"
+                      >
+                        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        Details
+                      </button>
+                      <button
+                        onClick={() => handleDisconnect(provider.id)}
+                        disabled={isPending}
+                        className="text-xs text-danger hover:text-danger/80 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-danger/30 hover:bg-danger/5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <X size={12} /> Disconnect
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <a
+                        href={provider.docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-subtlest hover:text-default rounded-lg hover:bg-neutral transition-colors"
+                        title="View Docs"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                      {provider.connectType === "OAUTH" ? (
+                        <button
+                          onClick={() => handleConnectOAuth(provider.oauthPath!)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-bold hover:bg-brand/90 transition-colors cursor-pointer"
+                        >
+                          <Shield size={13} /> Connect with {provider.name}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenModal(provider)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral border border-border-default text-xs font-bold text-default hover:bg-neutral/70 transition-colors cursor-pointer"
+                        >
+                          <Key size={13} /> Configure
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                <div className="flex flex-wrap gap-1">
-                  {p.badges.map((badge, bIdx) => (
-                    <span
-                      key={bIdx}
-                      className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-neutral text-text-subtle border border-border"
+              {/* Expanded Connection Details */}
+              {connected && expanded && (
+                <div className="border-t border-border-default px-4 pb-4 pt-3 flex flex-col gap-3">
+                  <p className="text-xs text-subtle">{provider.description}</p>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="rounded-lg bg-neutral border border-border-default p-3">
+                      <p className="text-subtlest font-medium mb-1">Webhook URL</p>
+                      <p className="font-mono text-[10px] text-subtle break-all">
+                        {`/api/webhooks/${provider.id.toLowerCase()}?siteId=${siteId}`}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-neutral border border-border-default p-3">
+                      <p className="text-subtlest font-medium mb-1">Provider</p>
+                      <p className="font-bold text-default">{provider.categoryName}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOpenModal(provider)}
+                      className="text-xs text-brand hover:underline flex items-center gap-1"
                     >
-                      {badge}
-                    </span>
-                  ))}
+                      <RefreshCw size={11} /> Reconfigure
+                    </button>
+                    <span className="text-subtlest">·</span>
+                    <a
+                      href={provider.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-subtle hover:text-default flex items-center gap-1"
+                    >
+                      <ExternalLink size={11} /> Docs
+                    </a>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    showToast(`${p.name} configuration active!`);
-                  }}
-                  className="text-[11px] font-bold text-brand hover:underline cursor-pointer"
-                >
-                  Manage →
-                </button>
-              </div>
+              )}
             </div>
           );
         })}
-      </div>
 
-      {/* Webhook & Credentials Drawer Card */}
-      <div className="rounded-[20px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
-          <div className="flex items-center gap-2">
-            <Key className="text-amber-500" size={18} />
-            <h3 className="text-sm font-extrabold text-text">
-              {selectedProvider} Dynamic Webhook Gateway
-            </h3>
-          </div>
-          <span className="text-[11px] font-mono text-text-subtle">
-            Endpoint: <code className="text-brand font-bold">/api/webhooks/{selectedProvider.toLowerCase()}</code>
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div>
-            <label className="block font-bold text-text mb-1">Webhook Target URL</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={webhookUrl}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-neutral/30 text-text font-mono text-[11px] select-all"
-              />
-              <button
-                type="button"
-                onClick={() => copyToClipboard(webhookUrl)}
-                className="px-3 py-2 rounded-lg bg-neutral hover:bg-neutral/80 text-text font-bold flex items-center gap-1 border border-border shrink-0 cursor-pointer"
-              >
-                {copiedKey ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                <span>{copiedKey ? "Copied" : "Copy"}</span>
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-bold text-text mb-1 flex items-center justify-between">
-              <span>Webhook Signing Secret</span>
-              <button
-                type="button"
-                onClick={() => setShowSecret(!showSecret)}
-                className="text-[10px] text-brand font-bold flex items-center gap-1 cursor-pointer"
-              >
-                {showSecret ? <EyeOff size={12} /> : <Eye size={12} />}
-                <span>{showSecret ? "Hide Secret" : "Reveal Secret"}</span>
-              </button>
-            </label>
-            <input
-              type={showSecret ? "text" : "password"}
-              readOnly
-              value={webhookSecret}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-neutral/30 text-text font-mono text-[11px]"
-            />
-          </div>
-        </div>
-
-        {/* Provider Specific Rules */}
-        {selectedProvider === "SENTRY" && (
-          <div className="mt-2 p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Flame className="text-rose-500" size={16} />
-                <h4 className="font-extrabold text-text text-xs">Sentry Auto-Bug Ticket Generator Rules</h4>
-              </div>
-              <input
-                type="checkbox"
-                checked={sentryAutoBug}
-                onChange={(e) => setSentryAutoBug(e.target.checked)}
-                className="h-4 w-4 accent-rose-500 cursor-pointer"
-              />
-            </div>
-            <p className="text-[11px] text-text-subtle">
-              When enabled, incoming Sentry exception webhooks automatically create a formatted <code className="text-rose-600 font-bold">BUG</code> task in Trackly with full stacktrace snippets.
-            </p>
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-subtle text-sm">
+            No integrations match &ldquo;{searchQuery}&rdquo;
           </div>
         )}
       </div>
 
-      {/* Webhook Notification Rules Dispatcher Builder */}
-      <WebhookNotificationBuilder siteId={siteId} />
-
-      {/* Personal Access Tokens (PAT) Developer Security Center */}
-      <PersonalAccessTokensSection showToast={showToast} />
-
-      {/* Workspace Project Board Mapping */}
-      <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
-        <h3 className="text-sm font-extrabold text-text flex items-center gap-2">
-          <FolderGit2 className="text-brand" size={18} />
-          <span>Project Board Repository Isolation Matrix</span>
-        </h3>
-
-        <div className="flex flex-col divide-y divide-border text-xs">
-          {[
-            { id: "p1", name: "Main Product Board", key: "TRK", repo: "Vamshidathrika/TRACKLY", status: "Connected", branches: 4, prs: 2 },
-            { id: "p2", name: "Mobile App Development", key: "MOB", repo: "Vamshidathrika/TRACKLY-MOBILE", status: "Connected", branches: 2, prs: 1 },
-            { id: "p3", name: "Design System & Canvas", key: "DS", repo: "Unlinked", status: "Unlinked", branches: 0, prs: 0 },
-          ].map((board) => (
-            <div key={board.id} className="py-3 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3">
-                <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded bg-brand/10 text-brand">
-                  {board.key}
-                </span>
-                <div>
-                  <h4 className="font-bold text-text">{board.name}</h4>
-                  <span className="font-mono text-[11px] text-text-subtle">{board.repo}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {board.status === "Connected" ? (
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    ● {board.branches} Branches · {board.prs} PRs
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                    Not Connected
-                  </span>
-                )}
-                <EditRepoModal
-                  repositoryId={`repo-${board.id}`}
-                  initialOwner={board.repo !== "Unlinked" ? board.repo.split("/")[0] : ""}
-                  initialRepoName={board.repo !== "Unlinked" ? board.repo.split("/")[1] : ""}
-                  onSuccess={() => showToast(`Repository configuration updated for ${board.key}!`)}
-                  trigger={
-                    <button
-                      type="button"
-                      className="px-3 py-1 rounded-full border border-border bg-neutral/40 hover:bg-neutral text-[11px] font-bold text-text cursor-pointer transition-all"
-                    >
-                      Configure
-                    </button>
-                  }
-                />
-              </div>
-            </div>
-          ))}
+      {/* Webhook Gateway Section */}
+      <div className="rounded-2xl border border-border-default bg-surface p-5 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-brand/10 flex items-center justify-center">
+            <Flame size={16} className="text-brand" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-default">Inbound Webhook Gateway</p>
+            <p className="text-[11px] text-subtle">
+              All providers send events to a single endpoint — Trackly routes by provider
+            </p>
+          </div>
+        </div>
+        <div className="rounded-lg bg-neutral border border-border-default p-3">
+          <p className="text-[10px] text-subtlest font-mono font-semibold mb-1">ENDPOINT</p>
+          <p className="text-xs font-mono text-default break-all">
+            https://trackly.vercel.app/api/webhooks/<span className="text-brand">[provider]</span>?siteId=<span className="text-brand">{siteId}</span>
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-[11px] text-subtle">
+          <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> HMAC SHA-256 signature verification</div>
+          <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Multi-tenant site isolation</div>
+          <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Idempotent event deduplication</div>
+          <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Auto issue key extraction from payloads</div>
         </div>
       </div>
+
+      {/* Webhook Notification Builder */}
+      <WebhookNotificationBuilder siteId={siteId} />
+
+      {/* Personal Access Tokens */}
+      <PersonalAccessTokensSection siteId={siteId} />
     </div>
   );
 }
 
-function PersonalAccessTokensSection({ showToast }: { showToast: (msg: string) => void }) {
-  const [tokens, setTokens] = useState<
-    { id: string; name: string; token: string; createdAt: string; expiry: string; status: "Active" | "Revoked" }[]
-  >([
-    {
-      id: "pat-1",
-      name: "GitHub Actions CI Runner",
-      token: "trk_pat_live_9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c",
-      createdAt: "2026-07-20",
-      expiry: "90 Days",
-      status: "Active",
-    },
+// ─────────────────────────────────────────────────────────────────
+// Personal Access Tokens Section
+// ─────────────────────────────────────────────────────────────────
+type TokenEntry = { id: string; description: string; expiry: string; lastUsed: string; masked: string };
+
+function PersonalAccessTokensSection({ siteId: _siteId }: { siteId: string }) {
+  const [tokens, setTokens] = useState<TokenEntry[]>([
+    { id: "tok-1", description: "CI/CD Pipeline Token", expiry: "Dec 31, 2025", lastUsed: "2 hours ago", masked: "trk_live_••••••••••••••••••4f2a" },
+    { id: "tok-2", description: "Local Dev Environment", expiry: "Never", lastUsed: "Yesterday", masked: "trk_live_••••••••••••••••••8c19" },
   ]);
-  const [name, setName] = useState("");
-  const [expiry, setExpiry] = useState("90d");
-  const [newlyCreatedToken, setNewlyCreatedToken] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [newDesc, setNewDesc] = useState("");
+  const [newExpiry, setNewExpiry] = useState("90d");
+  const [newToken, setNewToken] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const handleGenerate = () => {
-    if (!name.trim()) return;
-    const rawToken = `trk_pat_live_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`;
-    const newToken = {
-      id: `pat-${Date.now()}`,
-      name: name.trim(),
-      token: rawToken,
-      createdAt: new Date().toISOString().split("T")[0],
-      expiry: expiry === "30d" ? "30 Days" : expiry === "90d" ? "90 Days" : expiry === "1y" ? "1 Year" : "Never",
-      status: "Active" as const,
-    };
-    setTokens((prev) => [newToken, ...prev]);
-    setNewlyCreatedToken(rawToken);
-    setName("");
-    showToast("Personal Access Token generated successfully!");
+  const generateToken = () => {
+    if (!newDesc.trim()) return;
+    const raw = `trk_live_${crypto.getRandomValues(new Uint8Array(20)).join("").slice(0, 24)}`;
+    const masked = `${raw.slice(0, 14)}••••••••••••••••••${raw.slice(-4)}`;
+    const expiryLabel = newExpiry === "never" ? "Never" : newExpiry === "30d" ? "30 days" : newExpiry === "90d" ? "90 days" : "1 year";
+    setTokens((prev) => [...prev, {
+      id: `tok-${Date.now()}`,
+      description: newDesc.trim(),
+      expiry: expiryLabel,
+      lastUsed: "Never",
+      masked,
+    }]);
+    setNewToken(raw);
+    setNewDesc("");
+    setShowForm(false);
   };
 
-  const handleRevoke = (id: string) => {
-    setTokens((prev) => prev.map((t) => (t.id === id ? { ...t, status: "Revoked" } : t)));
-    showToast("Personal Access Token revoked.");
+  const copyToken = () => {
+    if (newToken) navigator.clipboard?.writeText(newToken);
+    setCopiedToken(true);
+    setTimeout(() => setCopiedToken(false), 2000);
   };
 
-  const handleCopy = (str: string) => {
-    navigator.clipboard.writeText(str);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    showToast("Token copied to clipboard!");
-  };
+  const revokeToken = (id: string) => setTokens((prev) => prev.filter((t) => t.id !== id));
 
   return (
-    <div className="rounded-[16px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4">
+    <div className="rounded-2xl border border-border-default bg-surface p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-extrabold text-text flex items-center gap-2">
-            <Key className="text-amber-500" size={18} />
-            <span>Personal Access Tokens (PAT) & API Keys</span>
-          </h3>
-          <p className="text-xs text-text-subtle mt-0.5">
-            Authenticate scripts, CI/CD runners, and custom tools with workspace-scoped API tokens.
-          </p>
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-neutral flex items-center justify-center">
+            <Key size={16} className="text-subtle" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-default">Personal Access Tokens</p>
+            <p className="text-[11px] text-subtle">For CI/CD pipelines and API automation</p>
+          </div>
         </div>
-      </div>
-
-      {/* Generator Form */}
-      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-neutral/30 border border-border">
-        <input
-          type="text"
-          placeholder="Token Description (e.g. Jenkins Deploy Bot)..."
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="flex-1 min-w-[220px] px-3 py-1.5 rounded-lg border border-border bg-surface text-xs text-text outline-none focus:border-brand"
-        />
-        <select
-          value={expiry}
-          onChange={(e) => setExpiry(e.target.value)}
-          className="px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-text outline-none focus:border-brand cursor-pointer"
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-bold hover:bg-brand/90 cursor-pointer"
         >
-          <option value="30d">Expires in 30 Days</option>
-          <option value="90d">Expires in 90 Days</option>
-          <option value="1y">Expires in 1 Year</option>
-          <option value="never">Never Expire</option>
-        </select>
-        <Button appearance="primary" onClick={handleGenerate} disabled={!name.trim()} className="text-xs">
-          <Key size={14} />
-          Generate Token
-        </Button>
+          <Plus size={13} /> Generate Token
+        </button>
       </div>
 
-      {/* Newly Created Token Display */}
-      {newlyCreatedToken && (
+      {/* Generate Token Form */}
+      {showForm && (
+        <div className="flex flex-col gap-3 p-3 rounded-xl border border-brand/30 bg-brand/5">
+          <input
+            type="text"
+            placeholder="Token description (e.g. GitHub Actions)"
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+            className="h-9 rounded-lg border border-border-default bg-surface px-3 text-xs outline-none focus:border-brand"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <select
+              value={newExpiry}
+              onChange={(e) => setNewExpiry(e.target.value)}
+              className="h-9 rounded-lg border border-border-default bg-surface px-2 text-xs outline-none focus:border-brand"
+            >
+              <option value="30d">30 days</option>
+              <option value="90d">90 days</option>
+              <option value="1y">1 year</option>
+              <option value="never">Never expires</option>
+            </select>
+            <Button appearance="primary" onClick={generateToken} disabled={!newDesc.trim()} className="text-xs h-9 flex-1">
+              Generate
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* New token reveal */}
+      {newToken && (
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
           <div className="min-w-0">
-            <span className="font-bold text-amber-600 dark:text-amber-400 block">
+            <span className="font-bold text-amber-600 block">
               Save your token now — it won&apos;t be shown again!
             </span>
-            <code className="font-mono text-[11px] text-text font-bold truncate block mt-0.5">
-              {newlyCreatedToken}
-            </code>
+            <code className="font-mono text-[11px] text-text font-bold truncate block mt-0.5">{newToken}</code>
           </div>
           <button
-            type="button"
-            onClick={() => handleCopy(newlyCreatedToken)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs cursor-pointer hover:bg-amber-600 transition-all shrink-0"
+            onClick={copyToken}
+            className="p-2 rounded-lg border border-amber-500/30 hover:bg-amber-500/10 shrink-0"
           >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? "Copied!" : "Copy Token"}</span>
+            {copiedToken ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-amber-600" />}
           </button>
         </div>
       )}
 
-      {/* Active Tokens List */}
-      <div className="flex flex-col divide-y divide-border text-xs">
-        {tokens.map((t) => (
-          <div key={t.id} className="py-3 flex items-center justify-between flex-wrap gap-2">
+      {/* Token List */}
+      <div className="flex flex-col gap-2">
+        {tokens.map((tok) => (
+          <div key={tok.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border-default bg-neutral">
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-text">{t.name}</h4>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    t.status === "Active"
-                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                      : "bg-neutral text-text-subtle border border-border"
-                  }`}
-                >
-                  {t.status}
-                </span>
-              </div>
-              <p className="font-mono text-[11px] text-text-subtle mt-0.5">
-                {t.token.slice(0, 16)}•••••••••••••••• · Created {t.createdAt} ({t.expiry})
-              </p>
+              <p className="text-xs font-semibold text-default">{tok.description}</p>
+              <p className="text-[10px] text-subtlest font-mono">{tok.masked}</p>
+              <p className="text-[10px] text-subtlest">Expires: {tok.expiry} · Last used: {tok.lastUsed}</p>
             </div>
-            {t.status === "Active" && (
-              <button
-                type="button"
-                onClick={() => handleRevoke(t.id)}
-                className="px-2.5 py-1 rounded-lg border border-border text-[11px] font-bold text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-              >
-                Revoke
-              </button>
-            )}
+            <button
+              onClick={() => revokeToken(tok.id)}
+              className="text-[11px] text-danger hover:text-danger/80 border border-danger/20 hover:bg-danger/5 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer"
+            >
+              Revoke
+            </button>
           </div>
         ))}
       </div>
     </div>
   );
 }
-

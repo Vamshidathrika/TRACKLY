@@ -2,9 +2,11 @@ import { requireMembership } from "@/lib/tenant";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
+import { getIntegrationConnections } from "@/lib/integrations/actions";
 
 export default async function IntegrationsSettingsPage() {
   const { siteId } = await requireMembership();
+  const initialConnections = await getIntegrationConnections(siteId);
 
   return (
     <div className="flex flex-1 flex-col px-8 py-6 overflow-y-auto max-w-5xl mx-auto w-full">
@@ -17,8 +19,9 @@ export default async function IntegrationsSettingsPage() {
       </div>
 
       <SettingsNav />
-      <IntegrationsSettings siteId={siteId} />
+      <IntegrationsSettings siteId={siteId} initialConnections={initialConnections} />
     </div>
   );
 }
+
 
