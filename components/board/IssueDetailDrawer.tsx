@@ -1473,7 +1473,7 @@ export function IssueDetailDrawer({
                 {activeTab === "development" && (
                   <div className="flex flex-col gap-4">
                     <DevelopmentPanel
-                      projectId={issue.project?.id || ""}
+                      projectId={issue?.projectId || issue?.project?.id || ""}
                       issueKey={issue.key}
                       branches={devData.branches}
                       pullRequests={devData.pullRequests}

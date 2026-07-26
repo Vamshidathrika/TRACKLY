@@ -399,12 +399,12 @@ export function FormsView({
 
 // 5. Development View Component
 export function DevView({ projectId = "demo-proj", projectKey = "VAM" }: { projectId?: string; projectKey?: string }) {
-  return <DevIntegrationsView projectId={projectId} projectKey={projectKey} />;
+  return <DevIntegrationsView projectId={projectId} projectKey={projectKey} initialTab="ALL" />;
 }
 
 // 6. Code View Component
 export function CodeView({ projectId = "demo-proj", projectKey = "VAM" }: { projectId?: string; projectKey?: string }) {
-  return <DevIntegrationsView projectId={projectId} projectKey={projectKey} />;
+  return <DevIntegrationsView projectId={projectId} projectKey={projectKey} initialTab="GITHUB" />;
 }
 
 // 7. Modals: Automation Modal

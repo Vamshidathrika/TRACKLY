@@ -139,6 +139,11 @@ export async function disconnectGithubRepoAction(repositoryId: string) {
 export async function fetchDevDashboardDataAction(projectId: string) {
   await getAuthUser();
   try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { siteId: true, key: true },
+    });
+
     const repos = await prisma.gitRepository.findMany({
       where: { projectId },
       include: {
@@ -148,10 +153,31 @@ export async function fetchDevDashboardDataAction(projectId: string) {
       },
     });
 
+    let webhookLogs: any[] = [];
+    if (project?.siteId) {
+      const dbLogs = await prisma.gitWebhookLog.findMany({
+        where: { siteId: project.siteId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      });
+
+      webhookLogs = dbLogs.map((log) => ({
+        id: log.id,
+        provider: "GITHUB",
+        eventType: `github:${log.event}${log.action ? `.${log.action}` : ""}`,
+        statusCode: log.status === "FAILED" ? 400 : 200,
+        issueKey: undefined,
+        latencyMs: 35,
+        timestamp: new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        summary: `${log.event}${log.action ? ` (${log.action})` : ""} on ${log.repositoryName || "repository"} by ${log.senderName || "user"}`,
+      }));
+    }
+
     if (repos.length === 0) {
       return {
         hasConnectedRepo: false,
         repos: [],
+        webhookLogs,
         stats: {
           activeBranches: 0,
           openPRs: 0,
@@ -183,6 +209,7 @@ export async function fetchDevDashboardDataAction(projectId: string) {
         repoName: r.repoName,
         createdAt: r.createdAt,
       })),
+      webhookLogs,
       stats: {
         activeBranches: primaryRepo.branches.length || liveStats.activeBranches,
         openPRs: primaryRepo.pullRequests.filter((p) => p.status === "OPEN").length || liveStats.openPRs,
@@ -204,6 +231,7 @@ export async function fetchDevDashboardDataAction(projectId: string) {
     return {
       hasConnectedRepo: false,
       repos: [],
+      webhookLogs: [],
       stats: {
         activeBranches: 0,
         openPRs: 0,

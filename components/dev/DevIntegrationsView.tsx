@@ -36,15 +36,17 @@ export type DevCommitItem = {
 export function DevIntegrationsView({
   projectId,
   projectKey = "VAM",
+  initialTab = "ALL",
 }: {
   projectId: string;
   projectKey?: string;
+  initialTab?: "ALL" | IntegrationProvider;
 }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasConnectedRepo, setHasConnectedRepo] = useState(false);
   const [reposList, setReposList] = useState<{ id: string; owner: string; repoName: string; createdAt: Date }[]>([]);
   const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"ALL" | IntegrationProvider>("ALL");
+  const [activeTab, setActiveTab] = useState<"ALL" | IntegrationProvider>(initialTab);
   const [stats, setStats] = useState<{
     activeBranches: number;
     openPRs: number;
@@ -58,6 +60,7 @@ export function DevIntegrationsView({
     pipelineStatus: "Idle",
     commits: [],
   });
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLogEntry[]>([]);
 
   const loadData = async () => {
     setIsRefreshing(true);
@@ -66,6 +69,9 @@ export function DevIntegrationsView({
     if (res) {
       setHasConnectedRepo(res.hasConnectedRepo);
       setReposList(res.repos || []);
+      if ((res as any).webhookLogs) {
+        setWebhookLogs((res as any).webhookLogs);
+      }
       if (res.stats) {
         setStats({
           activeBranches: res.stats.activeBranches,
@@ -91,49 +97,6 @@ export function DevIntegrationsView({
     await loadData();
   };
 
-  const [webhookLogs, setWebhookLogs] = useState<WebhookLogEntry[]>([
-    {
-      id: "log-1",
-      provider: "GITHUB",
-      eventType: "github:pull_request.closed",
-      statusCode: 200,
-      issueKey: `${projectKey}-14`,
-      latencyMs: 38,
-      timestamp: "2 mins ago",
-      summary: "PR #42 Merged -> Issue status updated to DONE",
-    },
-    {
-      id: "log-2",
-      provider: "SENTRY",
-      eventType: "sentry:event_alert",
-      statusCode: 200,
-      issueKey: `${projectKey}-19`,
-      latencyMs: 45,
-      timestamp: "12 mins ago",
-      summary: "Unhandled TypeError in checkout -> BUG Task Auto-Created",
-    },
-    {
-      id: "log-3",
-      provider: "VERCEL",
-      eventType: "vercel:deployment.succeeded",
-      statusCode: 200,
-      issueKey: `${projectKey}-14`,
-      latencyMs: 29,
-      timestamp: "25 mins ago",
-      summary: "Preview build ready -> Preview URL linked to task drawer",
-    },
-    {
-      id: "log-4",
-      provider: "GITLAB",
-      eventType: "gitlab:merge_request",
-      statusCode: 200,
-      issueKey: `${projectKey}-21`,
-      latencyMs: 41,
-      timestamp: "1 hour ago",
-      summary: "MR !8 Opened -> Status transitioned to IN_REVIEW",
-    },
-  ]);
-
   useEffect(() => {
     loadData();
   }, [projectId]);
@@ -143,7 +106,7 @@ export function DevIntegrationsView({
     : webhookLogs.filter((l) => l.provider === activeTab);
 
   return (
-    <div className="flex flex-1 flex-col p-6 max-w-6xl mx-auto w-full gap-6 animate-in fade-in duration-200">
+    <div className="flex flex-1 flex-col p-6 pb-24 max-w-6xl mx-auto w-full gap-6 animate-in fade-in duration-200">
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-3">
         <div>
@@ -322,43 +285,53 @@ export function DevIntegrationsView({
           <span className="text-[11px] font-mono text-text-subtle">{filteredLogs.length} events logged</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border text-text-subtle font-bold text-[11px]">
-                <th className="py-2.5 px-3">STATUS</th>
-                <th className="py-2.5 px-3">PROVIDER & EVENT</th>
-                <th className="py-2.5 px-3">TARGET ISSUE</th>
-                <th className="py-2.5 px-3">SUMMARY</th>
-                <th className="py-2.5 px-3">LATENCY</th>
-                <th className="py-2.5 px-3">TIMESTAMP</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-neutral/30 transition-colors">
-                  <td className="py-2.5 px-3">
-                    <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                      {log.statusCode} OK
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 font-mono font-bold text-text">
-                    <span className="px-2 py-0.5 rounded bg-neutral text-text-subtle border border-border mr-1 text-[10px]">
-                      {log.provider}
-                    </span>
-                    {log.eventType}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono font-bold text-brand">
-                    {log.issueKey || "—"}
-                  </td>
-                  <td className="py-2.5 px-3 text-text-subtle truncate max-w-xs">{log.summary}</td>
-                  <td className="py-2.5 px-3 font-mono text-text-subtle">{log.latencyMs}ms</td>
-                  <td className="py-2.5 px-3 text-text-subtle font-mono text-[11px]">{log.timestamp}</td>
+        {filteredLogs.length === 0 ? (
+          <div className="py-8 text-center text-xs text-text-subtle border border-dashed border-border rounded-lg bg-neutral/20 flex flex-col items-center gap-2">
+            <Activity size={24} className="text-text-subtle opacity-50" />
+            <p className="font-semibold text-text">No live webhook events logged for {projectKey} yet</p>
+            <p className="text-[11px] max-w-sm">Connect a Git repository or trigger webhooks to view real-time payload audits here.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+              <thead>
+                <tr className="border-b border-border text-text-subtle font-bold text-[11px]">
+                  <th className="py-2.5 px-3">STATUS</th>
+                  <th className="py-2.5 px-3">PROVIDER & EVENT</th>
+                  <th className="py-2.5 px-3">TARGET ISSUE</th>
+                  <th className="py-2.5 px-3">SUMMARY</th>
+                  <th className="py-2.5 px-3">LATENCY</th>
+                  <th className="py-2.5 px-3 min-w-[110px]">TIMESTAMP</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-neutral/30 transition-colors">
+                    <td className="py-2.5 px-3">
+                      <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                        {log.statusCode} OK
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-text">
+                      <span className="px-2 py-0.5 rounded bg-neutral text-text-subtle border border-border mr-1 text-[10px]">
+                        {log.provider}
+                      </span>
+                      {log.eventType}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-brand">
+                      {log.issueKey || "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-text-subtle truncate max-w-xs" title={log.summary}>
+                      {log.summary}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-text-subtle">{log.latencyMs}ms</td>
+                    <td className="py-2.5 px-3 text-text-subtle font-mono text-[11px] whitespace-nowrap">{log.timestamp}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
