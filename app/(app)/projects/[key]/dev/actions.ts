@@ -92,18 +92,30 @@ export async function updateGithubRepoAction(input: {
 }) {
   await getAuthUser();
   try {
-    const data: any = {};
-    if (input.owner?.trim()) data.owner = input.owner.trim();
-    if (input.repoName?.trim()) data.repoName = input.repoName.trim();
-    if (input.accessToken !== undefined) data.accessToken = input.accessToken.trim() || null;
-
-    const repo = await prisma.gitRepository.update({
+    const existing = await prisma.gitRepository.findUnique({
       where: { id: input.repositoryId },
-      data,
+    });
+    if (!existing) return { error: "Repository not found" };
+
+    const targetOwner = input.owner?.trim() || existing.owner;
+    const targetRepoName = input.repoName?.trim() || existing.repoName;
+    const targetAccessToken = input.accessToken !== undefined ? input.accessToken.trim() || undefined : existing.accessToken || undefined;
+
+    const syncRes = await validateAndSyncGithubRepo({
+      repositoryId: existing.id,
+      owner: targetOwner,
+      repoName: targetRepoName,
+      accessToken: targetAccessToken,
+      siteId: existing.siteId,
+      projectId: existing.projectId,
     });
 
+    if (!syncRes.success) {
+      return { error: syncRes.error };
+    }
+
     revalidatePath("/projects");
-    return { success: true, repo };
+    return { success: true, repo: syncRes.repoData };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     return { error: "Failed to update repository settings" };

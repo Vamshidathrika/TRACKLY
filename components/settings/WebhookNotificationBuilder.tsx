@@ -5,34 +5,56 @@ import { Send, CheckCircle2, MessageSquare, Plus, Trash2, Bell, Zap, Copy, Check
 import type { WebhookNotificationRule } from "@/lib/integrations/types";
 
 export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
-  const [rules, setRules] = useState<WebhookNotificationRule[]>([
-    {
-      id: "rule-1",
-      platform: "SLACK",
-      webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXXXX",
-      channelName: "#dev-alerts-live",
-      botName: "Trackly Dispatcher Bot",
-      enabledEvents: ["issue.created", "issue.status_changed", "sentry.auto_bug"],
-    },
-    {
-      id: "rule-2",
-      platform: "DISCORD",
-      webhookUrl: "https://discord.com/api/webhooks/12345/abcdef",
-      channelName: "#product-releases",
-      botName: "Release Bot",
-      enabledEvents: ["issue.status_changed"],
-    },
-  ]);
+  const [rules, setRules] = useState<WebhookNotificationRule[]>(() => {
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      const saved = localStorage.getItem(`trackly_webhook_rules_${siteId}`);
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      {
+        id: "rule-1",
+        platform: "SLACK",
+        webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXXXX",
+        channelName: "#dev-alerts-live",
+        botName: "Trackly Dispatcher Bot",
+        enabledEvents: ["issue.created", "issue.status_changed", "sentry.auto_bug"],
+      },
+      {
+        id: "rule-2",
+        platform: "DISCORD",
+        webhookUrl: "https://discord.com/api/webhooks/12345/abcdef",
+        channelName: "#product-releases",
+        botName: "Release Bot",
+        enabledEvents: ["issue.status_changed"],
+      },
+    ];
+  });
 
   const [platform, setPlatform] = useState<"SLACK" | "DISCORD">("SLACK");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [channelName, setChannelName] = useState("");
   const [botName, setBotName] = useState("");
   const [testSentId, setTestSentId] = useState<string | null>(null);
+  const [urlError, setUrlError] = useState<string | null>(null);
+
+  const saveRules = (next: WebhookNotificationRule[]) => {
+    setRules(next);
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      localStorage.setItem(`trackly_webhook_rules_${siteId}`, JSON.stringify(next));
+    }
+  };
 
   const handleAddRule = (e: React.FormEvent) => {
     e.preventDefault();
+    setUrlError(null);
     if (!webhookUrl.trim() || !channelName.trim()) return;
+
+    if (!webhookUrl.startsWith("http://") && !webhookUrl.startsWith("https://")) {
+      setUrlError("Webhook URL must start with http:// or https://");
+      return;
+    }
 
     const newRule: WebhookNotificationRule = {
       id: `rule-${Date.now()}`,
@@ -43,14 +65,16 @@ export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
       enabledEvents: ["issue.created", "issue.status_changed"],
     };
 
-    setRules([newRule, ...rules]);
+    const next = [newRule, ...rules];
+    saveRules(next);
     setWebhookUrl("");
     setChannelName("");
     setBotName("");
   };
 
   const handleRemove = (id: string) => {
-    setRules(rules.filter((r) => r.id !== id));
+    const next = rules.filter((r) => r.id !== id);
+    saveRules(next);
   };
 
   const handleTestPing = (id: string) => {
@@ -71,6 +95,12 @@ export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
           {rules.length} Active Dispatch Routes
         </span>
       </div>
+
+      {urlError && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-semibold text-red-600">
+          ❌ {urlError}
+        </div>
+      )}
 
       {/* Add Webhook Route Form */}
       <form onSubmit={handleAddRule} className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-neutral/20 p-4 rounded-xl border border-border">
