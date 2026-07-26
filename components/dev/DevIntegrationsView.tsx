@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConnectRepoModal } from "./ConnectRepoModal";
-import { fetchDevDashboardDataAction } from "@/app/(app)/projects/[key]/dev/actions";
+import { fetchDevDashboardDataAction, syncGithubRepoAction, disconnectGithubRepoAction } from "@/app/(app)/projects/[key]/dev/actions";
 import type { WebhookLogEntry, IntegrationProvider } from "@/lib/integrations/types";
 
 export type DevCommitItem = {
@@ -42,6 +42,8 @@ export function DevIntegrationsView({
 }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasConnectedRepo, setHasConnectedRepo] = useState(false);
+  const [reposList, setReposList] = useState<{ id: string; owner: string; repoName: string; createdAt: Date }[]>([]);
+  const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"ALL" | IntegrationProvider>("ALL");
   const [stats, setStats] = useState<{
     activeBranches: number;
@@ -56,6 +58,38 @@ export function DevIntegrationsView({
     pipelineStatus: "Idle",
     commits: [],
   });
+
+  const loadData = async () => {
+    setIsRefreshing(true);
+    const res = await fetchDevDashboardDataAction(projectId);
+    setIsRefreshing(false);
+    if (res) {
+      setHasConnectedRepo(res.hasConnectedRepo);
+      setReposList(res.repos || []);
+      if (res.stats) {
+        setStats({
+          activeBranches: res.stats.activeBranches,
+          openPRs: res.stats.openPRs,
+          mergedPRs: res.stats.mergedPRs,
+          pipelineStatus: res.stats.pipelineStatus as any,
+          commits: res.stats.commits,
+        });
+      }
+    }
+  };
+
+  const handleSyncRepo = async (repoId: string) => {
+    setSyncingRepoId(repoId);
+    await syncGithubRepoAction(repoId);
+    setSyncingRepoId(null);
+    await loadData();
+  };
+
+  const handleDisconnectRepo = async (repoId: string) => {
+    if (!confirm("Are you sure you want to disconnect this repository?")) return;
+    await disconnectGithubRepoAction(repoId);
+    await loadData();
+  };
 
   const [webhookLogs, setWebhookLogs] = useState<WebhookLogEntry[]>([
     {
@@ -99,24 +133,6 @@ export function DevIntegrationsView({
       summary: "MR !8 Opened -> Status transitioned to IN_REVIEW",
     },
   ]);
-
-  const loadData = async () => {
-    setIsRefreshing(true);
-    const res = await fetchDevDashboardDataAction(projectId);
-    setIsRefreshing(false);
-    if (res) {
-      setHasConnectedRepo(res.hasConnectedRepo);
-      if (res.stats) {
-        setStats({
-          activeBranches: res.stats.activeBranches,
-          openPRs: res.stats.openPRs,
-          mergedPRs: res.stats.mergedPRs,
-          pipelineStatus: res.stats.pipelineStatus as any,
-          commits: res.stats.commits,
-        });
-      }
-    }
-  };
 
   useEffect(() => {
     loadData();
@@ -191,6 +207,71 @@ export function DevIntegrationsView({
           </button>
         ))}
       </div>
+
+      {/* Connected Repositories Section */}
+      {reposList.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-xs flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <span className="text-xs font-bold text-text flex items-center gap-2">
+              <FolderGit2 size={15} className="text-brand" /> Connected Repositories ({reposList.length})
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {reposList.map((repo) => (
+              <div
+                key={repo.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border bg-neutral/30 text-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center font-bold">
+                    <FolderGit2 size={16} />
+                  </div>
+                  <div>
+                    <span className="font-bold text-text font-mono text-xs">
+                      {repo.owner} / {repo.repoName}
+                    </span>
+                    <div className="flex items-center gap-2 text-[11px] text-text-subtle mt-0.5">
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        <CheckCircle2 size={11} /> Connected & Synced
+                      </span>
+                      <span>•</span>
+                      <a
+                        href={`https://github.com/${repo.owner}/${repo.repoName}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline text-brand flex items-center gap-0.5"
+                      >
+                        github.com <ExternalLink size={10} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    appearance="subtle"
+                    onClick={() => handleSyncRepo(repo.id)}
+                    disabled={syncingRepoId === repo.id}
+                    className="h-8 text-xs flex items-center gap-1.5"
+                  >
+                    <RefreshCw size={12} className={syncingRepoId === repo.id ? "animate-spin" : ""} />
+                    <span>{syncingRepoId === repo.id ? "Syncing..." : "Sync Now"}</span>
+                  </Button>
+
+                  <Button
+                    appearance="subtle"
+                    onClick={() => handleDisconnectRepo(repo.id)}
+                    className="h-8 text-xs text-red-600 hover:bg-red-500/10"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Metrics Banner Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

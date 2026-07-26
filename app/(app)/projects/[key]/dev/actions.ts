@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { fetchGithubRepoStats } from "@/lib/github";
+import { fetchGithubRepoStats, validateAndSyncGithubRepo } from "@/lib/github";
 
 export async function connectGithubRepoAction(input: {
   projectId: string;
@@ -11,7 +11,7 @@ export async function connectGithubRepoAction(input: {
   repoName: string;
   accessToken?: string;
 }) {
-  const user = await getAuthUser();
+  await getAuthUser();
   if (!input.owner.trim() || !input.repoName.trim()) {
     return { error: "Owner and repository name are required" };
   }
@@ -26,31 +26,52 @@ export async function connectGithubRepoAction(input: {
     });
     if (!project) return { error: "Project not found" };
 
-    const repo = await prisma.gitRepository.upsert({
-      where: {
-        projectId_owner_repoName: {
-          projectId: input.projectId,
-          owner,
-          repoName,
-        },
-      },
-      create: {
-        siteId: project.siteId,
-        projectId: input.projectId,
-        owner,
-        repoName,
-        accessToken: input.accessToken?.trim() || null,
-      },
-      update: {
-        accessToken: input.accessToken?.trim() || null,
-      },
+    const syncRes = await validateAndSyncGithubRepo({
+      owner,
+      repoName,
+      accessToken: input.accessToken?.trim() || undefined,
+      siteId: project.siteId,
+      projectId: input.projectId,
     });
 
+    if (!syncRes.success) {
+      return { error: syncRes.error };
+    }
+
     revalidatePath("/projects");
-    return { success: true, repo };
+    return { success: true, repo: syncRes.repoData };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     return { error: "Could not connect repository" };
+  }
+}
+
+export async function syncGithubRepoAction(repositoryId: string) {
+  await getAuthUser();
+  try {
+    const repo = await prisma.gitRepository.findUnique({
+      where: { id: repositoryId },
+    });
+    if (!repo) return { error: "Repository not found" };
+
+    const syncRes = await validateAndSyncGithubRepo({
+      repositoryId: repo.id,
+      owner: repo.owner,
+      repoName: repo.repoName,
+      accessToken: repo.accessToken || undefined,
+      siteId: repo.siteId,
+      projectId: repo.projectId,
+    });
+
+    if (!syncRes.success) {
+      return { error: syncRes.error };
+    }
+
+    revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    return { error: "Failed to sync repository" };
   }
 }
 

@@ -107,28 +107,202 @@ export async function fetchGithubRepoStats(
     };
   } catch (error) {
     return {
-      activeBranches: 14,
-      openPRs: 2,
-      mergedPRs: 5,
-      pipelineStatus: "Passing",
-      commits: [
-        {
-          hash: "8f3a12b",
-          message: "feat: add super navigation tabs for space views",
-          author: "Antigravity",
-          committedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-          url: `https://github.com/${owner}/${repo}/commit/8f3a12b`,
-          taskKey: "VAM-1",
-        },
-        {
-          hash: "7c41d9e",
-          message: "fix: update kanban board drag status handlers",
-          author: "Dev Team",
-          committedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-          url: `https://github.com/${owner}/${repo}/commit/7c41d9e`,
-          taskKey: "VAM-2",
-        },
-      ],
+      activeBranches: 0,
+      openPRs: 0,
+      mergedPRs: 0,
+      pipelineStatus: "Idle",
+      commits: [],
     };
   }
+}
+
+/**
+ * Validates repository access with GitHub REST API and syncs live branches,
+ * commits, and pull requests into CockroachDB / Prisma.
+ */
+export async function validateAndSyncGithubRepo(input: {
+  repositoryId?: string;
+  owner: string;
+  repoName: string;
+  accessToken?: string;
+  siteId: string;
+  projectId: string;
+}): Promise<{ success: boolean; error?: string; repoData?: any }> {
+  const { owner, repoName, accessToken, siteId, projectId } = input;
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "Trackly-App",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  // 1. Live Validation Call
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, { headers }).catch(() => null);
+  if (!repoRes) {
+    return { success: false, error: "Network error attempting to contact GitHub API." };
+  }
+
+  if (!repoRes.ok) {
+    if (repoRes.status === 404) {
+      return {
+        success: false,
+        error: `Repository "${owner}/${repoName}" not found. If this is a private repository, please provide a valid Personal Access Token (PAT) with 'repo' scope.`,
+      };
+    }
+    if (repoRes.status === 401) {
+      return { success: false, error: "Invalid Personal Access Token (PAT). Please verify token credentials." };
+    }
+    if (repoRes.status === 403) {
+      return { success: false, error: "GitHub API rate limit exceeded or access denied. Please provide a PAT." };
+    }
+    return { success: false, error: `GitHub API error: ${repoRes.statusText} (${repoRes.status})` };
+  }
+
+  const { prisma } = await import("@/lib/prisma");
+
+  // 2. Fetch live GitHub objects
+  const [branchesRes, pullsRes, commitsRes] = await Promise.all([
+    fetch(`https://api.github.com/repos/${owner}/${repoName}/branches?per_page=30`, { headers }).catch(() => null),
+    fetch(`https://api.github.com/repos/${owner}/${repoName}/pulls?state=all&per_page=30`, { headers }).catch(() => null),
+    fetch(`https://api.github.com/repos/${owner}/${repoName}/commits?per_page=20`, { headers }).catch(() => null),
+  ]);
+
+  const branches = branchesRes?.ok ? await branchesRes.json() : [];
+  const pulls = pullsRes?.ok ? await pullsRes.json() : [];
+  const commitsData = commitsRes?.ok ? await commitsRes.json() : [];
+
+  // Fetch project issues to link task keys (e.g. TRK-88)
+  const projectIssues = await prisma.issue.findMany({
+    where: { projectId },
+    select: { id: true, key: true },
+  });
+  const issueKeyMap = new Map(projectIssues.map((i) => [i.key.toUpperCase(), i.id]));
+
+  // Ensure repository record exists in database
+  const repoRecord = await prisma.gitRepository.upsert({
+    where: {
+      projectId_owner_repoName: {
+        projectId,
+        owner,
+        repoName,
+      },
+    },
+    create: {
+      siteId,
+      projectId,
+      owner,
+      repoName,
+      accessToken: accessToken || null,
+    },
+    update: {
+      accessToken: accessToken || null,
+    },
+  });
+
+  // Sync Branches
+  if (Array.isArray(branches)) {
+    for (const b of branches) {
+      const keys = extractTaskKeys(b.name || "");
+      const matchedIssueId = keys.length > 0 ? issueKeyMap.get(keys[0]) || null : null;
+
+      await prisma.gitBranch.upsert({
+        where: {
+          repositoryId_name: {
+            repositoryId: repoRecord.id,
+            name: b.name,
+          },
+        },
+        create: {
+          siteId,
+          repositoryId: repoRecord.id,
+          name: b.name,
+          lastCommitHash: b.commit?.sha?.substring(0, 7) || null,
+          issueId: matchedIssueId,
+        },
+        update: {
+          lastCommitHash: b.commit?.sha?.substring(0, 7) || null,
+          issueId: matchedIssueId,
+        },
+      }).catch(() => null);
+    }
+  }
+
+  // Sync Commits
+  if (Array.isArray(commitsData)) {
+    for (const c of commitsData) {
+      if (!c.sha) continue;
+      const msg = c.commit?.message?.split("\n")[0] || "Update codebase";
+      const keys = extractTaskKeys(msg);
+      const matchedIssueId = keys.length > 0 ? issueKeyMap.get(keys[0]) || null : null;
+
+      await prisma.gitCommit.upsert({
+        where: {
+          repositoryId_hash: {
+            repositoryId: repoRecord.id,
+            hash: c.sha.substring(0, 7),
+          },
+        },
+        create: {
+          siteId,
+          repositoryId: repoRecord.id,
+          hash: c.sha.substring(0, 7),
+          message: msg,
+          authorName: c.commit?.author?.name || c.author?.login || "Developer",
+          authorAvatar: c.author?.avatar_url || null,
+          committedAt: c.commit?.author?.date ? new Date(c.commit.author.date) : new Date(),
+          issueId: matchedIssueId,
+          url: c.html_url || `https://github.com/${owner}/${repoName}/commit/${c.sha}`,
+        },
+        update: {
+          message: msg,
+          authorName: c.commit?.author?.name || c.author?.login || "Developer",
+          authorAvatar: c.author?.avatar_url || null,
+          issueId: matchedIssueId,
+          url: c.html_url || `https://github.com/${owner}/${repoName}/commit/${c.sha}`,
+        },
+      }).catch(() => null);
+    }
+  }
+
+  // Sync Pull Requests
+  if (Array.isArray(pulls)) {
+    for (const p of pulls) {
+      if (!p.number) continue;
+      const keys = extractTaskKeys(`${p.title || ""} ${p.head?.ref || ""}`);
+      const matchedIssueId = keys.length > 0 ? issueKeyMap.get(keys[0]) || null : null;
+      const status = p.merged_at ? "MERGED" : p.state === "open" ? "OPEN" : "CLOSED";
+
+      await prisma.pullRequest.upsert({
+        where: {
+          repositoryId_prNumber: {
+            repositoryId: repoRecord.id,
+            prNumber: p.number,
+          },
+        },
+        create: {
+          siteId,
+          repositoryId: repoRecord.id,
+          prNumber: p.number,
+          title: p.title || `Pull Request #${p.number}`,
+          status,
+          authorName: p.user?.login || "Developer",
+          authorAvatar: p.user?.avatar_url || null,
+          issueId: matchedIssueId,
+          url: p.html_url || `https://github.com/${owner}/${repoName}/pull/${p.number}`,
+          createdAt: p.created_at ? new Date(p.created_at) : new Date(),
+        },
+        update: {
+          title: p.title || `Pull Request #${p.number}`,
+          status,
+          authorName: p.user?.login || "Developer",
+          authorAvatar: p.user?.avatar_url || null,
+          issueId: matchedIssueId,
+          url: p.html_url || `https://github.com/${owner}/${repoName}/pull/${p.number}`,
+        },
+      }).catch(() => null);
+    }
+  }
+
+  return { success: true, repoData: repoRecord };
 }
