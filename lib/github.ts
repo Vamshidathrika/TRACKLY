@@ -127,14 +127,16 @@ export async function validateAndSyncGithubRepo(input: {
   accessToken?: string;
   siteId: string;
   projectId: string;
-}): Promise<{ success: boolean; error?: string; repoData?: any }> {
+}): Promise<{ success: boolean; error?: string; repoData?: any; syncedCounts?: { branches: number; commits: number; prs: number } }> {
   const { owner, repoName, accessToken, siteId, projectId } = input;
+  const cleanedToken = accessToken ? accessToken.replace(/[•\s]/g, "").trim() : "";
+
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "Trackly-App",
   };
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+  if (cleanedToken) {
+    headers.Authorization = `Bearer ${cleanedToken}`;
   }
 
   // 1. Live Validation Call
@@ -147,16 +149,16 @@ export async function validateAndSyncGithubRepo(input: {
     if (repoRes.status === 404) {
       return {
         success: false,
-        error: `Repository "${owner}/${repoName}" not found. If this is a private repository, please provide a valid Personal Access Token (PAT) with 'repo' scope.`,
+        error: `Connection Failed: Repository "${owner}/${repoName}" was not found on GitHub. If this is a private repository, please enter a valid Personal Access Token (PAT) with 'repo' scope.`,
       };
     }
     if (repoRes.status === 401) {
-      return { success: false, error: "Invalid Personal Access Token (PAT). Please verify token credentials." };
+      return { success: false, error: "Connection Failed: Invalid GitHub Personal Access Token (PAT). Please verify your token has 'repo' scope." };
     }
     if (repoRes.status === 403) {
-      return { success: false, error: "GitHub API rate limit exceeded or access denied. Please provide a PAT." };
+      return { success: false, error: "Connection Failed: GitHub API rate limit exceeded or access denied. Please provide a PAT." };
     }
-    return { success: false, error: `GitHub API error: ${repoRes.statusText} (${repoRes.status})` };
+    return { success: false, error: `Connection Failed: GitHub API returned HTTP ${repoRes.statusText} (${repoRes.status}).` };
   }
 
   const { prisma } = await import("@/lib/prisma");

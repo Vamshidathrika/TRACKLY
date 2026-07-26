@@ -16,7 +16,7 @@ export function ConnectRepoModal({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [owner, setOwner] = useState("Vamshidathrika");
-  const [repoName, setRepoName] = useState("TRACKLY");
+  const [repoName, setRepoName] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);

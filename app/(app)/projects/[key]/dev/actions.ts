@@ -35,6 +35,15 @@ export async function connectGithubRepoAction(input: {
     });
 
     if (!syncRes.success) {
+      // Purge any stale/false connection record
+      await prisma.gitRepository.deleteMany({
+        where: {
+          projectId: input.projectId,
+          owner,
+          repoName,
+        },
+      }).catch(() => null);
+
       return { error: syncRes.error };
     }
 
@@ -148,8 +157,14 @@ export async function fetchDevDashboardDataAction(projectId: string) {
       primaryRepo.accessToken || undefined
     );
 
+    const hasRealData =
+      primaryRepo.branches.length > 0 ||
+      primaryRepo.commits.length > 0 ||
+      primaryRepo.pullRequests.length > 0 ||
+      liveStats.commits.length > 0;
+
     return {
-      hasConnectedRepo: true,
+      hasConnectedRepo: hasRealData,
       repos: repos.map((r) => ({
         id: r.id,
         owner: r.owner,
@@ -160,7 +175,7 @@ export async function fetchDevDashboardDataAction(projectId: string) {
         activeBranches: primaryRepo.branches.length || liveStats.activeBranches,
         openPRs: primaryRepo.pullRequests.filter((p) => p.status === "OPEN").length || liveStats.openPRs,
         mergedPRs: primaryRepo.pullRequests.filter((p) => p.status === "MERGED").length || liveStats.mergedPRs,
-        pipelineStatus: liveStats.pipelineStatus,
+        pipelineStatus: hasRealData ? liveStats.pipelineStatus : "Idle",
         commits: primaryRepo.commits.length > 0
           ? primaryRepo.commits.map((c) => ({
               hash: c.hash,
