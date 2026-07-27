@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo, useTransition, useCallback } from "react";
+import { useState, useMemo, useTransition, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { BoardHeader } from "./BoardHeader";
 import { BoardFilterBar } from "./BoardFilterBar";
 import { BoardColumn } from "./BoardColumn";
 import { IssueTable } from "@/components/issues/IssueTable";
 import { type BoardIssue } from "./IssueCard";
-import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { updateIssueFieldAction, fetchLiveBoardIssuesAction } from "@/app/(app)/projects/[key]/issues/actions";
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 import type { IssueStatus } from "@prisma/client";
 
@@ -54,6 +54,32 @@ export function KanbanBoard({
   const [, startTransition] = useTransition();
   const [isStarred, setIsStarred] = useState(initialIsStarred);
   const [issues, setIssues] = useState<BoardIssue[]>(initialIssues);
+
+  // Synchronize state when initialIssues prop updates
+  useEffect(() => {
+    setIssues(initialIssues);
+  }, [initialIssues]);
+
+  // Real-time collaborative polling: sync live updates for active viewers of this board
+  useEffect(() => {
+    if (!projectId) return;
+
+    const interval = setInterval(async () => {
+      const res = await fetchLiveBoardIssuesAction(projectId, projectKey);
+      if (res?.success && Array.isArray(res.issues)) {
+        setIssues((prev) => {
+          const tempItems = prev.filter((i) => i.id.startsWith("temp-"));
+          const merged = res.issues.map((serverItem: BoardIssue) => {
+            const local = prev.find((p) => p.id === serverItem.id);
+            return local ? { ...local, ...serverItem } : serverItem;
+          });
+          return [...tempItems, ...merged];
+        });
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [projectId, projectKey]);
 
   // Selected issue for Jira slide-over detail drawer
   const [selectedIssue, setSelectedIssue] = useState<BoardIssue | null>(null);

@@ -84,6 +84,14 @@ export function BacklogView({
   const [, startTransition] = useTransition();
   const [sprints, setSprints] = useState<SprintData[]>(initialSprints);
   const [backlog, setBacklog] = useState<BacklogIssue[]>(initialBacklog);
+
+  useEffect(() => {
+    setSprints(initialSprints);
+  }, [initialSprints]);
+
+  useEffect(() => {
+    setBacklog(initialBacklog);
+  }, [initialBacklog]);
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
   const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
   const [dragOverTargetId, setDragOverTargetId] = useState<string | null>(null);

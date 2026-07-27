@@ -7,6 +7,7 @@ import { updateIssue, addComment, deleteIssue, deleteComment } from "@/lib/issue
 import { extractMentions, createNotification, toggleWatcher } from "@/lib/notifications";
 import { evaluateAutomationTriggers } from "@/lib/automation";
 import { prisma } from "@/lib/prisma";
+import { getBoardIssues } from "@/lib/dal";
 import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
 
 export async function updateIssueFieldAction(
@@ -645,5 +646,18 @@ export async function bulkUpdateIssuesAction(
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     return { error: "Failed to perform bulk update" };
+  }
+}
+
+export async function fetchLiveBoardIssuesAction(projectId: string, projectKey: string) {
+  await getAuthUser();
+  try {
+    const issues = await getBoardIssues(projectId);
+    return {
+      success: true,
+      issues: issues.map((i) => ({ ...i, projectKey })),
+    };
+  } catch (e) {
+    return { success: false, issues: [] };
   }
 }
