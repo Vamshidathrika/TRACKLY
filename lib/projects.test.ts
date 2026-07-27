@@ -105,11 +105,11 @@ describe("projects lib", () => {
     expect(prisma.project.findFirst).toHaveBeenCalledTimes(1);
   });
 
-  it("getProjectsForUser returns strictly target siteId projects for workspace MEMBER", async () => {
+  it("getProjectsForUser returns admin workspace boards plus explicit projectMember boards", async () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
       ...prisma.membership,
-      findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }),
+      findMany: vi.fn().mockResolvedValue([{ siteId: "s-admin", role: "ADMIN" }]),
     };
     (prisma.projectMember.findMany as any).mockResolvedValue([
       { projectId: "p-joined" },
@@ -123,8 +123,8 @@ describe("projects lib", () => {
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          siteId: "s-shared",
           OR: [
+            { siteId: { in: ["s-admin"] } },
             { id: { in: ["p-joined"] } },
             { leadId: "user-b" },
           ],
@@ -137,7 +137,7 @@ describe("projects lib", () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
       ...prisma.membership,
-      findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }),
+      findMany: vi.fn().mockResolvedValue([{ siteId: "site-B", role: "ADMIN" }]),
     };
     // User B was explicitly granted access to Board 1 ONLY
     (prisma.projectMember.findMany as any).mockResolvedValue([
@@ -153,8 +153,8 @@ describe("projects lib", () => {
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          siteId: "site-B",
           OR: [
+            { siteId: { in: ["site-B"] } },
             { id: { in: ["board-1-id"] } },
             { leadId: "user-B" },
           ],
@@ -167,8 +167,10 @@ describe("projects lib", () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
       ...prisma.membership,
-      findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
     };
+    (prisma.projectMember.findMany as any).mockResolvedValue([]);
+    (prisma.project.findMany as any).mockResolvedValue([]);
 
     const result = await getProjectsForUser("s1", "unknown-user");
     expect(result).toEqual([]);
