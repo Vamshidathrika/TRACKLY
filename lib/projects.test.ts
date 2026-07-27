@@ -3,7 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./prisma", () => ({
   prisma: {
     project: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
-    projectMember: { create: vi.fn().mockResolvedValue({ id: "pm1" }), upsert: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
+    projectMember: { create: vi.fn().mockResolvedValue({ id: "pm1" }), upsert: vi.fn(), delete: vi.fn(), deleteMany: vi.fn().mockResolvedValue({ count: 0 }), findMany: vi.fn() },
+    star: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    customField: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    automationRule: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    sprint: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    issue: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    invite: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    gitRepository: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
   },
 }));
 import { prisma } from "./prisma";
@@ -59,7 +66,7 @@ describe("projects lib", () => {
     (prisma.project.delete as any).mockResolvedValue({ id: "p1" });
 
     const res = await deleteProject("s1", "p1");
-    expect(res).toEqual({ success: true });
+    expect(res).toEqual({ success: true, key: "DEL" });
     expect(prisma.project.delete).toHaveBeenCalledWith({ where: { id: "p1" } });
   });
 

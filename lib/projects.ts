@@ -185,11 +185,21 @@ export async function deleteProject(siteId: string, projectId: string) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project || project.siteId !== siteId) throw new Error("PROJECT_NOT_FOUND");
 
+  // Clean up all related models explicitly so no dangling references remain in Starred or Recent lists
+  await prisma.star?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.projectMember?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.customField?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.automationRule?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.sprint?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.issue?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.invite?.deleteMany({ where: { projectId } }).catch(() => {});
+  await prisma.gitRepository?.deleteMany({ where: { projectId } }).catch(() => {});
+
   await prisma.project.delete({ where: { id: projectId } });
 
   await delCache(`site:projects:${siteId}`);
   await delCache(`site:project:${siteId}:${project.key}`);
-  return { success: true };
+  return { success: true, key: project.key };
 }
 
 export async function getProjectMembers(projectId: string) {

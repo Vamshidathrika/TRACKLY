@@ -34,10 +34,16 @@ export function DeleteProjectModal({
     setError(null);
     try {
       const res = await deleteProjectAction(projectId);
-      if (res && res.error) {
+      if (res && "error" in res && res.error) {
         setError(res.error);
         setIsDeleting(false);
       } else {
+        try {
+          const storageKey = "trackly-recent-projects";
+          const existing: string[] = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+          const updated = existing.filter((k) => k.toUpperCase() !== projectKey.toUpperCase());
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+        } catch { /* ignore */ }
         setOpen(false);
         router.push("/projects");
         router.refresh();

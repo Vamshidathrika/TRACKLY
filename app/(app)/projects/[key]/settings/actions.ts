@@ -33,9 +33,11 @@ export async function updateProjectDetailsAction(
 export async function deleteProjectAction(projectId: string) {
   try {
     const { siteId } = await requireMembership();
-    await deleteProject(siteId, projectId);
+    const res = await deleteProject(siteId, projectId);
+    revalidatePath("/", "layout");
     revalidatePath("/projects");
-    return { success: true };
+    revalidatePath("/your-work");
+    return res;
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     throw e;

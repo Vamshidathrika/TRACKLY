@@ -157,9 +157,15 @@ export function GlobalSidebar({
 
   useEffect(() => {
     try {
-      setRecentKeys(JSON.parse(localStorage.getItem("trackly-recent-projects") ?? "[]"));
+      const storedKeys: string[] = JSON.parse(localStorage.getItem("trackly-recent-projects") ?? "[]");
+      const validProjectKeys = new Set(projects.map((p) => p.key));
+      const cleaned = storedKeys.filter((k) => validProjectKeys.has(k));
+      if (cleaned.length !== storedKeys.length) {
+        localStorage.setItem("trackly-recent-projects", JSON.stringify(cleaned));
+      }
+      setRecentKeys(cleaned);
     } catch { /* ignore */ }
-  }, []);
+  }, [projects]);
 
   const starred = projects.filter((p) => starredProjectIds.includes(p.id));
   const recent = recentKeys
