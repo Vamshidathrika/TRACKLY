@@ -60,6 +60,7 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
 
   const activeUsers = projectMembers.map((m) => m.user);
   const availableUsers = activeUsers.length > 0 ? activeUsers : siteUsers;
+  const isOwnerOrAdmin = role === "ADMIN" || project.leadId === userId || access.projectRole === "WORKSPACE_ADMIN" || access.projectRole === "ADMIN";
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">
@@ -75,6 +76,7 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
         projectKey={project.key}
         projectId={project.id}
         isStarred={Boolean(star)}
+        isOwnerOrAdmin={isOwnerOrAdmin}
       />
     </main>
   );

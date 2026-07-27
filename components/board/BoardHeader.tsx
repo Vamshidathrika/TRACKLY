@@ -10,6 +10,7 @@ type BoardHeaderProps = {
   projectKey: string;
   projectId?: string;
   availableUsers?: { id: string; name: string; avatarUrl?: string | null }[];
+  isOwnerOrAdmin?: boolean;
   isStarred: boolean;
   onToggleStar: () => void;
   onShare: () => void;
@@ -25,6 +26,7 @@ function BoardHeaderComponent({
   projectKey,
   projectId,
   availableUsers = [],
+  isOwnerOrAdmin = false,
   isStarred,
   onToggleStar,
   onShare,
@@ -76,13 +78,15 @@ function BoardHeaderComponent({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
-        <button
-          onClick={onShare}
-          title="Share board link"
-          className="h-9 px-3 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all text-xs font-medium flex items-center gap-1.5"
-        >
-          <Share2 size={14} /> Share
-        </button>
+        {isOwnerOrAdmin && (
+          <button
+            onClick={onShare}
+            title="Share board link (Admin Only)"
+            className="h-9 px-3 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all text-xs font-medium flex items-center gap-1.5"
+          >
+            <Share2 size={14} /> Share
+          </button>
+        )}
 
         <button
           onClick={onExport}

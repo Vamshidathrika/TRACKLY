@@ -41,6 +41,7 @@ export function KanbanBoard({
   projectKey = "PROJ",
   projectId,
   isStarred: initialIsStarred = false,
+  isOwnerOrAdmin = false,
 }: {
   issues: BoardIssue[];
   sprints?: SprintOption[];
@@ -50,6 +51,7 @@ export function KanbanBoard({
   projectKey?: string;
   projectId?: string;
   isStarred?: boolean;
+  isOwnerOrAdmin?: boolean;
 }) {
   const [, startTransition] = useTransition();
   const [isStarred, setIsStarred] = useState(initialIsStarred);
@@ -338,6 +340,7 @@ export function KanbanBoard({
         projectKey={projectKey}
         projectId={projectId}
         availableUsers={boardUsers}
+        isOwnerOrAdmin={isOwnerOrAdmin}
         isStarred={isStarred}
         onToggleStar={handleToggleStar}
         onShare={handleShare}
