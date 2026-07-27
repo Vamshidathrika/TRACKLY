@@ -20,64 +20,41 @@ export async function toggleStar(userId: string, projectId: string) {
   }
 }
 
-export async function getChromeData(userId: string, siteId?: string) {
+export async function getChromeData(userId: string, _siteId?: string) {
   try {
     const cacheKey = `user:chrome:${userId}`;
     const cached = await getCache<{ projects: { id: string; key: string; name: string }[]; starredProjectIds: string[] }>(cacheKey);
     if (cached) return cached;
 
-    // Determine active workspace: use provided siteId or fall back to primary membership
-    let activeSiteId = siteId;
-    let activeRole: string | undefined;
+    const memberships = await prisma.membership.findMany({
+      where: { userId },
+      select: { siteId: true, role: true },
+    });
 
-    if (activeSiteId) {
-      const membership = await prisma.membership.findUnique({
-        where: { userId_siteId: { userId, siteId: activeSiteId } },
-        select: { role: true },
-      });
-      activeRole = membership?.role;
+    if (memberships.length === 0) return { projects: [], starredProjectIds: [] };
+
+    const adminSiteIds = memberships.filter((m) => m.role === "ADMIN").map((m) => m.siteId);
+
+    const projectMembers = await prisma.projectMember.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    const allowedProjectIds = projectMembers.map((pm) => pm.projectId);
+
+    const OR: any[] = [];
+    if (adminSiteIds.length > 0) {
+      OR.push({ siteId: { in: adminSiteIds } });
     }
-
-    if (!activeSiteId || !activeRole) {
-      const primaryMembership = await prisma.membership.findFirst({
-        where: { userId },
-        select: { siteId: true, role: true },
-        orderBy: { createdAt: "asc" },
-      });
-      if (!primaryMembership) return { projects: [], starredProjectIds: [] };
-      activeSiteId = primaryMembership.siteId;
-      activeRole = primaryMembership.role;
+    if (allowedProjectIds.length > 0) {
+      OR.push({ id: { in: allowedProjectIds } });
     }
+    OR.push({ leadId: userId });
 
-    let projects: { id: string; key: string; name: string }[] = [];
-
-    if (activeRole === "ADMIN") {
-      // Workspace ADMINs see all projects in their active workspace
-      projects = await prisma.project.findMany({
-        where: { siteId: activeSiteId },
-        select: { id: true, key: true, name: true },
-        orderBy: { name: "asc" },
-      });
-    } else {
-      // Workspace MEMBERs see only explicitly joined projects or led projects
-      const projectMembers = await prisma.projectMember.findMany({
-        where: { userId },
-        select: { projectId: true },
-      });
-      const projectIds = projectMembers.map((pm) => pm.projectId);
-
-      projects = await prisma.project.findMany({
-        where: {
-          siteId: activeSiteId,
-          OR: [
-            { id: { in: projectIds } },
-            { leadId: userId },
-          ],
-        },
-        select: { id: true, key: true, name: true },
-        orderBy: { name: "asc" },
-      });
-    }
+    const projects = await prisma.project.findMany({
+      where: { OR },
+      select: { id: true, key: true, name: true },
+      orderBy: { name: "asc" },
+    });
 
     const stars = await prisma.star.findMany({ where: { userId }, select: { projectId: true } });
     const data = { projects, starredProjectIds: stars.map((s) => s.projectId) };
