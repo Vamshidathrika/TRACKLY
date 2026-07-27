@@ -231,9 +231,27 @@ export async function updateProjectMemberRole(
 }
 
 export async function removeProjectMember(projectId: string, userId: string) {
-  return prisma.projectMember.delete({
+  await prisma.issue.updateMany({
+    where: { projectId, assigneeId: userId },
+    data: { assigneeId: null },
+  });
+
+  const res = await prisma.projectMember.delete({
     where: { projectId_userId: { projectId, userId } },
   });
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { siteId: true, key: true },
+  });
+
+  if (project) {
+    await delCache(`site:projects:${project.siteId}`).catch(() => {});
+    await delCache(`site:project:${project.siteId}:${project.key}`).catch(() => {});
+    await delCache(`user:chrome:${userId}`).catch(() => {});
+  }
+
+  return res;
 }
 
 /**

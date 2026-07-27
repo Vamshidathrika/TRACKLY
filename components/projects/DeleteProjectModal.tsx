@@ -65,7 +65,7 @@ export function DeleteProjectModal({
               <div className="p-2 rounded-lg bg-danger/10 text-danger">
                 <AlertTriangle size={20} />
               </div>
-              Delete Project "{projectName}"?
+              Delete Project &quot;{projectName}&quot;?
             </div>
             <Dialog.Close asChild>
               <button aria-label="Close" className="rounded-lg p-1.5 hover:bg-neutral text-subtle">

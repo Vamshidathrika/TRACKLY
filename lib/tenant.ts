@@ -94,65 +94,49 @@ export const checkProjectAccess = cache(
   async (userId: string, projectId: string, _siteId?: string): Promise<ProjectContext | null> => {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { id: true, key: true, name: true, siteId: true },
+      select: { id: true, key: true, name: true, siteId: true, leadId: true },
     });
 
     if (!project) return null;
 
     const targetSiteId = project.siteId;
-    let createdNewAccess = false;
 
-    // Check workspace-level membership or auto-join as workspace member
-    let membership = await prisma.membership.findUnique({
+    // Strict check: user MUST be an active member of this workspace
+    const membership = await prisma.membership.findUnique({
       where: { userId_siteId: { userId, siteId: targetSiteId } },
     });
 
     if (!membership) {
-      membership = await prisma.membership.create({
-        data: { userId, siteId: targetSiteId, role: "MEMBER" },
-      }).catch(() => null);
-      createdNewAccess = true;
+      return null;
     }
 
-    // Check per-project membership or grant workspace member access
-    try {
-      let projectMember = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId } },
-      });
-
-      if (!projectMember) {
-        projectMember = await prisma.projectMember.create({
-          data: { projectId, userId, role: "MEMBER" },
-        }).catch(() => null);
-        createdNewAccess = true;
-      }
-
-      if (createdNewAccess) {
-        const { delCache } = await import("./redis");
-        await delCache(`user:chrome:${userId}`).catch(() => {});
-      }
-
+    // Workspace ADMINs have full access to all projects in their workspace
+    if (membership.role === "ADMIN") {
       return {
         projectId: project.id,
         projectKey: project.key,
         projectName: project.name,
         siteId: project.siteId,
-        projectRole: membership?.role === "ADMIN" ? "WORKSPACE_ADMIN" : (projectMember ? projectMember.role : "MEMBER"),
-      };
-    } catch (err) {
-      if (createdNewAccess) {
-        const { delCache } = await import("./redis");
-        await delCache(`user:chrome:${userId}`).catch(() => {});
-      }
-
-      return {
-        projectId: project.id,
-        projectKey: project.key,
-        projectName: project.name,
-        siteId: project.siteId,
-        projectRole: "MEMBER",
+        projectRole: "WORKSPACE_ADMIN",
       };
     }
+
+    // Workspace MEMBERs must be explicit ProjectMembers or Project Lead
+    const projectMember = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    if (!projectMember && project.leadId !== userId) {
+      return null;
+    }
+
+    return {
+      projectId: project.id,
+      projectKey: project.key,
+      projectName: project.name,
+      siteId: project.siteId,
+      projectRole: projectMember ? projectMember.role : "MEMBER",
+    };
   }
 );
 
