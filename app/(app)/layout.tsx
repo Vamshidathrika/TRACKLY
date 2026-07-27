@@ -20,8 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (user?.id) {
     try {
-      const { siteId } = await requireMembership();
-      const chromeData = await getChromeData(user.id, siteId);
+      const chromeData = await getChromeData(user.id);
       projects = chromeData.projects || [];
       starredProjectIds = chromeData.starredProjectIds || [];
     } catch (err) {

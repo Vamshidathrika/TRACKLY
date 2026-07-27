@@ -20,10 +20,11 @@ export async function provisionWorkspaceAction(input: ProvisionInput) {
   const key = input.projectKey.trim().toUpperCase() || "PROJ";
   const name = input.projectName.trim() || "My New Project";
 
-  // Find user's primary ADMIN site or create one
+  // Find user's primary site or create one
   const membership = await prisma.membership.findFirst({
-    where: { userId, role: "ADMIN" },
+    where: { userId },
     include: { site: true },
+    orderBy: { createdAt: "asc" },
   });
 
   let siteId = membership?.siteId;

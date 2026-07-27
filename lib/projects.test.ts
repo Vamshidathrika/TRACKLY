@@ -133,21 +133,32 @@ describe("projects lib", () => {
     );
   });
 
-  it("getProjectsForUser returns all projects in target siteId for workspace ADMIN", async () => {
+  it("STRICT RULE: user in Workspace B with shared Board 1 from Workspace A sees Workspace B boards + Board 1, but NEVER Board 2 from Workspace A", async () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
       ...prisma.membership,
-      findUnique: vi.fn().mockResolvedValue({ role: "ADMIN" }),
+      findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }),
     };
+    // User B was explicitly granted access to Board 1 ONLY
+    (prisma.projectMember.findMany as any).mockResolvedValue([
+      { projectId: "board-1-id" },
+    ]);
     (prisma.project.findMany as any).mockResolvedValue([
-      { id: "p-own", siteId: "s-own", key: "OWN" },
+      { id: "board-b-id", siteId: "site-B", key: "BOARDB" },
+      { id: "board-1-id", siteId: "site-A", key: "BOARD1" },
     ]);
 
-    await getProjectsForUser("s-own", "admin-1");
+    await getProjectsForUser("site-B", "user-B");
 
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { siteId: "s-own" },
+        where: {
+          siteId: "site-B",
+          OR: [
+            { id: { in: ["board-1-id"] } },
+            { leadId: "user-B" },
+          ],
+        },
       })
     );
   });
