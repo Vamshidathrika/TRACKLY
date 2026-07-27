@@ -15,38 +15,7 @@ export type RetroCard = {
 };
 
 export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
-  const [cards, setCards] = useState<RetroCard[]>([
-    {
-      id: "c1",
-      column: "WENT_WELL",
-      text: "Sprint velocity increased by 25% with optimistic board drag-and-drop",
-      authorName: "Vamshi",
-      votes: 5,
-    },
-    {
-      id: "c2",
-      column: "WENT_WELL",
-      text: "Visual JQL Builder saved significant search time during daily triage",
-      authorName: "Srinija",
-      votes: 4,
-    },
-    {
-      id: "c3",
-      column: "NEEDS_IMPROVEMENT",
-      text: "Need automated alert when WIP limits are exceeded on In Review column",
-      authorName: "Alex",
-      votes: 3,
-    },
-    {
-      id: "c4",
-      column: "ACTION_ITEMS",
-      text: "Setup Redis cache invalidation keys with siteId prefixes for comments",
-      authorName: "Vamshi",
-      votes: 6,
-      convertedToIssue: false,
-      assignedUser: "Vamshi",
-    },
-  ]);
+  const [cards, setCards] = useState<RetroCard[]>([]);
 
   const [inputMap, setInputMap] = useState<Record<string, string>>({
     WENT_WELL: "",
@@ -57,9 +26,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyTopVoted, setOnlyTopVoted] = useState(false);
-  const [cardAssignees, setCardAssignees] = useState<Record<string, string>>({
-    c4: "Vamshi",
-  });
+  const [cardAssignees, setCardAssignees] = useState<Record<string, string>>({});
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 

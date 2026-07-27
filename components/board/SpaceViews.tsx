@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DevIntegrationsView } from "@/components/dev/DevIntegrationsView";
+import { submitCopilotCommandAction } from "@/app/(app)/ai/actions";
 import {
   CheckCircle2,
   Clock,
@@ -420,19 +421,11 @@ export function AutomationModal({
   onSuccess?: () => void;
 }) {
   const router = useRouter();
-  const [rules, setRules] = useState([
-    { title: "Auto-assign to reporter on creation", desc: "Sets issue assignee to author if left unassigned", active: true },
-    { title: "Transition to DONE when PR is merged", desc: "Triggered by GitHub PR webhook", active: true },
-    { title: "Notify team lead on high priority bugs", desc: "Sends instant notification upon highest priority tag", active: false },
-  ]);
+  const [rules, setRules] = useState<{ title: string; desc: string; active: boolean }[]>([]);
 
   useEffect(() => {
     if (isOpen) {
-      setRules([
-        { title: "Auto-assign to reporter on creation", desc: "Sets issue assignee to author if left unassigned", active: true },
-        { title: "Transition to DONE when PR is merged", desc: "Triggered by GitHub PR webhook", active: true },
-        { title: "Notify team lead on high priority bugs", desc: "Sends instant notification upon highest priority tag", active: false },
-      ]);
+      setRules([]);
     }
   }, [isOpen]);
 
@@ -455,24 +448,32 @@ export function AutomationModal({
           <h3 className="text-base font-bold text-text">Project Automation Rules</h3>
         </div>
         <div className="flex flex-col gap-3 mb-5 text-xs">
-          {rules.map((rule, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-md border border-border bg-neutral/30">
-              <div>
-                <p className="font-bold text-text">{rule.title}</p>
-                <p className="text-[11px] text-text-subtle">{rule.desc}</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={rule.active}
-                onChange={(e) => {
-                  const updated = [...rules];
-                  updated[idx].active = e.target.checked;
-                  setRules(updated);
-                }}
-                className="h-4 w-4 accent-brand cursor-pointer"
-              />
+          {rules.length === 0 ? (
+            <div className="py-6 text-center text-xs text-text-subtle border border-dashed border-border rounded-lg bg-neutral/20 flex flex-col items-center gap-1.5">
+              <Zap size={20} className="text-text-subtle opacity-50" />
+              <p className="font-semibold text-text">No active automation rules for this project</p>
+              <p className="text-[11px]">Configure rules in Project Settings to automate task transitions.</p>
             </div>
-          ))}
+          ) : (
+            rules.map((rule, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-md border border-border bg-neutral/30">
+                <div>
+                  <p className="font-bold text-text">{rule.title}</p>
+                  <p className="text-[11px] text-text-subtle">{rule.desc}</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rule.active}
+                  onChange={(e) => {
+                    const updated = [...rules];
+                    updated[idx].active = e.target.checked;
+                    setRules(updated);
+                  }}
+                  className="h-4 w-4 accent-brand cursor-pointer"
+                />
+              </div>
+            ))
+          )}
         </div>
         <div className="flex justify-end gap-2">
           <Button appearance="subtle" onClick={onClose} className="text-xs">Close</Button>
@@ -713,31 +714,26 @@ export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClos
 
   if (!isOpen) return null;
 
-  const handleSuperpower = (action: "breakdown" | "releasenotes" | "audit") => {
+  const handleSuperpower = async (action: "breakdown" | "releasenotes" | "audit") => {
     setIsThinking(true);
     let userMsg = "";
-    let aiResponse = "";
+    if (action === "breakdown") userMsg = "Breakdown top feature into tasks and subtasks";
+    else if (action === "releasenotes") userMsg = "Generate release notes for active sprint";
+    else if (action === "audit") userMsg = "Audit project risks and bottlenecks";
 
-    if (action === "breakdown") {
-      userMsg = "Breakdown feature: User Authentication & SSO";
-      aiResponse = `🎯 **AI Feature Breakdown Plan:**\n\n1. **[EPIC] User Auth & SSO Infrastructure** (8 pts)\n   - *Subtask 1.1*: Set up OAuth Google provider with callback validation (3 pts)\n   - *Subtask 1.2*: Store bcrypt password hashes securely in database (2 pts)\n   - *Subtask 1.3*: Add session caching layer with Upstash Redis (3 pts)\n2. **[TASK] UI Auth Pages & Forms** (5 pts)\n   - *Subtask 2.1*: Implement login modal & error alerts (2 pts)\n   - *Subtask 2.2*: Build intake forms with zod validation (3 pts)`;
-    } else if (action === "releasenotes") {
-      userMsg = "Generate release notes for active sprint";
-      aiResponse = `📋 **Sprint Release Notes (v1.4.0):**\n\n🚀 **New Features:**\n- Interactive Timeline & Gantt chart scheduling view.\n- Teams & Capacity workload management hub.\n- AI PM Co-Pilot with automated feature breakdown.\n\n🐛 **Fixes & Polish:**\n- Liquid-smooth optimistic status updates on Kanban board.\n- Instant Command Palette (Cmd+K) keyboard shortcuts.`;
-    } else if (action === "audit") {
-      userMsg = "Audit project risks and bottlenecks";
-      aiResponse = `🛡️ **AI Risk Audit Report:**\n\n- ⚠️ **Workload Capacity Warning**: 1 team member has >15 story points assigned.\n- ⏱️ **Deadline Proximity**: 2 high-priority bug tickets have due dates within 48 hours.\n- ✅ **Recommendation**: Reassign unassigned backlog items before starting new sprint.`;
+    setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
+
+    try {
+      const res = await submitCopilotCommandAction(userMsg);
+      setMessages((prev) => [...prev, { role: "assistant", text: res.message }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Failed to connect to AI workspace assistant." }]);
+    } finally {
+      setIsThinking(false);
     }
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text: userMsg },
-      { role: "assistant", text: aiResponse },
-    ]);
-    setIsThinking(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
     const prompt = input.trim();
@@ -746,16 +742,14 @@ export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClos
 
     setMessages((prev) => [...prev, { role: "user", text: prompt }]);
 
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: `🤖 **AI Analysis for "${prompt}":**\nRecommended Action: Create a high-priority Story ticket with 5 story points and assign to active sprint. Project trajectory remains 100% on schedule!`,
-        },
-      ]);
+    try {
+      const res = await submitCopilotCommandAction(prompt);
+      setMessages((prev) => [...prev, { role: "assistant", text: res.message }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Failed to process command." }]);
+    } finally {
       setIsThinking(false);
-    }, 400);
+    }
   };
 
   return (

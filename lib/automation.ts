@@ -14,41 +14,7 @@ export interface AutomationExecutionLogItem {
 }
 
 // In-Memory Real-Time Audit Log Store for low-latency visual log stream
-const executionLogStore: AutomationExecutionLogItem[] = [
-  {
-    id: "log-1",
-    ruleId: "rule-101",
-    ruleName: "Git PR Merged ➔ Move to DONE",
-    trigger: "PR_MERGED",
-    action: "UPDATE_STATUS",
-    status: "SUCCESS",
-    latencyMs: 38,
-    details: "Updated status to DONE for PR #42 merge payload",
-    timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-  },
-  {
-    id: "log-2",
-    ruleId: "rule-102",
-    ruleName: "Sentry Crash ➔ Trigger AI Auto-Fixer",
-    trigger: "SENTRY_CRASH",
-    action: "TRIGGER_AI_FIX",
-    status: "SUCCESS",
-    latencyMs: 142,
-    details: "Enqueued Autonomous AI Code Fixer patch generator for CVE-2026-8911",
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-  },
-  {
-    id: "log-3",
-    ruleId: "rule-103",
-    ruleName: "High Priority Alert ➔ Slack #dev-alerts",
-    trigger: "PRIORITY_CHANGED",
-    action: "SEND_SLACK_WEBHOOK",
-    status: "SUCCESS",
-    latencyMs: 64,
-    details: "Dispatched payload to #dev-alerts via webhook",
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-  },
-];
+const executionLogStore: AutomationExecutionLogItem[] = [];
 
 export async function createAutomationRule(input: {
   projectId: string;

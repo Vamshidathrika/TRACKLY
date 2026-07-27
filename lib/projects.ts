@@ -156,7 +156,7 @@ export const resolveProjectByKey = cache(async (userId: string, siteId: string, 
   const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
   const upperKey = rawKey.toUpperCase();
 
-  return prisma.project.findFirst({
+  let project = await prisma.project.findFirst({
     where: {
       siteId: { in: siteIds },
       OR: [
@@ -169,4 +169,23 @@ export const resolveProjectByKey = cache(async (userId: string, siteId: string, 
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
   });
+
+  // Global fallback for shared board links: search globally across all projects
+  // so users accessing a shared link seamlessly gain access and see it in their workspace
+  if (!project) {
+    project = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { key: upperKey },
+          { name: { equals: rawKey, mode: "insensitive" } },
+          { id: rawKey },
+        ],
+      },
+      include: {
+        lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    });
+  }
+
+  return project;
 });

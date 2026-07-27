@@ -1,6 +1,6 @@
 import { CodeView } from "@/components/board/SpaceViews";
-import { prisma } from "@/lib/prisma";
-import { requireMembership } from "@/lib/tenant";
+import { resolveProjectByKey } from "@/lib/projects";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { notFound } from "next/navigation";
 
 export default async function ProjectCodePage({
@@ -8,16 +8,14 @@ export default async function ProjectCodePage({
 }: {
   params: Promise<{ key: string }>;
 }) {
-  const { siteId } = await requireMembership();
+  const { userId, siteId } = await requireMembership();
   const { key } = await params;
-  const upperKey = key.toUpperCase();
 
-  const project = await prisma.project.findFirst({
-    where: { siteId, key: upperKey },
-    select: { id: true, key: true },
-  });
+  const project = await resolveProjectByKey(userId, siteId, key);
 
   if (!project) notFound();
+
+  await checkProjectAccess(userId, project.id, project.siteId);
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">

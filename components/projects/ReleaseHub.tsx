@@ -41,30 +41,7 @@ export function ReleaseHub({
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return initialReleases.length > 0
-      ? initialReleases
-      : [
-          {
-            id: "rel-1",
-            name: "v1.0.0 - Initial Launch",
-            description: "Production MVP release with Kanban, JQL search, and Teams CRUD",
-            status: "RELEASED",
-            releaseDate: "2026-07-24",
-            completedIssues: 12,
-            totalIssues: 12,
-            notesMarkdown: `## 🚀 Release v1.0.0 Notes\n\n### New Features\n- 🎨 **Multi-Dimensional Swimlanes**: Assignee & Priority board grouping.\n- 🔍 **Visual JQL Builder**: Interactive filter drawer with workspace sharing.\n- 👥 **Teams Management**: Workload capacity indicators and member CRUD.\n\n### Fixes & Improvements\n- 🛡️ **Tenant Security Isolation**: Workspace-scoped permissions and auto-healing access.`,
-          },
-          {
-            id: "rel-2",
-            name: "v1.1.0 - Superpowers Edition",
-            description: "Automated Release Hub, Sprint Retrospective Suite, and AI Query Copilot",
-            status: "UNRELEASED",
-            releaseDate: "2026-08-01",
-            completedIssues: 5,
-            totalIssues: 8,
-            notesMarkdown: `## 🚀 Release v1.1.0 Notes (Draft)\n\n### New Features\n- 📦 **Release Versioning Hub**: Version progress tracking and 1-click Markdown release notes.\n- ❇️ **Sprint Retrospective Board**: 3-column retro suite with 1-click issue conversion.`,
-          },
-        ];
+    return initialReleases;
   });
 
   const saveReleases = (next: ReleaseVersion[]) => {

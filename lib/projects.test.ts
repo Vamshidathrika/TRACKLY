@@ -36,4 +36,16 @@ describe("projects lib", () => {
     const res = await createProject({ siteId: "s1", name: "Mobile App", type: "KANBAN", leadId: "u1" });
     expect(res.key).toBe("MA");
   });
+
+  it("resolves project globally if user is not yet in target site memberships", async () => {
+    const { resolveProjectByKey } = await import("./projects");
+    (prisma as any).membership = { findMany: vi.fn().mockResolvedValue([{ siteId: "s2" }]) };
+    (prisma.project.findFirst as any)
+      .mockResolvedValueOnce(null) // first lookup in user's site memberships (s2) returns null
+      .mockResolvedValueOnce({ id: "p100", key: "SHARED", siteId: "s1" }); // global fallback lookup returns project in s1
+
+    const project = await resolveProjectByKey("user-other", "s2", "SHARED");
+    expect(project).toEqual({ id: "p100", key: "SHARED", siteId: "s1" });
+    expect(prisma.project.findFirst).toHaveBeenCalledTimes(2);
+  });
 });

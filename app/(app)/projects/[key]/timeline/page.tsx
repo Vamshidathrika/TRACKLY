@@ -6,6 +6,8 @@ import { TimelineView } from "@/components/board/SpaceViews";
 import type { BoardIssue } from "@/components/board/IssueCard";
 import { BoardNotFound } from "@/components/projects/BoardNotFound";
 
+import { resolveProjectByKey } from "@/lib/projects";
+
 export default async function TimelinePage({
   params,
 }: {
@@ -15,20 +17,7 @@ export default async function TimelinePage({
   const { key } = await params;
   const upperKey = key.toUpperCase();
 
-  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
-  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
-
-  const project = await prisma.project.findFirst({
-    where: {
-      siteId: { in: siteIds },
-      OR: [
-        { key: upperKey },
-        { name: { equals: key, mode: "insensitive" } },
-        { id: key },
-      ],
-    },
-    select: { id: true, key: true, name: true, siteId: true },
-  });
+  const project = await resolveProjectByKey(userId, siteId, key);
 
   if (!project) {
     return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;

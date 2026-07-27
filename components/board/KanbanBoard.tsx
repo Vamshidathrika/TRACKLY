@@ -11,7 +11,8 @@ import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/action
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 import type { IssueStatus } from "@prisma/client";
 
-// Dynamically import heavy secondary views & modals to cut initial bundle size
+import { ShareBoardModal } from "./ShareBoardModal";
+
 const IssueDetailDrawer = dynamic(() => import("./IssueDetailDrawer").then((m) => m.IssueDetailDrawer), { ssr: false });
 const SummaryView = dynamic(() => import("./SpaceViews").then((m) => m.SummaryView), { ssr: false });
 const TimelineView = dynamic(() => import("./SpaceViews").then((m) => m.TimelineView), { ssr: false });
@@ -70,6 +71,7 @@ export function KanbanBoard({
   const [activeTab, setActiveTab] = useState("Board");
 
   // Modals state
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showAutomationModal, setShowAutomationModal] = useState(false);
   const [showAIDrawer, setShowAIDrawer] = useState(false);
   const [showSpaceMenu, setShowSpaceMenu] = useState(false);
@@ -120,10 +122,7 @@ export function KanbanBoard({
   };
 
   const handleShare = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      showToast("Board link copied! Workspace members with project access can view this board.");
-    }
+    setShowShareModal(true);
   };
 
   const handleExport = () => {
@@ -503,6 +502,15 @@ export function KanbanBoard({
         </div>
 
       {/* Modals & Drawers */}
+      {showShareModal && (
+        <ShareBoardModal
+          projectName={projectName}
+          projectKey={projectKey}
+          availableUsers={availableUsers}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
       {showAutomationModal && (
         <AutomationModal isOpen={showAutomationModal} onClose={() => setShowAutomationModal(false)} />
       )}

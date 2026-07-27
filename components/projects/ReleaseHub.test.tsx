@@ -8,9 +8,22 @@ vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
 
 import { ReleaseHub } from "./ReleaseHub";
 
+const testReleases = [
+  {
+    id: "rel-1",
+    name: "v1.0.0 - Initial Launch",
+    description: "Production MVP release",
+    status: "RELEASED" as const,
+    releaseDate: "2026-07-24",
+    completedIssues: 12,
+    totalIssues: 12,
+    notesMarkdown: "## 🚀 Release v1.0.0 Notes",
+  },
+];
+
 describe("ReleaseHub", () => {
   it("renders release version list and creates a new release version", () => {
-    render(<ReleaseHub projectKey="PRJ" />);
+    render(<ReleaseHub projectKey="PRJ" initialReleases={testReleases} />);
 
     expect(screen.getByText("Releases & Versioning")).toBeInTheDocument();
     expect(screen.getByText("v1.0.0 - Initial Launch")).toBeInTheDocument();
@@ -31,7 +44,7 @@ describe("ReleaseHub", () => {
 
 
   it("opens release notes modal when View Release Notes is clicked", () => {
-    render(<ReleaseHub projectKey="PRJ" />);
+    render(<ReleaseHub projectKey="PRJ" initialReleases={testReleases} />);
 
     const viewNotesBtns = screen.getAllByText("View Release Notes");
     fireEvent.click(viewNotesBtns[0]);

@@ -13,10 +13,10 @@ describe("SprintRetroBoard", () => {
     expect(screen.getByText("Action Items")).toBeInTheDocument();
 
     const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
-    fireEvent.change(textareas[0], { target: { value: "Great velocity in sprint!" } });
-
     const addBtns = screen.getAllByRole("button", { name: /add/i });
-    fireEvent.click(addBtns[0]);
+
+    fireEvent.change(textareas[2], { target: { value: "Great velocity in sprint!" } });
+    fireEvent.click(addBtns[2]);
 
     expect(screen.getByText("Great velocity in sprint!")).toBeInTheDocument();
 

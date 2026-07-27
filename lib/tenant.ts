@@ -100,6 +100,7 @@ export const checkProjectAccess = cache(
     if (!project) return null;
 
     const targetSiteId = project.siteId;
+    let createdNewAccess = false;
 
     // Check workspace-level membership or auto-join as workspace member
     let membership = await prisma.membership.findUnique({
@@ -110,6 +111,7 @@ export const checkProjectAccess = cache(
       membership = await prisma.membership.create({
         data: { userId, siteId: targetSiteId, role: "MEMBER" },
       }).catch(() => null);
+      createdNewAccess = true;
     }
 
     // Check per-project membership or grant workspace member access
@@ -122,6 +124,12 @@ export const checkProjectAccess = cache(
         projectMember = await prisma.projectMember.create({
           data: { projectId, userId, role: "MEMBER" },
         }).catch(() => null);
+        createdNewAccess = true;
+      }
+
+      if (createdNewAccess) {
+        const { delCache } = await import("./redis");
+        await delCache(`user:chrome:${userId}`).catch(() => {});
       }
 
       return {
@@ -132,6 +140,11 @@ export const checkProjectAccess = cache(
         projectRole: membership?.role === "ADMIN" ? "WORKSPACE_ADMIN" : (projectMember ? projectMember.role : "MEMBER"),
       };
     } catch (err) {
+      if (createdNewAccess) {
+        const { delCache } = await import("./redis");
+        await delCache(`user:chrome:${userId}`).catch(() => {});
+      }
+
       return {
         projectId: project.id,
         projectKey: project.key,

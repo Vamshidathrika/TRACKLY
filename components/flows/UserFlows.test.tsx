@@ -219,9 +219,22 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
     });
   });
 
+  const testReleases = [
+    {
+      id: "rel-1",
+      name: "v1.0.0 - Initial Launch",
+      description: "Production MVP release",
+      status: "RELEASED" as const,
+      releaseDate: "2026-07-24",
+      completedIssues: 12,
+      totalIssues: 12,
+      notesMarkdown: "## 🚀 Release v1.0.0 Notes",
+    },
+  ];
+
   describe("Step 4: Release Notes Copy", () => {
     it("copies markdown release notes to clipboard when Copy Notes is clicked", async () => {
-      render(<ReleaseHub projectKey="PROJ" />);
+      render(<ReleaseHub projectKey="PROJ" initialReleases={testReleases} />);
 
       expect(screen.getByText("Releases & Versioning")).toBeInTheDocument();
       expect(screen.getByText("v1.0.0 - Initial Launch")).toBeInTheDocument();
@@ -249,6 +262,12 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
 
       expect(screen.getByText("Sprint Retrospective Suite")).toBeInTheDocument();
       expect(screen.getByText("Action Items")).toBeInTheDocument();
+
+      // Add retro action item first
+      const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
+      const addBtns = screen.getAllByRole("button", { name: /add/i });
+      await userEvent.type(textareas[2], "Fix Redis caching");
+      await userEvent.click(addBtns[2]);
 
       // Locate convert button for Action Item card
       const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
@@ -296,13 +315,18 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       expect(executeJQLQueryAction).toHaveBeenCalled();
 
       // Touchpoint 4: Release Notes Copy
-      rerender(<ReleaseHub projectKey="PROJ" />);
+      rerender(<ReleaseHub projectKey="PROJ" initialReleases={testReleases} />);
       const copyButtons = screen.getAllByRole("button", { name: /Copy Notes/i });
       await userEvent.click(copyButtons[0]);
       expect(navigator.clipboard.writeText).toHaveBeenCalled();
 
       // Touchpoint 5: Retro Action Item Conversion
       rerender(<SprintRetroBoard projectKey="PROJ" />);
+      const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
+      const addBtns = screen.getAllByRole("button", { name: /add/i });
+      await userEvent.type(textareas[2], "Setup caching");
+      await userEvent.click(addBtns[2]);
+
       const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
       await userEvent.click(convertBtn);
       expect(screen.getByText(/Converted Action Item to live backlog task/i)).toBeInTheDocument();

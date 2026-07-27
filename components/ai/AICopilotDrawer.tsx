@@ -27,21 +27,21 @@ function PlusIcon({ size, className }: { size?: number; className?: string }) {
 const SUGGESTIONS_BY_MODE: Record<string, string[]> = {
   copilot: [
     'create task "Fix mobile navigation alignment" as bug fix',
-    'move DEMO-3 to IN_PROGRESS',
-    'assign DEMO-3 to teammate',
-    'comment on DEMO-3 "Ready for peer review"',
+    'move task to IN_PROGRESS',
+    'assign task to team lead',
+    'comment on task "Ready for peer review"',
   ],
   creator: [
     'create bug "OAuth callback 500 error on production login"',
     'create story "Add dark mode toggle to user settings panel"',
   ],
   triage: [
-    'triage unassigned tasks in project DEMO',
+    'triage unassigned tasks in current project',
     'assign highest priority tasks to teammate',
   ],
   spec: [
-    'generate acceptance criteria for DEMO-3',
-    'decompose DEMO-3 into subtasks',
+    'generate acceptance criteria for current task',
+    'decompose task into subtasks',
   ],
 };
 

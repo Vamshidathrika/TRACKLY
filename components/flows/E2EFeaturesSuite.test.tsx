@@ -22,6 +22,19 @@ import { SprintRetroBoard } from "@/components/sprints/SprintRetroBoard";
 import { JQLNavigator } from "@/components/search/JQLNavigator";
 import { ReleaseHub } from "@/components/projects/ReleaseHub";
 
+const testReleases = [
+  {
+    id: "rel-1",
+    name: "v1.0.0 - Initial Launch",
+    description: "Production MVP release",
+    status: "RELEASED" as const,
+    releaseDate: "2026-07-24",
+    completedIssues: 12,
+    totalIssues: 12,
+    notesMarkdown: "## 🚀 Release v1.0.0 Notes",
+  },
+];
+
 describe("E2E Core Features & Workflows Test Suite", () => {
   describe("❇️ Sprint Retrospective Suite Flow", () => {
     it("allows adding retro items, upvoting, and converting action items to backlog issues", () => {
@@ -31,6 +44,12 @@ describe("E2E Core Features & Workflows Test Suite", () => {
       expect(screen.getByText("What Went Well")).toBeInTheDocument();
       expect(screen.getByText("What Needs Improvement")).toBeInTheDocument();
       expect(screen.getByText("Action Items")).toBeInTheDocument();
+
+      // Add retro action item first
+      const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
+      const addBtns = screen.getAllByRole("button", { name: /add/i });
+      fireEvent.change(textareas[2], { target: { value: "Fix Redis caching" } });
+      fireEvent.click(addBtns[2]);
 
       // Convert action item to backlog task
       const convertBtns = screen.getAllByRole("button", { name: /Convert to Task/i });
@@ -43,7 +62,7 @@ describe("E2E Core Features & Workflows Test Suite", () => {
 
   describe("📦 Release Versioning Hub Flow", () => {
     it("renders release versions, tracks progress, and opens release notes modal", () => {
-      render(<ReleaseHub projectKey="SOU" />);
+      render(<ReleaseHub projectKey="SOU" initialReleases={testReleases} />);
 
       expect(screen.getByText("Releases & Versioning")).toBeInTheDocument();
       expect(screen.getByText("v1.0.0 - Initial Launch")).toBeInTheDocument();
