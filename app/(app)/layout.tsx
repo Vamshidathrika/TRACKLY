@@ -1,4 +1,5 @@
 import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { getChromeData } from "@/lib/stars";
 import { AppShell } from "@/components/chrome/AppShell";
 import { redirect } from "next/navigation";
@@ -19,7 +20,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (user?.id) {
     try {
-      const chromeData = await getChromeData(user.id);
+      const { siteId } = await requireMembership();
+      const chromeData = await getChromeData(user.id, siteId);
       projects = chromeData.projects || [];
       starredProjectIds = chromeData.starredProjectIds || [];
     } catch (err) {

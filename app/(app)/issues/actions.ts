@@ -62,18 +62,12 @@ export async function fetchUserProjectsAction() {
 }
 
 export async function fetchWorkspaceMembersAction() {
-  const user = await getAuthUser();
-  const userMemberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    select: { siteId: true },
-  });
-  const siteIds = userMemberships.map((m) => m.siteId);
-  if (siteIds.length === 0) return [];
+  const { siteId } = await requireMembership();
 
   return prisma.user.findMany({
     where: {
       memberships: {
-        some: { siteId: { in: siteIds } },
+        some: { siteId },
       },
     },
     select: { id: true, name: true, email: true, avatarUrl: true },
@@ -103,17 +97,12 @@ export async function createIssueLinkAction(input: {
   targetIssueKey: string;
   relation: "RELATES_TO" | "BLOCKS" | "IS_BLOCKED_BY" | "DUPLICATES";
 }) {
-  const user = await getAuthUser();
-  const userMemberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    select: { siteId: true },
-  });
-  const siteIds = userMemberships.map((m) => m.siteId);
+  const { siteId } = await requireMembership();
 
   const target = await prisma.issue.findFirst({
     where: {
       key: input.targetIssueKey.toUpperCase().trim(),
-      project: { siteId: { in: siteIds } },
+      project: { siteId },
     },
     select: { id: true },
   });

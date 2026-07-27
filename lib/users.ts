@@ -81,8 +81,10 @@ export const getUsersForProject = cache(async (projectId: string): Promise<UserO
 /**
  * Fetch team members belonging to all Sites / Tenants where the logged-in user is a member.
  */
-export const getUsersForAuthUser = cache(async (userId: string): Promise<UserOption[]> => {
-  if (!userId) return [];
+export const getUsersForAuthUser = cache(async (userId: string, siteId?: string): Promise<UserOption[]> => {
+  if (!userId && !siteId) return [];
+  if (siteId) return getUsersForSite(siteId);
+
   try {
     const userMemberships = await prisma.membership.findMany({
       where: { userId },

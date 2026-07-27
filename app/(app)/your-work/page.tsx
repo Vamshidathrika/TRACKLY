@@ -12,12 +12,9 @@ export default async function YourWorkPage() {
     const { userId, siteId } = await requireMembership();
     const user = await getAuthUser();
 
-    const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
-    const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
-
     const [assignedIssues, reportedIssues, userProjects, availableUsers] = await Promise.all([
       prisma.issue.findMany({
-        where: { assigneeId: userId, project: { siteId: { in: siteIds } } },
+        where: { assigneeId: userId, project: { siteId } },
         include: {
           project: { select: { key: true, name: true } },
           assignee: { select: { id: true, name: true, avatarUrl: true } },
@@ -25,7 +22,7 @@ export default async function YourWorkPage() {
         orderBy: { updatedAt: "desc" },
       }).catch(() => []),
       prisma.issue.findMany({
-        where: { reporterId: userId, project: { siteId: { in: siteIds } } },
+        where: { reporterId: userId, project: { siteId } },
         include: {
           project: { select: { key: true, name: true } },
           assignee: { select: { id: true, name: true, avatarUrl: true } },
@@ -33,7 +30,7 @@ export default async function YourWorkPage() {
         orderBy: { updatedAt: "desc" },
       }).catch(() => []),
       getProjectsForUser(siteId, userId).catch(() => []),
-      getUsersForAuthUser(userId).catch(() => []),
+      getUsersForAuthUser(userId, siteId).catch(() => []),
     ]);
 
     return (

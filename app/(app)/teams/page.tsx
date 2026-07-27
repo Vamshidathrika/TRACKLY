@@ -1,42 +1,19 @@
 import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { TeamHub, type MemberItem } from "@/components/teams/TeamHub";
 
 export default async function TeamsPage() {
   const user = await getAuthUser();
-
-  const userMemberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    select: { siteId: true },
-  });
-  const siteIds = userMemberships.map((m) => m.siteId);
-
-  if (siteIds.length === 0) {
-    return (
-      <TeamHub
-        initialMembers={[
-          {
-            id: user.id,
-            name: user.name ?? user.email,
-            email: user.email,
-            role: "ADMIN",
-            avatarUrl: user.image,
-            assignedCount: 0,
-            completedCount: 0,
-            storyPoints: 0,
-          },
-        ]}
-      />
-    );
-  }
+  const { siteId } = await requireMembership();
 
   const siteMemberships = await prisma.membership.findMany({
-    where: { siteId: { in: siteIds } },
+    where: { siteId },
     include: {
       user: {
         include: {
           assignedIssues: {
-            where: { project: { siteId: { in: siteIds } } },
+            where: { project: { siteId } },
             select: { id: true, status: true, storyPoints: true },
           },
         },
