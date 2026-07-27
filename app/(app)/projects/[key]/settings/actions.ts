@@ -2,12 +2,82 @@
 
 import { revalidatePath } from "next/cache";
 import { requireMembership, requireAdmin } from "@/lib/tenant";
-import { updateProjectDetails, createCustomField, deleteCustomField } from "@/lib/admin";
+import { createCustomField, deleteCustomField } from "@/lib/admin";
+import {
+  updateProject,
+  deleteProject,
+  addProjectMember,
+  updateProjectMemberRole,
+  removeProjectMember,
+} from "@/lib/projects";
+import type { ProjectType, ProjectRole } from "@prisma/client";
 
-export async function updateProjectDetailsAction(projectId: string, name: string, key: string) {
+export async function updateProjectDetailsAction(
+  projectId: string,
+  name: string,
+  key: string,
+  type?: ProjectType,
+  leadId?: string
+) {
   try {
-    await requireAdmin();
-    await updateProjectDetails(projectId, { name, key });
+    const { siteId } = await requireMembership();
+    await updateProject(siteId, projectId, { name, key, type, leadId });
+    revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function deleteProjectAction(projectId: string) {
+  try {
+    const { siteId } = await requireMembership();
+    await deleteProject(siteId, projectId);
+    revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function addProjectMemberAction(
+  projectId: string,
+  userId: string,
+  role: ProjectRole = "MEMBER"
+) {
+  try {
+    await requireMembership();
+    const member = await addProjectMember({ projectId, userId, role });
+    revalidatePath("/projects");
+    return { success: true, member };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function updateProjectMemberRoleAction(
+  projectId: string,
+  userId: string,
+  role: ProjectRole
+) {
+  try {
+    await requireMembership();
+    await updateProjectMemberRole(projectId, userId, role);
+    revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function removeProjectMemberAction(projectId: string, userId: string) {
+  try {
+    await requireMembership();
+    await removeProjectMember(projectId, userId);
     revalidatePath("/projects");
     return { success: true };
   } catch (e) {
@@ -39,3 +109,4 @@ export async function deleteCustomFieldAction(fieldId: string) {
     throw e;
   }
 }
+

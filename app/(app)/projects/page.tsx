@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { requireMembership } from "@/lib/tenant";
 import { getProjectsForUser } from "@/lib/projects";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
-import { Avatar } from "@/components/ui/Avatar";
-import { Tag } from "@/components/ui/Tag";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
+import { ProjectsListView } from "@/components/projects/ProjectsListView";
 
 export default async function ProjectsPage() {
   const { userId, siteId, role } = await requireMembership();
@@ -51,38 +49,9 @@ export default async function ProjectsPage() {
           )}
         </div>
       ) : (
-        <table className="mt-6 w-full max-w-4xl text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs font-semibold text-text-subtle">
-              <th className="py-2">Name</th>
-              <th>Key</th>
-              <th>Type</th>
-              <th>Lead</th>
-              <th>Issues</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((p) => (
-              <tr key={p.id} className="border-b border-border-default hover:bg-neutral">
-                <td className="py-2 font-medium">
-                  <Link href={`/projects/${p.key}`} className="text-brand hover:underline">
-                    {p.name}
-                  </Link>
-                </td>
-                <td className="font-mono text-xs text-text-subtle">{p.key}</td>
-                <td>
-                  <Tag color={p.type === "SCRUM" ? "blue" : "gray"}>{p.type}</Tag>
-                </td>
-                <td className="flex items-center gap-2 py-2">
-                  <Avatar name={p.lead?.name ?? p.lead?.email ?? "Lead"} src={p.lead?.avatarUrl} size={24} />
-                  <span>{p.lead?.name ?? p.lead?.email ?? "Unassigned"}</span>
-                </td>
-                <td className="text-text-subtle">{p._count.issues}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ProjectsListView projects={projects as any} isAdmin={role === "ADMIN"} />
       )}
     </main>
   );
 }
+

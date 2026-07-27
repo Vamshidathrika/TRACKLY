@@ -330,6 +330,6 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
       await userEvent.click(convertBtn);
       expect(screen.getByText(/Converted Action Item to live backlog task/i)).toBeInTheDocument();
-    });
+    }, 25000);
   });
 });

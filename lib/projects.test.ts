@@ -2,12 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("./prisma", () => ({
   prisma: {
-    project: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn() },
-    projectMember: { create: vi.fn().mockResolvedValue({ id: "pm1" }) },
+    project: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
+    projectMember: { create: vi.fn().mockResolvedValue({ id: "pm1" }), upsert: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
   },
 }));
 import { prisma } from "./prisma";
-import { createProject, getProjects, getProjectByKey } from "./projects";
+import {
+  createProject,
+  updateProject,
+  deleteProject,
+  getProjectMembers,
+  addProjectMember,
+  removeProjectMember,
+} from "./projects";
 
 describe("projects lib", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -37,15 +44,82 @@ describe("projects lib", () => {
     expect(res.key).toBe("MA");
   });
 
+  it("updates project details cleanly", async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p1", siteId: "s1", key: "OLD" });
+    (prisma.project.findFirst as any).mockResolvedValue(null);
+    (prisma.project.update as any).mockResolvedValue({ id: "p1", key: "NEW", name: "Updated Name" });
+
+    const res = await updateProject("s1", "p1", { name: "Updated Name", key: "NEW", type: "SCRUM" });
+    expect(res.name).toBe("Updated Name");
+    expect(prisma.project.update).toHaveBeenCalled();
+  });
+
+  it("deletes project cleanly", async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p1", siteId: "s1", key: "DEL" });
+    (prisma.project.delete as any).mockResolvedValue({ id: "p1" });
+
+    const res = await deleteProject("s1", "p1");
+    expect(res).toEqual({ success: true });
+    expect(prisma.project.delete).toHaveBeenCalledWith({ where: { id: "p1" } });
+  });
+
+  it("adds a project member with default role", async () => {
+    (prisma.projectMember.create as any).mockResolvedValue({ id: "pm1", projectId: "p1", userId: "u2", role: "MEMBER" });
+
+    const member = await addProjectMember({ projectId: "p1", userId: "u2" });
+    expect(member.role).toBe("MEMBER");
+    expect(prisma.projectMember.create).toHaveBeenCalledWith({
+      data: { projectId: "p1", userId: "u2", role: "MEMBER" },
+      include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+    });
+  });
+
   it("resolves project globally if user is not yet in target site memberships", async () => {
     const { resolveProjectByKey } = await import("./projects");
     (prisma as any).membership = { findMany: vi.fn().mockResolvedValue([{ siteId: "s2" }]) };
     (prisma.project.findFirst as any)
-      .mockResolvedValueOnce(null) // first lookup in user's site memberships (s2) returns null
-      .mockResolvedValueOnce({ id: "p100", key: "SHARED", siteId: "s1" }); // global fallback lookup returns project in s1
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "p100", key: "SHARED", siteId: "s1" });
 
     const project = await resolveProjectByKey("user-other", "s2", "SHARED");
     expect(project).toEqual({ id: "p100", key: "SHARED", siteId: "s1" });
     expect(prisma.project.findFirst).toHaveBeenCalledTimes(2);
   });
+
+  it("restricts projects in non-admin sites to explicitly assigned projectMember IDs", async () => {
+    const { getProjectsForUser } = await import("./projects");
+    (prisma as any).membership = {
+      findMany: vi.fn().mockResolvedValue([
+        { siteId: "s-own", role: "ADMIN" },
+        { siteId: "s-shared", role: "MEMBER" },
+      ]),
+    };
+    (prisma.projectMember.findMany as any).mockResolvedValue([
+      { projectId: "p-shared-1" },
+    ]);
+    (prisma.project.findMany as any).mockResolvedValue([
+      { id: "p-own-1", siteId: "s-own", key: "OWN" },
+      { id: "p-shared-1", siteId: "s-shared", key: "SH1" },
+    ]);
+
+    await getProjectsForUser("s-shared", "user-b");
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [
+            { siteId: { in: ["s-own"] } },
+            {
+              siteId: { in: ["s-shared"] },
+              OR: [
+                { id: { in: ["p-shared-1"] } },
+                { leadId: "user-b" },
+              ],
+            },
+          ],
+        },
+      })
+    );
+  });
 });
+

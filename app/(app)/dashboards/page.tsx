@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/tenant";
+import { getProjectsForUser } from "@/lib/projects";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { DashboardView } from "@/components/dashboards/DashboardView";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -11,24 +12,26 @@ export const dynamic = "force-dynamic";
 export default async function DashboardsPage() {
   const { userId, siteId } = await requireMembership();
 
-  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
-  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+  // 1. Fetch authorized projects for user
+  const userProjects = await getProjectsForUser(siteId, userId);
+  const authorizedProjectIds = userProjects.map((p) => p.id);
 
-  // 1. Fetch all projects in user's workspace sites
-  const projects = await prisma.project.findMany({
-    where: { siteId: { in: siteIds } },
-    include: {
-      sprints: {
-        orderBy: { createdAt: "desc" },
-      },
-      issues: {
+  const projects = authorizedProjectIds.length > 0
+    ? await prisma.project.findMany({
+        where: { id: { in: authorizedProjectIds } },
         include: {
-          assignee: { select: { id: true, name: true, avatarUrl: true } },
-          reporter: { select: { id: true, name: true, avatarUrl: true } },
+          sprints: {
+            orderBy: { createdAt: "desc" },
+          },
+          issues: {
+            include: {
+              assignee: { select: { id: true, name: true, avatarUrl: true } },
+              reporter: { select: { id: true, name: true, avatarUrl: true } },
+            },
+          },
         },
-      },
-    },
-  });
+      })
+    : [];
 
   // 2. Aggregate all workspace issues
   const allIssues = projects.flatMap((p) =>
@@ -103,9 +106,9 @@ export default async function DashboardsPage() {
     }));
 
   // 4. Live Activity History
-  const recentActivity = siteIds.length > 0
+  const recentActivity = authorizedProjectIds.length > 0
     ? await prisma.issueHistory.findMany({
-        where: { issue: { project: { siteId: { in: siteIds } } } },
+        where: { issue: { projectId: { in: authorizedProjectIds } } },
         include: {
           author: { select: { name: true } },
           issue: { select: { key: true, project: { select: { key: true } } } },

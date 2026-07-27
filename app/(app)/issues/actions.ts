@@ -52,19 +52,13 @@ export async function createIssueAction(
   }
 }
 
+import { requireMembership } from "@/lib/tenant";
+import { getProjectsForUser } from "@/lib/projects";
+
 export async function fetchUserProjectsAction() {
-  const user = await getAuthUser();
-  return prisma.project.findMany({
-    where: {
-      site: {
-        memberships: {
-          some: { userId: user.id },
-        },
-      },
-    },
-    select: { id: true, name: true, key: true },
-    orderBy: { name: "asc" },
-  });
+  const { userId, siteId } = await requireMembership();
+  const projects = await getProjectsForUser(siteId, userId);
+  return projects.map((p) => ({ id: p.id, name: p.name, key: p.key }));
 }
 
 export async function fetchWorkspaceMembersAction() {

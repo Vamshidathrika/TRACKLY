@@ -87,8 +87,8 @@ export async function getProjectByKey(siteId: string, key: string) {
 
 /**
  * Returns projects visible to a specific user within their workspace.
- * - Workspace ADMINs see ALL projects
- * - Workspace MEMBERs see only projects they have ProjectMember access to
+ * - Workspace ADMINs see ALL projects within their ADMIN workspace(s)
+ * - Workspace MEMBERs see only projects they have explicit ProjectMember access to or lead
  */
 export async function getProjectsForUser(siteId: string, userId: string) {
   const memberships = await prisma.membership.findMany({
@@ -98,50 +98,142 @@ export async function getProjectsForUser(siteId: string, userId: string) {
 
   if (memberships.length === 0) return [];
 
-  const siteIds = Array.from(new Set(memberships.map((m) => m.siteId).concat(siteId)));
-  const isAdmin = memberships.some((m) => m.role === "ADMIN");
+  const siteIds = Array.from(new Set(memberships.map((m) => m.siteId).concat(siteId).filter(Boolean)));
 
   const projectInclude = {
     lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     _count: { select: { issues: true } },
   } as const;
 
-  // Workspace ADMINs see all projects across their workspaces
-  if (isAdmin) {
-    return prisma.project.findMany({
-      where: { siteId: { in: siteIds } },
-      include: projectInclude,
-      orderBy: { createdAt: "desc" },
+  // Scope admin privileges specifically per site
+  const adminSiteIds = memberships.filter((m) => m.role === "ADMIN").map((m) => m.siteId);
+  const memberSiteIds = siteIds.filter((sId) => !adminSiteIds.includes(sId));
+
+  const projectMembers = await prisma.projectMember.findMany({
+    where: { userId },
+    select: { projectId: true },
+  });
+  const allowedProjectIds = projectMembers.map((pm) => pm.projectId);
+
+  const conditions = [];
+
+  if (adminSiteIds.length > 0) {
+    conditions.push({ siteId: { in: adminSiteIds } });
+  }
+
+  if (memberSiteIds.length > 0) {
+    conditions.push({
+      siteId: { in: memberSiteIds },
+      OR: [
+        { id: { in: allowedProjectIds } },
+        { leadId: userId },
+      ],
     });
   }
 
-  // Workspace MEMBERs see projects they have explicit access to or lead
-  try {
-    const projectMembers = await prisma.projectMember.findMany({
-      where: { userId },
-      select: { projectId: true },
-    });
+  if (conditions.length === 0) return [];
 
-    const projectIds = projectMembers.map((pm) => pm.projectId);
+  return prisma.project.findMany({
+    where: { OR: conditions },
+    include: projectInclude,
+    orderBy: { createdAt: "desc" },
+  });
+}
 
-    return await prisma.project.findMany({
-      where: {
-        siteId: { in: siteIds },
-        OR: [
-          { id: { in: projectIds } },
-          { leadId: userId },
-        ],
-      },
-      include: projectInclude,
-      orderBy: { createdAt: "desc" },
+
+export async function updateProject(
+  siteId: string,
+  projectId: string,
+  data: { name?: string; key?: string; type?: ProjectType; leadId?: string }
+) {
+  const existing = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!existing || existing.siteId !== siteId) throw new Error("PROJECT_NOT_FOUND");
+
+  let newKey = existing.key;
+  if (data.key && data.key.toUpperCase() !== existing.key) {
+    newKey = data.key.toUpperCase();
+    const keyTaken = await prisma.project.findFirst({
+      where: { siteId, key: newKey, id: { not: projectId } },
     });
-  } catch (err) {
-    return prisma.project.findMany({
-      where: { siteId: { in: siteIds } },
-      include: projectInclude,
-      orderBy: { createdAt: "desc" },
+    if (keyTaken) throw new Error("KEY_TAKEN");
+    data.key = newKey;
+  }
+
+  const updated = await prisma.project.update({
+    where: { id: projectId },
+    data,
+  });
+
+  if (data.leadId) {
+    await prisma.projectMember.upsert({
+      where: { projectId_userId: { projectId, userId: data.leadId } },
+      create: { projectId, userId: data.leadId, role: "ADMIN" },
+      update: { role: "ADMIN" },
     });
   }
+
+  await delCache(`site:projects:${siteId}`);
+  await delCache(`site:project:${siteId}:${existing.key}`);
+  if (data.key) {
+    await delCache(`site:project:${siteId}:${data.key}`);
+  }
+
+  return updated;
+}
+
+export async function deleteProject(siteId: string, projectId: string) {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project || project.siteId !== siteId) throw new Error("PROJECT_NOT_FOUND");
+
+  await prisma.project.delete({ where: { id: projectId } });
+
+  await delCache(`site:projects:${siteId}`);
+  await delCache(`site:project:${siteId}:${project.key}`);
+  return { success: true };
+}
+
+export async function getProjectMembers(projectId: string) {
+  return prisma.projectMember.findMany({
+    where: { projectId },
+    include: {
+      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function addProjectMember(input: {
+  projectId: string;
+  userId: string;
+  role?: "ADMIN" | "MEMBER" | "VIEWER";
+}) {
+  return prisma.projectMember.create({
+    data: {
+      projectId: input.projectId,
+      userId: input.userId,
+      role: input.role ?? "MEMBER",
+    },
+    include: {
+      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+    },
+  });
+}
+
+export async function updateProjectMemberRole(
+  projectId: string,
+  userId: string,
+  role: "ADMIN" | "MEMBER" | "VIEWER"
+) {
+  return prisma.projectMember.update({
+    where: { projectId_userId: { projectId, userId } },
+    data: { role },
+  });
+}
+
+export async function removeProjectMember(projectId: string, userId: string) {
+  return prisma.projectMember.delete({
+    where: { projectId_userId: { projectId, userId } },
+  });
 }
 
 /**
@@ -189,3 +281,4 @@ export const resolveProjectByKey = cache(async (userId: string, siteId: string, 
 
   return project;
 });
+

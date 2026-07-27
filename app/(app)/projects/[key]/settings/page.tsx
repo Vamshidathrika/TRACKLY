@@ -39,7 +39,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
       </div>
 
       <ProjectSettingsView
-        project={{ id: project.id, name: project.name, key: project.key, lead: project.lead }}
+        project={{ id: project.id, name: project.name, key: project.key, type: project.type, lead: project.lead }}
         customFields={customFields}
       />
     </main>

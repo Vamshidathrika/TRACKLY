@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/tenant";
+import { getProjectsForUser } from "@/lib/projects";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
 import { Button } from "@/components/ui/Button";
@@ -9,25 +10,27 @@ import Link from "next/link";
 export default async function PlansPage() {
   const { userId, siteId } = await requireMembership();
 
-  const userMemberships = await prisma.membership.findMany({ where: { userId }, select: { siteId: true } });
-  const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
+  const userProjects = await getProjectsForUser(siteId, userId);
+  const authorizedProjectIds = userProjects.map((p) => p.id);
 
-  const projects = await prisma.project.findMany({
-    where: { siteId: { in: siteIds } },
-    include: {
-      sprints: {
-        orderBy: { createdAt: "desc" },
-      },
-      issues: {
-        select: {
-          id: true,
-          status: true,
-          type: true,
-          storyPoints: true,
+  const projects = authorizedProjectIds.length > 0
+    ? await prisma.project.findMany({
+        where: { id: { in: authorizedProjectIds } },
+        include: {
+          sprints: {
+            orderBy: { createdAt: "desc" },
+          },
+          issues: {
+            select: {
+              id: true,
+              status: true,
+              type: true,
+              storyPoints: true,
+            },
+          },
         },
-      },
-    },
-  });
+      })
+    : [];
 
   return (
     <div className="flex flex-1 flex-col px-8 py-7 overflow-y-auto">

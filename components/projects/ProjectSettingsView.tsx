@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, Plus, Trash2, CheckCircle2, Sliders, Layers, UserCheck } from "lucide-react";
+import { Settings, Plus, Trash2, CheckCircle2, Sliders, Layers, UserCheck, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
+import { DeleteProjectModal } from "@/components/projects/DeleteProjectModal";
 import {
   updateProjectDetailsAction,
   createCustomFieldAction,
@@ -28,15 +29,17 @@ export function ProjectSettingsView({
   project,
   customFields: initialCustomFields,
 }: {
-  project: { id: string; name: string; key: string; lead: { name: string } };
+  project: { id: string; name: string; key: string; type?: string; lead: { name: string } };
   customFields: CustomFieldItem[];
 }) {
-  const [activeTab, setActiveTab] = useState<"general" | "custom_fields" | "components">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "custom_fields" | "components" | "danger">("general");
   const [name, setName] = useState(project.name);
   const [key, setKey] = useState(project.key);
+  const [projectType, setProjectType] = useState<"KANBAN" | "SCRUM">((project.type as any) || "KANBAN");
   const [defaultAssignee, setDefaultAssignee] = useState<"UNASSIGNED" | "PROJECT_LEAD">("UNASSIGNED");
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
   const [generalSuccess, setGeneralSuccess] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
   const [customFields, setCustomFields] = useState<CustomFieldItem[]>(initialCustomFields);
   const [fieldName, setFieldName] = useState("");
@@ -56,10 +59,15 @@ export function ProjectSettingsView({
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingGeneral(true);
-    await updateProjectDetailsAction(project.id, name, key);
+    setGeneralError(null);
+    const res = await updateProjectDetailsAction(project.id, name, key, projectType);
     setIsSavingGeneral(false);
-    setGeneralSuccess(true);
-    setTimeout(() => setGeneralSuccess(false), 3000);
+    if (res && res.error) {
+      setGeneralError(res.error);
+    } else {
+      setGeneralSuccess(true);
+      setTimeout(() => setGeneralSuccess(false), 3000);
+    }
   };
 
   const handleAddCustomField = async (e: React.FormEvent) => {
@@ -106,13 +114,16 @@ export function ProjectSettingsView({
           { id: "general", label: "General Details", icon: Settings },
           { id: "components", label: "Components & Sub-systems", icon: Layers },
           { id: "custom_fields", label: "Custom Fields", icon: Sliders },
+          { id: "danger", label: "Danger Zone", icon: AlertTriangle },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id as any)}
             className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
               activeTab === id
-                ? "bg-brand text-white shadow-2xs font-bold"
+                ? id === "danger"
+                  ? "bg-danger text-white shadow-2xs font-bold"
+                  : "bg-brand text-white shadow-2xs font-bold"
                 : "border border-border-default bg-surface text-default hover:bg-neutral"
             }`}
           >
@@ -151,6 +162,18 @@ export function ProjectSettingsView({
             </div>
 
             <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-subtle">Project Type</label>
+              <select
+                value={projectType}
+                onChange={(e) => setProjectType(e.target.value as any)}
+                className="h-9 rounded-lg border border-border-default bg-surface px-3 text-xs font-medium text-default outline-none focus:border-brand cursor-pointer"
+              >
+                <option value="KANBAN">Kanban (Continuous flow)</option>
+                <option value="SCRUM">Scrum (Sprint-based)</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-subtle">Project Lead</label>
               <input
                 type="text"
@@ -159,19 +182,9 @@ export function ProjectSettingsView({
                 className="h-9 rounded-lg border border-border-default bg-neutral px-3 text-xs font-medium text-subtle cursor-not-allowed"
               />
             </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-subtle">Default Assignee for New Issues</label>
-              <select
-                value={defaultAssignee}
-                onChange={(e) => setDefaultAssignee(e.target.value as any)}
-                className="h-9 rounded-lg border border-border-default bg-surface px-3 text-xs font-medium text-default outline-none focus:border-brand cursor-pointer"
-              >
-                <option value="UNASSIGNED">Unassigned (Leave empty for triage)</option>
-                <option value="PROJECT_LEAD">Project Lead ({project.lead.name})</option>
-              </select>
-            </div>
           </div>
+
+          {generalError && <p className="text-xs font-medium text-danger">{generalError}</p>}
 
           <div className="flex items-center gap-3 pt-2">
             <Button appearance="primary" type="submit" disabled={isSavingGeneral}>
@@ -185,6 +198,7 @@ export function ProjectSettingsView({
           </div>
         </form>
       )}
+
 
       {/* COMPONENTS TAB */}
       {activeTab === "components" && (
@@ -368,6 +382,35 @@ export function ProjectSettingsView({
           </div>
         </div>
       )}
+
+      {/* DANGER ZONE TAB */}
+      {activeTab === "danger" && (
+        <div className="flex flex-col gap-5 rounded-xl border border-danger/30 bg-danger/5 p-6 shadow-xs">
+          <div className="border-b border-danger/20 pb-3">
+            <h3 className="text-base font-bold text-danger flex items-center gap-2">
+              <AlertTriangle size={18} /> Delete Project
+            </h3>
+            <p className="text-xs text-subtle mt-1">
+              Permanently delete this project and all of its data. This action is irreversible.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div>
+              <p className="text-xs font-semibold text-default">Delete this project</p>
+              <p className="text-[11px] text-subtle">
+                Once deleted, all issues, sprints, and custom fields associated with key <strong className="font-mono text-danger">{project.key}</strong> will be destroyed.
+              </p>
+            </div>
+            <DeleteProjectModal
+              projectId={project.id}
+              projectKey={project.key}
+              projectName={project.name}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
