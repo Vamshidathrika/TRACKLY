@@ -91,50 +91,42 @@ export async function getProjectByKey(siteId: string, key: string) {
  * - Workspace MEMBERs see only projects they have explicit ProjectMember access to or lead
  */
 export async function getProjectsForUser(siteId: string, userId: string) {
-  const memberships = await prisma.membership.findMany({
-    where: { userId },
-    select: { siteId: true, role: true },
+  const membership = await prisma.membership.findUnique({
+    where: { userId_siteId: { userId, siteId } },
+    select: { role: true },
   });
 
-  if (memberships.length === 0) return [];
-
-  const siteIds = Array.from(new Set(memberships.map((m) => m.siteId).concat(siteId).filter(Boolean)));
+  if (!membership) return [];
 
   const projectInclude = {
     lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     _count: { select: { issues: true } },
   } as const;
 
-  // Scope admin privileges specifically per site
-  const adminSiteIds = memberships.filter((m) => m.role === "ADMIN").map((m) => m.siteId);
-  const memberSiteIds = siteIds.filter((sId) => !adminSiteIds.includes(sId));
+  // Workspace ADMINs see all projects in this workspace
+  if (membership.role === "ADMIN") {
+    return prisma.project.findMany({
+      where: { siteId },
+      include: projectInclude,
+      orderBy: { createdAt: "desc" },
+    });
+  }
 
+  // Workspace MEMBERs see only projects where they are explicit ProjectMembers or Project Lead
   const projectMembers = await prisma.projectMember.findMany({
     where: { userId },
     select: { projectId: true },
   });
   const allowedProjectIds = projectMembers.map((pm) => pm.projectId);
 
-  const conditions = [];
-
-  if (adminSiteIds.length > 0) {
-    conditions.push({ siteId: { in: adminSiteIds } });
-  }
-
-  if (memberSiteIds.length > 0) {
-    conditions.push({
-      siteId: { in: memberSiteIds },
+  return prisma.project.findMany({
+    where: {
+      siteId,
       OR: [
         { id: { in: allowedProjectIds } },
         { leadId: userId },
       ],
-    });
-  }
-
-  if (conditions.length === 0) return [];
-
-  return prisma.project.findMany({
-    where: { OR: conditions },
+    },
     include: projectInclude,
     orderBy: { createdAt: "desc" },
   });
@@ -310,7 +302,7 @@ export async function removeProjectMember(projectId: string, userId: string) {
 
 /**
  * Shared helper to resolve a project by key, case-insensitive name, or ID
- * across all site memberships of a given user.
+ * strictly within the user's workspace memberships. No global fallback.
  */
 export const resolveProjectByKey = cache(async (userId: string, siteId: string, rawKey: string) => {
   const userMemberships = await prisma.membership.findMany({
@@ -320,7 +312,7 @@ export const resolveProjectByKey = cache(async (userId: string, siteId: string, 
   const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
   const upperKey = rawKey.toUpperCase();
 
-  let project = await prisma.project.findFirst({
+  const project = await prisma.project.findFirst({
     where: {
       siteId: { in: siteIds },
       OR: [
@@ -333,23 +325,6 @@ export const resolveProjectByKey = cache(async (userId: string, siteId: string, 
       lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
   });
-
-  // Global fallback for shared board links: search globally across all projects
-  // so users accessing a shared link seamlessly gain access and see it in their workspace
-  if (!project) {
-    project = await prisma.project.findFirst({
-      where: {
-        OR: [
-          { key: upperKey },
-          { name: { equals: rawKey, mode: "insensitive" } },
-          { id: rawKey },
-        ],
-      },
-      include: {
-        lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
-      },
-    });
-  }
 
   return project;
 });

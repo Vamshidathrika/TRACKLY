@@ -30,9 +30,9 @@ export function ShareBoardModal({
 
   const getBoardUrl = () => {
     if (typeof window !== "undefined") {
-      return `${window.location.origin}/projects/${projectKey}/board`;
+      return `${window.location.origin}/projects/${projectKey}/join`;
     }
-    return `/projects/${projectKey}/board`;
+    return `/projects/${projectKey}/join`;
   };
 
   const handleCopy = () => {

@@ -100,22 +100,16 @@ export const checkProjectAccess = cache(
     if (!project) return null;
 
     const targetSiteId = project.siteId;
-    let createdNewAccess = false;
 
-    // Check workspace-level membership or auto-join as workspace member
-    let membership = await prisma.membership.findUnique({
+    // Must have active workspace membership
+    const membership = await prisma.membership.findUnique({
       where: { userId_siteId: { userId, siteId: targetSiteId } },
     });
 
-    if (!membership) {
-      membership = await prisma.membership.create({
-        data: { userId, siteId: targetSiteId, role: "MEMBER" },
-      }).catch(() => null);
-      createdNewAccess = true;
-    }
+    if (!membership) return null;
 
     // Workspace ADMINs have full access to all projects in their workspace
-    if (membership?.role === "ADMIN") {
+    if (membership.role === "ADMIN") {
       return {
         projectId: project.id,
         projectKey: project.key,
@@ -125,22 +119,24 @@ export const checkProjectAccess = cache(
       };
     }
 
-    // Auto-grant per-project member access for shared links (including re-access for removed members)
-    let projectMember = await prisma.projectMember.findUnique({
+    // Project Lead has ADMIN role on project
+    if (project.leadId === userId) {
+      return {
+        projectId: project.id,
+        projectKey: project.key,
+        projectName: project.name,
+        siteId: project.siteId,
+        projectRole: "ADMIN",
+      };
+    }
+
+    // Check for explicit ProjectMember membership
+    const projectMember = await prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId } },
     });
 
-    if (!projectMember && project.leadId !== userId) {
-      projectMember = await prisma.projectMember.create({
-        data: { projectId, userId, role: "MEMBER" },
-      }).catch(() => null);
-      createdNewAccess = true;
-    }
-
-    if (createdNewAccess) {
-      const { delCache } = await import("./redis");
-      await delCache(`user:chrome:${userId}`).catch(() => {});
-      await delCache(`site:projects:${targetSiteId}`).catch(() => {});
+    if (!projectMember) {
+      return null;
     }
 
     return {
@@ -148,7 +144,7 @@ export const checkProjectAccess = cache(
       projectKey: project.key,
       projectName: project.name,
       siteId: project.siteId,
-      projectRole: projectMember ? projectMember.role : "MEMBER",
+      projectRole: projectMember.role,
     };
   }
 );

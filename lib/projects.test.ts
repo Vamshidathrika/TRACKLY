@@ -93,52 +93,77 @@ describe("projects lib", () => {
     });
   });
 
-  it("resolves project globally if user is not yet in target site memberships", async () => {
+  it("resolveProjectByKey returns null if project is outside user workspace memberships", async () => {
     const { resolveProjectByKey } = await import("./projects");
     (prisma as any).membership = { findMany: vi.fn().mockResolvedValue([{ siteId: "s2" }]) };
-    (prisma.project.findFirst as any)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "p100", key: "SHARED", siteId: "s1" });
+    // Project not found within user's workspaces
+    (prisma.project.findFirst as any).mockResolvedValueOnce(null);
 
-    const project = await resolveProjectByKey("user-other", "s2", "SHARED");
-    expect(project).toEqual({ id: "p100", key: "SHARED", siteId: "s1" });
-    expect(prisma.project.findFirst).toHaveBeenCalledTimes(2);
+    const project = await resolveProjectByKey("user-other", "s2", "PRIVATE");
+    expect(project).toBeNull();
+    // Must NOT do a second global fallback query
+    expect(prisma.project.findFirst).toHaveBeenCalledTimes(1);
   });
 
-  it("restricts projects in non-admin sites to explicitly assigned projectMember IDs", async () => {
+  it("getProjectsForUser returns only explicitly joined projects for workspace MEMBER", async () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
-      findMany: vi.fn().mockResolvedValue([
-        { siteId: "s-own", role: "ADMIN" },
-        { siteId: "s-shared", role: "MEMBER" },
-      ]),
+      ...prisma.membership,
+      findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }),
     };
     (prisma.projectMember.findMany as any).mockResolvedValue([
-      { projectId: "p-shared-1" },
+      { projectId: "p-joined" },
     ]);
     (prisma.project.findMany as any).mockResolvedValue([
-      { id: "p-own-1", siteId: "s-own", key: "OWN" },
-      { id: "p-shared-1", siteId: "s-shared", key: "SH1" },
+      { id: "p-joined", siteId: "s1", key: "JOIN" },
     ]);
 
-    await getProjectsForUser("s-shared", "user-b");
+    await getProjectsForUser("s1", "user-b");
 
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          siteId: "s1",
           OR: [
-            { siteId: { in: ["s-own"] } },
-            {
-              siteId: { in: ["s-shared"] },
-              OR: [
-                { id: { in: ["p-shared-1"] } },
-                { leadId: "user-b" },
-              ],
-            },
+            { id: { in: ["p-joined"] } },
+            { leadId: "user-b" },
           ],
         },
       })
     );
+  });
+
+  it("getProjectsForUser returns all projects for workspace ADMIN", async () => {
+    const { getProjectsForUser } = await import("./projects");
+    (prisma as any).membership = {
+      ...prisma.membership,
+      findUnique: vi.fn().mockResolvedValue({ role: "ADMIN" }),
+    };
+    (prisma.project.findMany as any).mockResolvedValue([
+      { id: "p1", siteId: "s1", key: "ONE" },
+      { id: "p2", siteId: "s1", key: "TWO" },
+    ]);
+
+    await getProjectsForUser("s1", "user-admin");
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { siteId: "s1" },
+      })
+    );
+    // Should NOT query projectMember for admins
+    expect(prisma.projectMember.findMany).not.toHaveBeenCalled();
+  });
+
+  it("getProjectsForUser returns empty array when user has no workspace membership", async () => {
+    const { getProjectsForUser } = await import("./projects");
+    (prisma as any).membership = {
+      ...prisma.membership,
+      findUnique: vi.fn().mockResolvedValue(null),
+    };
+
+    const result = await getProjectsForUser("s1", "unknown-user");
+    expect(result).toEqual([]);
   });
 });
 

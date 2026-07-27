@@ -20,7 +20,7 @@ describe("ShareBoardModal", () => {
     const copyBtn = screen.getByRole("button", { name: /copy link/i });
     fireEvent.click(copyBtn);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("/projects/MOB/board"));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("/projects/MOB/join"));
   });
 
   it("sends teammate invitation when form is submitted", () => {
