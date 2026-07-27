@@ -185,8 +185,22 @@ export async function deleteProject(siteId: string, projectId: string, deletingU
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project || project.siteId !== siteId) throw new Error("PROJECT_NOT_FOUND");
 
-  // Create audit log for universal deletion awareness
   if (deletingUserId) {
+    const membership = await prisma.membership.findUnique({
+      where: { userId_siteId: { userId: deletingUserId, siteId } },
+    });
+    const projectMember = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: deletingUserId } },
+    });
+
+    const isWorkspaceAdmin = membership?.role === "ADMIN";
+    const isProjectLead = project.leadId === deletingUserId;
+    const isProjectAdmin = projectMember?.role === "ADMIN";
+
+    if (!isWorkspaceAdmin && !isProjectLead && !isProjectAdmin) {
+      throw new Error("ONLY_OWNER_OR_ADMIN_CAN_DELETE");
+    }
+
     const deletingUser = await prisma.user.findUnique({
       where: { id: deletingUserId },
       select: { name: true, email: true },

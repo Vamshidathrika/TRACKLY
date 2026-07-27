@@ -48,14 +48,18 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
     );
   }
 
-  const [issues, sprints, siteUsers, star] = await Promise.all([
+  const [issues, sprints, projectMembers, siteUsers, star] = await Promise.all([
     getBoardIssues(project.id),
     getSprintsByProject(project.id),
+    import("@/lib/projects").then((m) => m.getProjectMembers(project.id)),
     getUsersForSite(project.siteId),
     prisma.star.findUnique({
       where: { userId_projectId: { userId, projectId: project.id } },
     }),
   ]);
+
+  const activeUsers = projectMembers.map((m) => m.user);
+  const availableUsers = activeUsers.length > 0 ? activeUsers : siteUsers;
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">
@@ -65,7 +69,7 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
           ...s,
           issues: s.issues.map((i) => ({ ...i, projectKey: project.key })),
         }))}
-        availableUsers={siteUsers}
+        availableUsers={availableUsers}
         currentUserId={userId}
         projectName={project.name}
         projectKey={project.key}

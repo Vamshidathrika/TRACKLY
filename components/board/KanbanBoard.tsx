@@ -337,6 +337,7 @@ export function KanbanBoard({
         projectName={projectName}
         projectKey={projectKey}
         projectId={projectId}
+        availableUsers={boardUsers}
         isStarred={isStarred}
         onToggleStar={handleToggleStar}
         onShare={handleShare}

@@ -80,7 +80,32 @@ export async function removeProjectMemberAction(projectId: string, userId: strin
   try {
     await requireMembership();
     await removeProjectMember(projectId, userId);
+    // Unassign issues assigned to removed member
+    const { prisma } = await import("@/lib/prisma");
+    await prisma.issue.updateMany({
+      where: { projectId, assigneeId: userId },
+      data: { assigneeId: null },
+    });
     revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function leaveProjectAction(projectId: string) {
+  try {
+    const { userId } = await requireMembership();
+    await removeProjectMember(projectId, userId);
+    const { prisma } = await import("@/lib/prisma");
+    await prisma.issue.updateMany({
+      where: { projectId, assigneeId: userId },
+      data: { assigneeId: null },
+    });
+    revalidatePath("/", "layout");
+    revalidatePath("/projects");
+    revalidatePath("/your-work");
     return { success: true };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };

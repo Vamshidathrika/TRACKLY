@@ -28,9 +28,11 @@ export type ComponentItem = {
 export function ProjectSettingsView({
   project,
   customFields: initialCustomFields,
+  isOwnerOrAdmin = true,
 }: {
   project: { id: string; name: string; key: string; type?: string; lead: { name: string } };
   customFields: CustomFieldItem[];
+  isOwnerOrAdmin?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<"general" | "custom_fields" | "components" | "danger">("general");
   const [name, setName] = useState(project.name);
@@ -406,6 +408,7 @@ export function ProjectSettingsView({
               projectId={project.id}
               projectKey={project.key}
               projectName={project.name}
+              isOwnerOrAdmin={isOwnerOrAdmin}
             />
           </div>
         </div>

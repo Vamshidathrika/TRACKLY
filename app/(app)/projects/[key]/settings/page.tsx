@@ -26,6 +26,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
   if (!access) redirect("/your-work");
 
   const customFields = await getCustomFields(project.id).catch(() => []);
+  const isOwnerOrAdmin = role === "ADMIN" || project.leadId === userId || access.projectRole === "WORKSPACE_ADMIN" || access.projectRole === "ADMIN";
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">
@@ -41,6 +42,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
       <ProjectSettingsView
         project={{ id: project.id, name: project.name, key: project.key, type: project.type, lead: project.lead }}
         customFields={customFields}
+        isOwnerOrAdmin={isOwnerOrAdmin}
       />
     </main>
   );

@@ -63,13 +63,23 @@ describe("projects lib", () => {
     expect(prisma.project.update).toHaveBeenCalled();
   });
 
-  it("deletes project cleanly", async () => {
-    (prisma.project.findUnique as any).mockResolvedValue({ id: "p1", siteId: "s1", key: "DEL" });
+  it("deletes project cleanly when user is admin or lead", async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p1", siteId: "s1", key: "DEL", leadId: "u1" });
+    (prisma as any).membership = { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN" }) };
+    (prisma as any).projectMember = { ...prisma.projectMember, findUnique: vi.fn().mockResolvedValue({ role: "ADMIN" }) };
     (prisma.project.delete as any).mockResolvedValue({ id: "p1" });
 
-    const res = await deleteProject("s1", "p1");
+    const res = await deleteProject("s1", "p1", "u1");
     expect(res).toEqual({ success: true, key: "DEL" });
     expect(prisma.project.delete).toHaveBeenCalledWith({ where: { id: "p1" } });
+  });
+
+  it("throws ONLY_OWNER_OR_ADMIN_CAN_DELETE if regular member tries to delete project", async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({ id: "p1", siteId: "s1", key: "DEL", leadId: "owner-1" });
+    (prisma as any).membership = { findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }) };
+    (prisma as any).projectMember = { ...prisma.projectMember, findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }) };
+
+    await expect(deleteProject("s1", "p1", "regular-user")).rejects.toThrow("ONLY_OWNER_OR_ADMIN_CAN_DELETE");
   });
 
   it("adds a project member with default role", async () => {
