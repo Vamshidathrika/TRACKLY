@@ -399,6 +399,19 @@ model Star {
   @@unique([userId, projectId])
 }
 
+model DeletedBoardLog {
+  id              String   @id @default(cuid())
+  siteId          String
+  projectKey      String
+  projectName     String
+  deletedByUserId String
+  deletedByName   String
+  deletedByEmail  String
+  createdAt       DateTime @default(now())
+
+  @@index([siteId, projectKey])
+}
+
 model GitInstallation {
   id             String          @id @default(cuid())
   siteId         String

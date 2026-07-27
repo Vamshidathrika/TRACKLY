@@ -7,7 +7,10 @@ import { getUsersForSite } from "@/lib/users";
 import { KanbanBoard } from "@/components/board/KanbanBoard";
 import { BoardNotFound } from "@/components/projects/BoardNotFound";
 
-import { resolveProjectByKey } from "@/lib/projects";
+import { resolveProjectByKey, getDeletedBoardLog } from "@/lib/projects";
+import { getAdminContactForSite } from "@/lib/tenant";
+import { DeletedBoardBanner } from "@/components/projects/DeletedBoardBanner";
+import { AccessRevokedBanner } from "@/components/projects/AccessRevokedBanner";
 
 export default async function BoardPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
@@ -17,11 +20,33 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
   const project = await resolveProjectByKey(userId, siteId, key);
 
   if (!project) {
+    const deletedLog = await getDeletedBoardLog(siteId, key);
+    if (deletedLog) {
+      return (
+        <DeletedBoardBanner
+          projectKey={deletedLog.projectKey}
+          projectName={deletedLog.projectName}
+          deletedByName={deletedLog.deletedByName}
+          deletedByEmail={deletedLog.deletedByEmail}
+          deletedAt={deletedLog.createdAt}
+        />
+      );
+    }
     return <BoardNotFound projectKey={upperKey} isAdmin={role === "ADMIN"} />;
   }
 
   const access = await checkProjectAccess(userId, project.id, project.siteId);
-  if (!access) redirect("/your-work");
+  if (!access) {
+    const adminContact = await getAdminContactForSite(project.siteId);
+    return (
+      <AccessRevokedBanner
+        projectKey={project.key}
+        projectName={project.name}
+        adminName={adminContact.name ?? "Workspace Admin"}
+        adminEmail={adminContact.email}
+      />
+    );
+  }
 
   const [issues, sprints, siteUsers, star] = await Promise.all([
     getBoardIssues(project.id),

@@ -181,9 +181,29 @@ export async function updateProject(
   return updated;
 }
 
-export async function deleteProject(siteId: string, projectId: string) {
+export async function deleteProject(siteId: string, projectId: string, deletingUserId?: string) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project || project.siteId !== siteId) throw new Error("PROJECT_NOT_FOUND");
+
+  // Create audit log for universal deletion awareness
+  if (deletingUserId) {
+    const deletingUser = await prisma.user.findUnique({
+      where: { id: deletingUserId },
+      select: { name: true, email: true },
+    });
+    if (deletingUser) {
+      await prisma.deletedBoardLog?.create({
+        data: {
+          siteId,
+          projectKey: project.key,
+          projectName: project.name,
+          deletedByUserId: deletingUserId,
+          deletedByName: deletingUser.name ?? "Workspace Admin",
+          deletedByEmail: deletingUser.email ?? "",
+        },
+      }).catch(() => {});
+    }
+  }
 
   // Clean up all related models explicitly so no dangling references remain in Starred or Recent lists
   await prisma.star?.deleteMany({ where: { projectId } }).catch(() => {});
@@ -200,6 +220,16 @@ export async function deleteProject(siteId: string, projectId: string) {
   await delCache(`site:projects:${siteId}`);
   await delCache(`site:project:${siteId}:${project.key}`);
   return { success: true, key: project.key };
+}
+
+export async function getDeletedBoardLog(siteId: string, projectKey: string) {
+  return prisma.deletedBoardLog?.findFirst({
+    where: {
+      siteId,
+      projectKey: projectKey.toUpperCase(),
+    },
+    orderBy: { createdAt: "desc" },
+  }).catch(() => null);
 }
 
 export async function getProjectMembers(projectId: string) {

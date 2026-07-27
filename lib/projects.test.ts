@@ -4,6 +4,8 @@ vi.mock("./prisma", () => ({
   prisma: {
     project: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
     projectMember: { create: vi.fn().mockResolvedValue({ id: "pm1" }), upsert: vi.fn(), delete: vi.fn(), deleteMany: vi.fn().mockResolvedValue({ count: 0 }), findMany: vi.fn() },
+    user: { findUnique: vi.fn() },
+    deletedBoardLog: { create: vi.fn().mockResolvedValue({ id: "dbl1" }), findFirst: vi.fn() },
     star: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     customField: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     automationRule: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },

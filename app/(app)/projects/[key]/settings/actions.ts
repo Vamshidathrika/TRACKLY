@@ -32,8 +32,8 @@ export async function updateProjectDetailsAction(
 
 export async function deleteProjectAction(projectId: string) {
   try {
-    const { siteId } = await requireMembership();
-    const res = await deleteProject(siteId, projectId);
+    const { siteId, userId } = await requireMembership();
+    const res = await deleteProject(siteId, projectId, userId);
     revalidatePath("/", "layout");
     revalidatePath("/projects");
     revalidatePath("/your-work");

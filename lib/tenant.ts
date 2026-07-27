@@ -192,9 +192,23 @@ export async function grantAllProjectAccess(siteId: string, userId: string, role
 
   if (projects.length === 0) return;
 
-  // Use createMany with skipDuplicates for efficiency
   await prisma.projectMember.createMany({
     data: projects.map((p) => ({ projectId: p.id, userId, role })),
     skipDuplicates: true,
   });
+}
+
+/**
+ * Fetch primary workspace admin contact info (name, email) for a given site.
+ */
+export async function getAdminContactForSite(siteId: string) {
+  const adminMembership = await prisma.membership.findFirst({
+    where: { siteId, role: "ADMIN" },
+    include: {
+      user: { select: { name: true, email: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return adminMembership?.user ?? { name: "Workspace Administrator", email: "" };
 }
