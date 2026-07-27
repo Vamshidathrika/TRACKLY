@@ -22,10 +22,6 @@ export async function toggleStar(userId: string, projectId: string) {
 
 export async function getChromeData(userId: string, siteId?: string) {
   try {
-    const cacheKey = siteId ? `user:chrome:${userId}:${siteId}` : `user:chrome:${userId}`;
-    const cached = await getCache<{ projects: { id: string; key: string; name: string }[]; starredProjectIds: string[] }>(cacheKey);
-    if (cached) return cached;
-
     let targetSiteId = siteId;
     let targetRole: string | undefined;
 
@@ -48,17 +44,21 @@ export async function getChromeData(userId: string, siteId?: string) {
       targetRole = primaryMembership.role;
     }
 
+    const cacheKey = `user:chrome:${userId}:${targetSiteId}`;
+    const cached = await getCache<{ projects: { id: string; key: string; name: string }[]; starredProjectIds: string[] }>(cacheKey);
+    if (cached) return cached;
+
     let projects: { id: string; key: string; name: string }[] = [];
 
     if (targetRole === "ADMIN") {
-      // Workspace ADMINs see all projects in this workspace
+      // Workspace ADMINs see all projects in target workspace ONLY
       projects = await prisma.project.findMany({
         where: { siteId: targetSiteId },
         select: { id: true, key: true, name: true },
         orderBy: { name: "asc" },
       });
     } else {
-      // Workspace MEMBERs see ONLY explicitly joined projects or led projects in this workspace
+      // Workspace MEMBERs see ONLY explicitly joined projects or led projects in target workspace
       const projectMembers = await prisma.projectMember.findMany({
         where: { userId },
         select: { projectId: true },

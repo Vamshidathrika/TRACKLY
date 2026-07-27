@@ -91,37 +91,42 @@ export async function getProjectByKey(siteId: string, key: string) {
  * - Workspace MEMBERs see only projects they have explicit ProjectMember access to or lead
  */
 export async function getProjectsForUser(siteId: string, userId: string) {
-  const memberships = await prisma.membership.findMany({
-    where: { userId },
-    select: { siteId: true, role: true },
+  const membership = await prisma.membership.findUnique({
+    where: { userId_siteId: { userId, siteId } },
+    select: { role: true },
   });
 
-  if (memberships.length === 0) return [];
-
-  const adminSiteIds = memberships.filter((m) => m.role === "ADMIN").map((m) => m.siteId);
-
-  const projectMembers = await prisma.projectMember.findMany({
-    where: { userId },
-    select: { projectId: true },
-  });
-  const allowedProjectIds = projectMembers.map((pm) => pm.projectId);
-
-  const OR: any[] = [];
-  if (adminSiteIds.length > 0) {
-    OR.push({ siteId: { in: adminSiteIds } });
-  }
-  if (allowedProjectIds.length > 0) {
-    OR.push({ id: { in: allowedProjectIds } });
-  }
-  OR.push({ leadId: userId });
+  if (!membership) return [];
 
   const projectInclude = {
     lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
     _count: { select: { issues: true } },
   } as const;
 
+  // Workspace ADMINs see all projects in this target workspace
+  if (membership.role === "ADMIN") {
+    return prisma.project.findMany({
+      where: { siteId },
+      include: projectInclude,
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  // Workspace MEMBERs see ONLY projects in this target workspace where they are explicit ProjectMembers or Project Lead
+  const projectMembers = await prisma.projectMember.findMany({
+    where: { userId },
+    select: { projectId: true },
+  });
+  const allowedProjectIds = projectMembers.map((pm) => pm.projectId);
+
   return prisma.project.findMany({
-    where: { OR },
+    where: {
+      siteId,
+      OR: [
+        { id: { in: allowedProjectIds } },
+        { leadId: userId },
+      ],
+    },
     include: projectInclude,
     orderBy: { createdAt: "desc" },
   });

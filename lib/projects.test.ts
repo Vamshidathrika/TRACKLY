@@ -105,20 +105,16 @@ describe("projects lib", () => {
     expect(prisma.project.findFirst).toHaveBeenCalledTimes(1);
   });
 
-  it("getProjectsForUser returns explicitly joined projects and admin workspace projects", async () => {
+  it("getProjectsForUser returns strictly target siteId projects for workspace MEMBER", async () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
       ...prisma.membership,
-      findMany: vi.fn().mockResolvedValue([
-        { siteId: "s-own", role: "ADMIN" },
-        { siteId: "s-shared", role: "MEMBER" },
-      ]),
+      findUnique: vi.fn().mockResolvedValue({ role: "MEMBER" }),
     };
     (prisma.projectMember.findMany as any).mockResolvedValue([
       { projectId: "p-joined" },
     ]);
     (prisma.project.findMany as any).mockResolvedValue([
-      { id: "p-own", siteId: "s-own", key: "OWN" },
       { id: "p-joined", siteId: "s-shared", key: "JOIN" },
     ]);
 
@@ -127,8 +123,8 @@ describe("projects lib", () => {
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          siteId: "s-shared",
           OR: [
-            { siteId: { in: ["s-own"] } },
             { id: { in: ["p-joined"] } },
             { leadId: "user-b" },
           ],
@@ -137,11 +133,30 @@ describe("projects lib", () => {
     );
   });
 
-  it("getProjectsForUser returns empty array when user has no workspace memberships", async () => {
+  it("getProjectsForUser returns all projects in target siteId for workspace ADMIN", async () => {
     const { getProjectsForUser } = await import("./projects");
     (prisma as any).membership = {
       ...prisma.membership,
-      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn().mockResolvedValue({ role: "ADMIN" }),
+    };
+    (prisma.project.findMany as any).mockResolvedValue([
+      { id: "p-own", siteId: "s-own", key: "OWN" },
+    ]);
+
+    await getProjectsForUser("s-own", "admin-1");
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { siteId: "s-own" },
+      })
+    );
+  });
+
+  it("getProjectsForUser returns empty array when user has no workspace membership", async () => {
+    const { getProjectsForUser } = await import("./projects");
+    (prisma as any).membership = {
+      ...prisma.membership,
+      findUnique: vi.fn().mockResolvedValue(null),
     };
 
     const result = await getProjectsForUser("s1", "unknown-user");
