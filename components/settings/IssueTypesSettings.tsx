@@ -15,6 +15,12 @@ export type IssueTypeScheme = {
   fields: string[];
 };
 
+/**
+ * No IssueTypeScheme model exists — issue types are Trackly's fixed
+ * IssueType enum (Story/Task/Bug/Epic/Subtask). Types "created" here save to
+ * this browser only; they do not become selectable when creating a real
+ * issue anywhere in the app.
+ */
 export function IssueTypesSettings() {
   const [types, setTypes] = useState<IssueTypeScheme[]>(() => {
     if (typeof window !== "undefined") {
@@ -68,11 +74,11 @@ export function IssueTypesSettings() {
     saveTypes(next);
     setTypeName("");
     setTypeDesc("");
-    showToast(`Issue type "${newType.name}" created and saved!`);
+    showToast(`Saved "${newType.name}" to this browser — not usable on real issues yet.`);
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Delete issue type "${name}"? Existing tasks will be migrated to Task.`)) return;
+    if (!confirm(`Remove "${name}" from this preview list? This does not affect any real issue.`)) return;
     const next = types.filter((t) => t.id !== id);
     saveTypes(next);
     showToast(`Issue type "${name}" removed.`);
@@ -92,7 +98,10 @@ export function IssueTypesSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-default">Issue Types & Screen Field Schemes</h2>
-          <p className="text-xs text-subtle">Define issue categories, icons, colors, and required screen input fields</p>
+          <p className="text-xs text-subtle">
+            Preview only, saved to this browser. Real issues can currently be Story, Task, Bug,
+            Epic, or Subtask — custom types aren&apos;t usable yet.
+          </p>
         </div>
       </div>
 

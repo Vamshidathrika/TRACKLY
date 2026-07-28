@@ -68,6 +68,12 @@ const INITIAL_IDEAS: DiscoveryIdea[] = [
   },
 ];
 
+/**
+ * The idea backlog and votes below save to this browser only — no
+ * DiscoveryIdea model exists yet, so teammates on another device see none of
+ * it. "Convert to Task" is real: it calls createIssueAction and creates an
+ * actual issue on the board.
+ */
 export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
   const [ideas, setIdeas] = useState<DiscoveryIdea[]>(() => {
     if (typeof window !== "undefined") {
@@ -167,7 +173,8 @@ export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
             <span>Product Discovery & Idea Matrix</span>
           </h1>
           <p className="text-xs text-text-subtle mt-0.5">
-            Prioritize feature ideas by Impact vs Effort and convert top voted requests directly into Backlog tasks
+            Prioritize feature ideas by Impact vs Effort and convert top voted requests directly into Backlog tasks.
+            The idea list and votes save to this browser only; converting to a task is real.
           </p>
         </div>
 
