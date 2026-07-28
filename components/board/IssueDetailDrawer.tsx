@@ -565,14 +565,14 @@ export function IssueDetailDrawer({
     const newDesc = description ? `${description}${acTemplate}` : acTemplate.trim();
     setDescription(newDesc);
     setIsEditingDescription(true);
-    showToast("✨ AI generated Acceptance Criteria template!");
+    showToast("AI generated Acceptance Criteria template!");
   };
 
   // Superpower Action: AI Executive Summary Recap
   const handleAiSummarize = () => {
     const prCount = pullRequests.filter((p) => p.status === "MERGED").length;
     const prText = prCount === 1 ? "1 PR merged" : `${prCount} PRs merged`;
-    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and ${prText}.`);
+    showToast(`AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and ${prText}.`);
   };
 
   // Clipboard Image Paste Handler (`Cmd+V` / `Ctrl+V`)
@@ -812,7 +812,7 @@ export function IssueDetailDrawer({
     setCommentInput((prev) => (prev ? `${prev} ${chip}` : chip));
   };
 
-  const actionChips = ["Approved 👍", "Please review 🔍", "Needs info ❓", "In progress 🚀"];
+  const actionChips = ["Approved", "Please review", "Needs info", "In progress"];
 
   // Copy Menu Actions
   const copyToClipboard = (text: string, msg: string) => {
@@ -928,7 +928,7 @@ export function IssueDetailDrawer({
               {/* AI Executive Summary Button */}
               <button
                 onClick={handleAiSummarize}
-                title="✨ AI Executive Recap"
+                title="AI Executive Recap"
                 className="p-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1 text-xs font-bold"
               >
                 <Sparkles size={14} />
@@ -1085,7 +1085,7 @@ export function IssueDetailDrawer({
                       onClick={handleAiGenerateAcceptanceCriteria}
                       className="text-[11px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <Sparkles size={12} /> ✨ Acceptance Criteria
+                      <Sparkles size={12} /> Acceptance Criteria
                     </button>
                     <span className="text-[10px] text-text-subtle italic">Hotkey &apos;E&apos; to edit</span>
                   </div>
@@ -1412,7 +1412,7 @@ export function IssueDetailDrawer({
                         activeTab === "development" ? "border-b-2 border-brand text-brand font-bold" : "hover:text-text"
                       }`}
                     >
-                      <Layers size={14} className="text-purple-600" /> Development & Apps ⚡
+                      <Layers size={14} className="text-purple-600" /> Development & Apps
                     </button>
                   </div>
                 </div>
@@ -1626,7 +1626,7 @@ export function IssueDetailDrawer({
                       : issue.status === "IN_PROGRESS"
                       ? "Submit for Review"
                       : issue.status === "IN_REVIEW"
-                      ? (isBlocked ? `Mark Complete (Blocked by ${activeBlockers[0].key})` : "Mark Complete ✓")
+                      ? (isBlocked ? `Mark Complete (Blocked by ${activeBlockers[0].key})` : "Mark Complete")
                       : "Reopen Task"}
                   </span>
                   <ArrowRight size={14} />
