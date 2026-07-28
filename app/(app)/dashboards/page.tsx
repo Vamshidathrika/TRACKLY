@@ -118,6 +118,98 @@ export default async function DashboardsPage() {
       })
     : [];
 
+  // 5. Active sprint health — sums story points across every currently
+  // active sprint in the workspace, since the dashboard is workspace-wide.
+  const activeSprints = projects.flatMap((p) => p.sprints.filter((s) => s.status === "ACTIVE"));
+  const activeSprintIds = new Set(activeSprints.map((s) => s.id));
+  const activeSprintIssues = allIssues.filter((i) => i.sprintId && activeSprintIds.has(i.sprintId));
+  const sprintHealth = {
+    sprintNames: activeSprints.map((s) => s.name),
+    daysRemaining:
+      activeSprints.length > 0 && activeSprints.some((s) => s.endDate)
+        ? Math.ceil(
+            (Math.min(...activeSprints.filter((s) => s.endDate).map((s) => new Date(s.endDate!).getTime())) - Date.now()) /
+              (1000 * 60 * 60 * 24)
+          )
+        : null,
+    totalPoints: activeSprintIssues.reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+    donePoints: activeSprintIssues.filter((i) => i.status === "DONE").reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+    inProgressPoints: activeSprintIssues
+      .filter((i) => i.status === "IN_PROGRESS" || i.status === "IN_REVIEW")
+      .reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+    toDoPoints: activeSprintIssues.filter((i) => i.status === "TO_DO").reduce((sum, i) => sum + (i.storyPoints ?? 0), 0),
+  };
+
+  // 6. Created vs. resolved over the last 7 real calendar days.
+  const dayMs = 24 * 60 * 60 * 1000;
+  const sevenDaysAgo = new Date(Date.now() - 6 * dayMs);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const resolvedHistory =
+    authorizedProjectIds.length > 0
+      ? await prisma.issueHistory.findMany({
+          where: {
+            field: "status",
+            newValue: "DONE",
+            createdAt: { gte: sevenDaysAgo },
+            issue: { projectId: { in: authorizedProjectIds } },
+          },
+          select: { createdAt: true },
+        })
+      : [];
+
+  const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+  const createdVsResolved = Array.from({ length: 7 }, (_, idx) => {
+    const date = new Date(sevenDaysAgo.getTime() + idx * dayMs);
+    const key = dayKey(date);
+    return {
+      label: date.toLocaleDateString("en-US", { weekday: "short" }),
+      created: allIssues.filter((i) => dayKey(new Date(i.createdAt)) === key).length,
+      resolved: resolvedHistory.filter((h) => dayKey(new Date(h.createdAt)) === key).length,
+    };
+  });
+
+  // 7. Risk detector: overdue issues, plus issues still blocked by an
+  // unresolved BLOCKS link. Deterministic, not a model call — see
+  // AIRiskDetectorGadget's comment for why it keeps the "AI" label anyway.
+  const now = new Date();
+  const overdueRisks = allIssues
+    .filter((i) => i.dueDate && new Date(i.dueDate) < now && i.status !== "DONE")
+    .map((i) => {
+      const daysOverdue = Math.floor((now.getTime() - new Date(i.dueDate!).getTime()) / dayMs);
+      return {
+        id: `overdue-${i.id}`,
+        severity: daysOverdue > 2 ? ("HIGH" as const) : ("MEDIUM" as const),
+        issueKey: i.key,
+        summary: i.summary,
+        riskMessage: `Overdue by ${daysOverdue} day${daysOverdue === 1 ? "" : "s"}`,
+      };
+    });
+
+  const blockingLinks =
+    authorizedProjectIds.length > 0
+      ? await prisma.issueLink.findMany({
+          where: {
+            relation: "BLOCKS",
+            targetIssue: { projectId: { in: authorizedProjectIds }, status: { not: "DONE" } },
+            sourceIssue: { status: { not: "DONE" } },
+          },
+          include: {
+            sourceIssue: { select: { key: true } },
+            targetIssue: { select: { id: true, key: true, summary: true } },
+          },
+        })
+      : [];
+  const blockedRisks = blockingLinks.map((l) => ({
+    id: `blocked-${l.id}`,
+    severity: "HIGH" as const,
+    issueKey: l.targetIssue.key,
+    summary: l.targetIssue.summary,
+    riskMessage: `Blocked by ${l.sourceIssue.key}`,
+  }));
+
+  const risks = [...overdueRisks, ...blockedRisks];
+
   return (
     <div className="flex flex-1 flex-col px-8 py-7 overflow-y-auto">
       <Breadcrumbs
@@ -176,6 +268,9 @@ export default async function DashboardsPage() {
           doneIssues: p.issues.filter((i) => i.status === "DONE").length,
           activeSprint: p.sprints.find((s) => s.status === "ACTIVE")?.name ?? "No Active Sprint",
         }))}
+        sprintHealth={sprintHealth}
+        createdVsResolved={createdVsResolved}
+        risks={risks}
       />
     </div>
   );
