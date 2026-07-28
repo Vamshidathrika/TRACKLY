@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { grantProjectAccess } from "@/lib/tenant";
+import { createInvite } from "@/lib/invites";
 import { revalidatePath } from "next/cache";
 
 export type ProvisionInput = {
@@ -132,21 +134,20 @@ export async function provisionWorkspaceAction(input: ProvisionInput) {
     data: { issueCounter: counter - 1 },
   });
 
+  // The creator needs an explicit ProjectMember row: board visibility is driven
+  // by ProjectMember, and this path builds the project by hand rather than going
+  // through createProject(), which is what normally grants it.
+  await grantProjectAccess(project.id, userId, "ADMIN");
+
   // Handle invites if provided
   if (input.inviteEmails && input.inviteEmails.length > 0) {
     for (const email of input.inviteEmails) {
       if (email && email.includes("@")) {
-        const token = `inv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await prisma.invite.create({
-          data: {
-            siteId,
-            email: email.trim(),
-            token,
-            role: "MEMBER",
-            expiresAt,
-          },
-        });
+        // Was `Date.now()` + `Math.random()`. Math.random is not a CSPRNG, so
+        // an attacker who harvests a few tokens from the same process can
+        // recover the generator state and predict tokens minted for other
+        // workspaces. createInvite uses randomBytes(32).
+        await createInvite({ siteId, email: email.trim(), role: "MEMBER" });
       }
     }
   }

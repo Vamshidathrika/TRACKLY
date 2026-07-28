@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireMembership, requireAdmin } from "@/lib/tenant";
+import { requireMembership, requireAdmin, checkProjectAdmin } from "@/lib/tenant";
 import { createCustomField, deleteCustomField } from "@/lib/admin";
 import {
   updateProject,
@@ -20,7 +20,13 @@ export async function updateProjectDetailsAction(
   leadId?: string
 ) {
   try {
-    const { siteId } = await requireMembership();
+    const { siteId, userId } = await requireMembership();
+    // Re-keying a project rewrites every issue key, bookmark and deep link for
+    // that board workspace-wide, so this is an admin operation — being a member
+    // of some workspace is not enough.
+    if (!(await checkProjectAdmin(userId, projectId))) {
+      return { error: "Only board owners and workspace admins can change board settings" };
+    }
     await updateProject(siteId, projectId, { name, key, type, leadId });
     revalidatePath("/projects");
     return { success: true };
@@ -50,7 +56,13 @@ export async function addProjectMemberAction(
   role: ProjectRole = "MEMBER"
 ) {
   try {
-    await requireMembership();
+    // projectId and userId are both client-supplied. Without an admin check on
+    // the TARGET project, a member of any workspace could add themselves to a
+    // board in a workspace they were never invited to.
+    const { userId: actorId } = await requireMembership();
+    if (!(await checkProjectAdmin(actorId, projectId))) {
+      return { error: "Only board owners and workspace admins can add members" };
+    }
     const member = await addProjectMember({ projectId, userId, role });
     revalidatePath("/projects");
     return { success: true, member };
@@ -66,7 +78,10 @@ export async function updateProjectMemberRoleAction(
   role: ProjectRole
 ) {
   try {
-    await requireMembership();
+    const { userId: actorId } = await requireMembership();
+    if (!(await checkProjectAdmin(actorId, projectId))) {
+      return { error: "Only board owners and workspace admins can change member roles" };
+    }
     await updateProjectMemberRole(projectId, userId, role);
     revalidatePath("/projects");
     return { success: true };
@@ -78,7 +93,10 @@ export async function updateProjectMemberRoleAction(
 
 export async function removeProjectMemberAction(projectId: string, userId: string) {
   try {
-    await requireMembership();
+    const { userId: actorId } = await requireMembership();
+    if (!(await checkProjectAdmin(actorId, projectId))) {
+      return { error: "Only board owners and workspace admins can remove members" };
+    }
     await removeProjectMember(projectId, userId);
     // Unassign issues assigned to removed member
     const { prisma } = await import("@/lib/prisma");
@@ -115,7 +133,10 @@ export async function leaveProjectAction(projectId: string) {
 
 export async function createCustomFieldAction(projectId: string, name: string, fieldType: string, required: boolean) {
   try {
-    await requireMembership();
+    const { userId } = await requireMembership();
+    if (!(await checkProjectAdmin(userId, projectId))) {
+      return { error: "Only board owners and workspace admins can change custom fields" };
+    }
     const field = await createCustomField({ projectId, name, fieldType, required });
     revalidatePath("/projects");
     return { success: true, field };
@@ -127,7 +148,19 @@ export async function createCustomFieldAction(projectId: string, name: string, f
 
 export async function deleteCustomFieldAction(fieldId: string) {
   try {
-    await requireMembership();
+    const { userId } = await requireMembership();
+    // Only a field id arrives from the client, so resolve which project owns it
+    // before deciding anything — lib/admin.deleteCustomField is a bare
+    // delete-by-id and would happily drop another tenant's field.
+    const { prisma } = await import("@/lib/prisma");
+    const field = await prisma.customField.findUnique({
+      where: { id: fieldId },
+      select: { projectId: true },
+    });
+    if (!field) return { error: "Custom field not found" };
+    if (!(await checkProjectAdmin(userId, field.projectId))) {
+      return { error: "Only board owners and workspace admins can change custom fields" };
+    }
     await deleteCustomField(fieldId);
     revalidatePath("/projects");
     return { success: true };

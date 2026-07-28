@@ -128,11 +128,34 @@ export async function updateIssueFieldAction(
   }
 }
 
+/**
+ * Confirms the caller can reach the board that owns `issueId`.
+ *
+ * Server actions are addressed by global action id, not by route, so every one
+ * of these is a public endpoint that receives a client-chosen cuid. Reading the
+ * issue is not authorization — the issue must be resolved to its project and
+ * that project checked against the caller.
+ */
+async function resolveAccessibleIssue(userId: string, issueId: string) {
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { id: true, key: true, projectId: true, project: { select: { key: true } } },
+  });
+  if (!issue) return { error: "Issue not found" as const };
+  if (!(await checkProjectAccess(userId, issue.projectId))) {
+    return { error: "You don't have access to this board" as const };
+  }
+  return { issue };
+}
+
 export async function postCommentAction(issueId: string, body: string) {
   const user = await getAuthUser();
   if (!body.trim()) return { error: "Comment cannot be empty" };
 
   try {
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { error: guard.error };
+
     await addComment({ issueId, authorId: user.id, body });
 
     revalidatePath("/projects");
@@ -218,6 +241,9 @@ export async function logWorkAction(
   if (hours > 24 * 30) return { error: "Time spent is unrealistically large" };
 
   try {
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { error: guard.error };
+
     // Mock/unseeded issues have synthetic ids and no database row to attach to.
     const issue = await prisma.issue.findUnique({
       where: { id: issueId },
@@ -296,6 +322,9 @@ export async function createSubtaskAction(parentIssueId: string, title: string) 
       include: { project: true },
     });
     if (!parent) return { error: "This ticket is not persisted yet, so subtasks cannot be added." };
+    if (!(await checkProjectAccess(user.id, parent.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     // number/key are unique per project and derived from the current max, so two
     // concurrent creates can pick the same number. Retry on the resulting unique
@@ -378,7 +407,7 @@ export async function toggleSubtaskAction(subtaskId: string) {
 }
 
 export async function deleteSubtaskAction(subtaskId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
     const subtask = await prisma.issue.findUnique({
       where: { id: subtaskId },
@@ -386,6 +415,9 @@ export async function deleteSubtaskAction(subtaskId: string) {
     });
     if (!subtask) return { error: "Subtask not found" };
     if (!subtask.parentId) return { error: "This ticket is not a subtask" };
+    if (!(await checkProjectAccess(user.id, subtask.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     await prisma.issue.delete({ where: { id: subtaskId } });
 
@@ -455,13 +487,16 @@ export async function linkIssueAction(
 }
 
 export async function unlinkIssueAction(linkId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
     const link = await prisma.issueLink.findUnique({
       where: { id: linkId },
       include: { sourceIssue: { include: { project: true } } },
     });
     if (!link) return { error: "Link not found" };
+    if (!(await checkProjectAccess(user.id, link.sourceIssue.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     await prisma.issueLink.delete({ where: { id: linkId } });
 
@@ -490,6 +525,9 @@ export async function uploadAttachmentAction(issueId: string, formData: FormData
       include: { project: true },
     });
     if (!issue) return { error: "This ticket is not persisted yet, so files cannot be attached." };
+    if (!(await checkProjectAccess(user.id, issue.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     const files = formData.getAll("files").filter((f): f is File => f instanceof File);
     if (files.length === 0) return { error: "No files provided" };
@@ -541,6 +579,9 @@ export async function deleteAttachmentAction(attachmentId: string) {
       include: { issue: { include: { project: true } } },
     });
     if (!attachment) return { error: "Attachment not found" };
+    if (!(await checkProjectAccess(user.id, attachment.issue.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
     if (attachment.uploaderId !== user.id) {
       return { error: "You can only delete attachments you uploaded" };
     }
@@ -562,6 +603,9 @@ export async function deleteAttachmentAction(attachmentId: string) {
 export async function toggleWatcherAction(issueId: string) {
   const user = await getAuthUser();
   try {
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { error: guard.error };
+
     const isWatching = await toggleWatcher(issueId, user.id);
     revalidatePath("/projects");
     return { success: true, isWatching };
@@ -609,8 +653,13 @@ export async function deleteCommentAction(commentId: string) {
 }
 
 export async function getIssueDevelopmentDataAction(issueId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
+    // Returns commit hashes, messages, author names and PR titles — board
+    // access is required before any of it leaves the server.
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { commits: [], pullRequests: [], branches: [] };
+
     const [commits, pullRequests, branches] = await Promise.all([
       prisma.gitCommit.findMany({
         where: { issueId },

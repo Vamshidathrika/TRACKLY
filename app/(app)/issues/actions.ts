@@ -60,6 +60,22 @@ export async function createIssueAction(
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getProjectsForUser } from "@/lib/projects";
 
+/**
+ * Throws unless the caller can reach the board that owns `issueId`.
+ * These actions receive a client-chosen issue cuid and write rows against it,
+ * so the issue must be resolved to its project and that project checked.
+ */
+async function assertIssueAccess(userId: string, issueId: string) {
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { projectId: true },
+  });
+  if (!issue) throw new Error("Issue not found");
+  if (!(await checkProjectAccess(userId, issue.projectId))) {
+    throw new Error("You do not have access to this issue");
+  }
+}
+
 export async function fetchUserProjectsAction() {
   const { userId, siteId } = await requireMembership();
   const projects = await getProjectsForUser(siteId, userId);
@@ -107,7 +123,19 @@ export async function createIssueLinkAction(input: {
   targetIssueKey: string;
   relation: "RELATES_TO" | "BLOCKS" | "IS_BLOCKED_BY" | "DUPLICATES";
 }) {
-  const { siteId } = await requireMembership();
+  const { siteId, userId } = await requireMembership();
+
+  // The TARGET was already scoped by siteId, but the SOURCE was taken on trust —
+  // so a foreign sourceIssueId would write a link row onto another tenant's
+  // issue, which then renders in their issue view.
+  const source = await prisma.issue.findUnique({
+    where: { id: input.sourceIssueId },
+    select: { projectId: true },
+  });
+  if (!source) throw new Error("Source issue not found.");
+  if (!(await checkProjectAccess(userId, source.projectId))) {
+    throw new Error("You do not have access to this issue.");
+  }
 
   const target = await prisma.issue.findFirst({
     where: {
@@ -155,6 +183,7 @@ export async function logWorkAction(input: {
   description?: string;
 }) {
   const user = await getAuthUser();
+  await assertIssueAccess(user.id, input.issueId);
   const log = await prisma.workLog.create({
     data: {
       issueId: input.issueId,
@@ -175,6 +204,7 @@ export async function uploadAttachmentAction(input: {
   sizeBytes: number;
 }) {
   const user = await getAuthUser();
+  await assertIssueAccess(user.id, input.issueId);
   const attachment = await prisma.attachment.create({
     data: {
       issueId: input.issueId,
@@ -197,8 +227,12 @@ export async function deleteAttachmentAction(attachmentId: string) {
   // check was the weaker rule the UI happened to reach).
   const attachment = await prisma.attachment.findUnique({
     where: { id: attachmentId },
+    include: { issue: { select: { projectId: true } } },
   });
   if (!attachment) return { error: "Attachment not found" };
+  if (!(await checkProjectAccess(user.id, attachment.issue.projectId))) {
+    return { error: "You do not have access to this issue" };
+  }
   if (attachment.uploaderId !== user.id) {
     return { error: "You can only delete attachments you uploaded" };
   }
