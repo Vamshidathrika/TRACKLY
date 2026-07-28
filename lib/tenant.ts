@@ -36,6 +36,24 @@ export type ProjectContext = {
  */
 export const requireMembership = cache(async (): Promise<TenantContext> => {
   const user = await getAuthUser();
+
+  if (
+    user.siteId &&
+    user.role &&
+    typeof user.membershipVersion === "number"
+  ) {
+    const { getAccessVersion } = await import("./access-cache");
+    const currentVersion = await getAccessVersion(user.id);
+    if (user.membershipVersion === currentVersion) {
+      return {
+        userId: user.id,
+        siteId: user.siteId,
+        role: user.role,
+        siteName: "",
+      };
+    }
+  }
+
   const { getCache, setCache } = await import("./redis");
   const cacheKey = `user:membership:${user.id}`;
   const cached = await getCache<TenantContext>(cacheKey);
@@ -101,8 +119,10 @@ export const checkProjectAccess = cache(
   async (userId: string, projectId: string, _siteId?: string): Promise<ProjectContext | null> => {
     const { getCache, setCache } = await import("./redis");
     const cacheKey = `user:project-access:${userId}:${projectId}`;
-    const cached = await getCache<ProjectContext | null>(cacheKey);
-    if (cached !== null && cached !== undefined) return cached;
+    const cached = await getCache<ProjectContext | { denied: true } | null>(cacheKey);
+    if (cached) {
+      return "denied" in cached ? null : cached;
+    }
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -110,7 +130,7 @@ export const checkProjectAccess = cache(
     });
 
     if (!project) {
-      await setCache(cacheKey, null, 60);
+      await setCache(cacheKey, { denied: true }, 60);
       return null;
     }
 
@@ -122,7 +142,7 @@ export const checkProjectAccess = cache(
     });
 
     if (!membership) {
-      await setCache(cacheKey, null, 60);
+      await setCache(cacheKey, { denied: true }, 60);
       return null;
     }
 
@@ -161,7 +181,7 @@ export const checkProjectAccess = cache(
       }
     }
 
-    await setCache(cacheKey, result, 60);
+    await setCache(cacheKey, result ?? { denied: true }, 60);
     return result;
   }
 );

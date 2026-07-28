@@ -86,6 +86,9 @@ export type AuthUser = {
   name: string | null;
   email: string;
   image: string | null;
+  siteId?: string;
+  role?: any;
+  membershipVersion?: number;
 };
 
 export const getAuthUser = cache(async (): Promise<AuthUser> => {
@@ -121,6 +124,9 @@ export const getAuthUser = cache(async (): Promise<AuthUser> => {
         name: dbUser.name,
         email: dbUser.email,
         image: dbUser.avatarUrl,
+        siteId: (session as any)?.siteId,
+        role: (session as any)?.role,
+        membershipVersion: (session as any)?.membershipVersion,
       };
       await setCache(cacheKey, authUser, 600); // 10 minutes cache
       return authUser;

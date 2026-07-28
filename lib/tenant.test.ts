@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./prisma", () => ({
   prisma: {
     project: { findUnique: vi.fn() },
-    membership: { findUnique: vi.fn(), create: vi.fn() },
+    membership: { findUnique: vi.fn(), create: vi.fn(), findFirst: vi.fn() },
     projectMember: { findUnique: vi.fn(), create: vi.fn() },
     site: { create: vi.fn() },
   },
@@ -11,12 +11,12 @@ vi.mock("./prisma", () => ({
 
 vi.mock("./auth", () => ({
   getAuthUser: vi.fn().mockResolvedValue({ id: "user-1", name: "Test User" }),
+  auth: vi.fn(),
 }));
 
 import { prisma } from "./prisma";
-import { checkProjectAccess } from "./tenant";
-
-import { delCachePrefix } from "./redis";
+import { checkProjectAccess, requireMembership } from "./tenant";
+import { setCache, delCachePrefix } from "./redis";
 
 describe("checkProjectAccess DAL guard", () => {
   beforeEach(async () => {
@@ -163,5 +163,78 @@ describe("checkProjectAccess DAL guard", () => {
     // Verify zero mutations happened
     expect(prisma.membership.create).not.toHaveBeenCalled();
     expect(prisma.projectMember.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("requireMembership caching", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await delCachePrefix("user:");
+  });
+
+  it("serves from cache without touching the database", async () => {
+    await setCache("user:membership:user-1", {
+      userId: "user-1",
+      siteId: "s1",
+      role: "ADMIN",
+      siteName: "Acme",
+    }, 60);
+
+    const ctx = await requireMembership();
+
+    expect(ctx).toEqual({ userId: "user-1", siteId: "s1", role: "ADMIN", siteName: "Acme" });
+    expect(prisma.membership.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("queries and populates the cache on a miss", async () => {
+    (prisma.membership.findFirst as any).mockResolvedValue({
+      siteId: "s1",
+      role: "MEMBER",
+      site: { name: "Acme" },
+    });
+
+    const ctx = await requireMembership();
+
+    expect(ctx.siteId).toBe("s1");
+    expect(prisma.membership.findFirst).toHaveBeenCalled();
+  });
+});
+
+describe("checkProjectAccess caching", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await delCachePrefix("user:");
+  });
+
+  it("serves a cached grant without touching the database", async () => {
+    await setCache("user:project-access:user-1:p1", {
+      projectId: "p1",
+      projectKey: "TRK",
+      projectName: "Trackly",
+      siteId: "s1",
+      projectRole: "WORKSPACE_ADMIN",
+    }, 60);
+
+    const access = await checkProjectAccess("user-1", "p1");
+
+    expect(access).toMatchObject({ projectRole: "WORKSPACE_ADMIN" });
+    expect(prisma.project.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("serves a cached denial as null without touching the database", async () => {
+    await setCache("user:project-access:user-1:p1", { denied: true }, 60);
+
+    const access = await checkProjectAccess("user-1", "p1");
+
+    expect(access).toBeNull();
+    expect(prisma.project.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("caches a denial when the project does not exist", async () => {
+    (prisma.project.findUnique as any).mockResolvedValue(null);
+
+    const access = await checkProjectAccess("user-1", "p1");
+
+    expect(access).toBeNull();
   });
 });
