@@ -247,6 +247,8 @@ export const IssueCard = memo(IssueCardComponent, (prev, next) => {
     prev.issue.priority === next.issue.priority &&
     prev.issue.type === next.issue.type &&
     prev.issue.storyPoints === next.issue.storyPoints &&
+    prev.issue.loggedHours === next.issue.loggedHours &&
+    prev.issue.estimatedHours === next.issue.estimatedHours &&
     prev.issue.assignee?.id === next.issue.assignee?.id &&
     prev.canEditStatus === next.canEditStatus
   );

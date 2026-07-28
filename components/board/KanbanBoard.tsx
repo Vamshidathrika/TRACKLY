@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition, useCallback, useEffect } from "react";
+import { useState, useMemo, useTransition, useCallback, useEffect, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import { BoardHeader } from "./BoardHeader";
 import { BoardFilterBar } from "./BoardFilterBar";
@@ -246,10 +246,12 @@ export function KanbanBoard({
     search || selectedUserId || myIssuesOnly || filterUnassigned || filterType !== "ALL" || filterPriority !== "ALL"
   );
 
+  const deferredSearch = useDeferredValue(search);
+
   const filteredIssues = useMemo(() => {
     return issues.filter((i) => {
-      if (search) {
-        const q = search.toLowerCase();
+      if (deferredSearch) {
+        const q = deferredSearch.toLowerCase();
         const matchesKey = i.key.toLowerCase().includes(q);
         const matchesSummary = i.summary.toLowerCase().includes(q);
         if (!matchesKey && !matchesSummary) return false;
@@ -270,7 +272,7 @@ export function KanbanBoard({
 
       return true;
     });
-  }, [issues, search, myIssuesOnly, currentUserId, filterUnassigned, selectedUserId, filterType, filterPriority]);
+  }, [issues, deferredSearch, myIssuesOnly, currentUserId, filterUnassigned, selectedUserId, filterType, filterPriority]);
 
   const issuesByStatus = useMemo(() => {
     return {

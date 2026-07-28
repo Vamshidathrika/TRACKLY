@@ -52,7 +52,7 @@ function BoardColumnComponent({
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setIsDragOver(true);
+    if (!isDragOver) setIsDragOver(true);
   };
 
   const handleDragLeave = () => {

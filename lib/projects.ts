@@ -91,16 +91,17 @@ export async function getProjectByKey(siteId: string, key: string) {
  * - Workspace MEMBERs see only projects they have explicit ProjectMember access to or lead
  */
 export async function getProjectsForUser(_siteId: string, userId: string) {
-  const adminMemberships = await prisma.membership.findMany({
-    where: { userId, role: "ADMIN" },
-    select: { siteId: true },
-  });
+  const [adminMemberships, projectMembers] = await Promise.all([
+    prisma.membership.findMany({
+      where: { userId, role: "ADMIN" },
+      select: { siteId: true },
+    }),
+    prisma.projectMember.findMany({
+      where: { userId },
+      select: { projectId: true },
+    }),
+  ]);
   const adminSiteIds = adminMemberships.map((m) => m.siteId);
-
-  const projectMembers = await prisma.projectMember.findMany({
-    where: { userId },
-    select: { projectId: true },
-  });
   const allowedProjectIds = projectMembers.map((pm) => pm.projectId);
 
   const OR: any[] = [];
