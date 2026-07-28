@@ -137,3 +137,57 @@ export async function deleteCustomFieldAction(fieldId: string) {
   }
 }
 
+
+/**
+ * Issue a real, tokenised invite for a single board.
+ *
+ * The Share dialog previously faked this: it rendered "Invitation sent" from
+ * client state without calling anything, while its "copy link" produced an
+ * untokenised /join URL that granted access to whoever opened it. Sharing now
+ * goes through the same expiring, single-use Invite record as every other
+ * invitation, and only a board admin can issue one.
+ */
+export async function shareBoardByEmailAction(projectKey: string, email: string) {
+  try {
+    const { getAuthUser } = await import("@/lib/auth");
+    const { checkProjectAccess } = await import("@/lib/tenant");
+    const { getProjectByKey } = await import("@/lib/projects");
+    const { createInvite } = await import("@/lib/invites");
+    const { sendInviteEmail } = await import("@/lib/email");
+
+    const trimmed = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return { error: "Enter a valid email address" };
+    }
+
+    const user = await getAuthUser();
+    const { siteId, siteName } = await requireMembership();
+
+    const project = await getProjectByKey(siteId, projectKey);
+    if (!project) return { error: "Board not found" };
+
+    const access = await checkProjectAccess(user.id, project.id);
+    if (!access || (access.projectRole !== "ADMIN" && access.projectRole !== "WORKSPACE_ADMIN")) {
+      return { error: "Only board owners and workspace admins can share this board" };
+    }
+
+    const invite = await createInvite({
+      siteId,
+      email: trimmed,
+      role: "MEMBER",
+      projectId: project.id,
+    });
+
+    const baseUrl =
+      process.env.AUTH_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const inviteUrl = `${baseUrl}/invite/${invite.token}`;
+
+    const emailRes = await sendInviteEmail(trimmed, inviteUrl, user.name ?? user.email, siteName);
+
+    return { success: true, inviteUrl, emailSent: emailRes.sent, recipient: trimmed };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}

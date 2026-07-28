@@ -2,7 +2,7 @@ import { requireMembership } from "@/lib/tenant";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
-import { getIntegrationConnections } from "@/lib/integrations/actions";
+import { getIntegrationConnections } from "@/lib/integrations/store";
 
 export default async function IntegrationsSettingsPage() {
   const { siteId } = await requireMembership();

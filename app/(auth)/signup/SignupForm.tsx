@@ -33,10 +33,17 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({
+  inviteToken,
+  callbackUrl,
+}: {
+  inviteToken?: string;
+  callbackUrl?: string;
+} = {}) {
   const [state, action, pending] = useActionState(signupAction, {});
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+  const isInvited = !!inviteToken;
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in max-w-md mx-auto w-full">
@@ -44,7 +51,9 @@ export function SignupForm() {
         {/* Header */}
         <div className="flex flex-col gap-1.5 mb-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-extrabold text-text tracking-tight">Create Workspace</h1>
+            <h1 className="text-2xl font-extrabold text-text tracking-tight">
+              {isInvited ? "Accept Invitation" : "Create Workspace"}
+            </h1>
             <div className="flex items-center gap-1 text-[11px] font-semibold text-text-subtle bg-neutral/80 px-2.5 py-1 rounded-full border border-border">
               <Shield size={12} className="text-brand" />
               <span>Free Tier</span>
@@ -54,6 +63,11 @@ export function SignupForm() {
         </div>
 
         <form action={action} className="flex flex-col gap-4">
+          {/* Carries the invite through signup. The server re-validates the token
+              against the submitted email — this field is a hint, not a grant. */}
+          {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
+          {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
+
           {/* Full name */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider" htmlFor="signup-name">
@@ -116,20 +130,26 @@ export function SignupForm() {
             <PasswordStrength password={password} />
           </div>
 
-          {/* Workspace name */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider" htmlFor="signup-site">
-              Workspace Name
-            </label>
-            <input
-              id="signup-site"
-              name="siteName"
-              type="text"
-              placeholder="Acme Corp"
-              required
-              className="h-11 rounded-xl border border-border bg-neutral/20 px-3.5 text-xs outline-none transition-all duration-200 placeholder:text-text-subtle focus:bg-surface focus:border-brand focus:ring-3 focus:ring-brand/10 font-medium"
-            />
-          </div>
+          {/* Workspace name — on the invite path the user joins an existing
+              workspace, so asking them to name one and then discarding it is a lie.
+              The field is still submitted (the schema requires it) but hidden. */}
+          {isInvited ? (
+            <input type="hidden" name="siteName" value="Invited" />
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider" htmlFor="signup-site">
+                Workspace Name
+              </label>
+              <input
+                id="signup-site"
+                name="siteName"
+                type="text"
+                placeholder="Acme Corp"
+                required
+                className="h-11 rounded-xl border border-border bg-neutral/20 px-3.5 text-xs outline-none transition-all duration-200 placeholder:text-text-subtle focus:bg-surface focus:border-brand focus:ring-3 focus:ring-brand/10 font-medium"
+              />
+            </div>
+          )}
 
           {/* Error */}
           {state.error && (

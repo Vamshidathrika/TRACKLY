@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireMembership } from "@/lib/tenant";
-import { saveOAuthIntegration } from "@/lib/integrations/actions";
+import { saveOAuthIntegration } from "@/lib/integrations/store";
 
 /**
  * GET /api/integrations/callback/github

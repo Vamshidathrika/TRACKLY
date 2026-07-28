@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Share2, Copy, Check, X, Globe, Users, ShieldCheck, Mail, Sparkles } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Share2, Copy, Check, X, Globe, Users, ShieldCheck, Mail, Sparkles, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { shareBoardByEmailAction } from "@/app/(app)/projects/[key]/settings/actions";
 
 export function ShareBoardModal({
   projectName,
@@ -21,6 +22,8 @@ export function ShareBoardModal({
   const [copied, setCopied] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitedStatus, setInvitedStatus] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [isSending, startSending] = useTransition();
 
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const handleClose = () => {
@@ -30,9 +33,9 @@ export function ShareBoardModal({
 
   const getBoardUrl = () => {
     if (typeof window !== "undefined") {
-      return `${window.location.origin}/projects/${projectKey}/join`;
+      return `${window.location.origin}/projects/${projectKey}/board`;
     }
-    return `/projects/${projectKey}/join`;
+    return `/projects/${projectKey}/board`;
   };
 
   const handleCopy = () => {
@@ -46,11 +49,25 @@ export function ShareBoardModal({
 
   const handleSendInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    const email = inviteEmail.trim();
+    if (!email) return;
 
-    setInvitedStatus(`Invitation sent to ${inviteEmail.trim()}! Link granted.`);
-    setInviteEmail("");
-    setTimeout(() => setInvitedStatus(null), 3500);
+    setInviteError(null);
+    setInvitedStatus(null);
+
+    startSending(async () => {
+      const res = await shareBoardByEmailAction(projectKey, email);
+      if ("error" in res && res.error) {
+        setInviteError(res.error);
+        return;
+      }
+      setInviteEmail("");
+      setInvitedStatus(
+        res.emailSent
+          ? `Invitation emailed to ${res.recipient}.`
+          : `Invite created for ${res.recipient}. Email delivery is not configured — copy the link from Settings › Members.`
+      );
+    });
   };
 
   if (!isOpen) return null;
@@ -78,7 +95,7 @@ export function ShareBoardModal({
               </span>
             </h3>
             <p className="text-xs text-text-subtle mt-0.5">
-              Anyone with this link will automatically gain access and see this board in their workspace sidebar.
+              Invite teammates by email. The board link only opens for people who already have access.
             </p>
           </div>
         </div>
@@ -87,9 +104,9 @@ export function ShareBoardModal({
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs text-emerald-700 flex items-start gap-2.5">
           <Globe size={16} className="shrink-0 text-emerald-600 mt-0.5" />
           <div className="flex-1">
-            <p className="font-extrabold text-emerald-800">Shared Board Access Active</p>
+            <p className="font-extrabold text-emerald-800">Invite-only board</p>
             <p className="text-[11px] text-emerald-700/90 mt-0.5 leading-relaxed">
-              When teammates open this link, the board is added directly to their <strong>Projects navigation</strong> and <strong>Your Work dashboard</strong> across their workspace.
+              Each invitation is a single-use link that expires in 7 days. Once accepted, the board appears in that person&apos;s <strong>Projects navigation</strong> and <strong>Your Work dashboard</strong>.
             </p>
           </div>
         </div>
@@ -139,13 +156,23 @@ export function ShareBoardModal({
               onChange={(e) => setInviteEmail(e.target.value)}
               className="flex-1 h-9 px-3 rounded-xl border border-border bg-surface text-xs text-text focus:outline-none focus:border-brand"
             />
-            <Button type="submit" appearance="subtle" className="h-9 px-3.5 text-xs font-bold rounded-xl border border-border">
-              Send Link
+            <Button
+              type="submit"
+              appearance="subtle"
+              disabled={isSending}
+              className="h-9 px-3.5 text-xs font-bold rounded-xl border border-border disabled:opacity-60"
+            >
+              {isSending ? "Sending…" : "Send Link"}
             </Button>
           </div>
           {invitedStatus && (
             <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1 mt-1 animate-in fade-in">
               <Sparkles size={13} /> {invitedStatus}
+            </p>
+          )}
+          {inviteError && (
+            <p className="text-xs font-semibold text-danger flex items-center gap-1 mt-1 animate-in fade-in">
+              <AlertTriangle size={13} /> {inviteError}
             </p>
           )}
         </form>

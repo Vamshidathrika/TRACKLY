@@ -9,6 +9,13 @@ vi.mock("@/app/(app)/projects/[key]/issues/actions", () => ({
   getIssueDevelopmentDataAction: vi.fn().mockResolvedValue({ commits: [], pullRequests: [], branches: [] }),
 }));
 
+// IssueDetailDrawer imports this too. Unmocked, it pulls the real lib/auth ->
+// next-auth -> next/server, which does not resolve under jsdom and fails the
+// whole suite at import time before a single test runs.
+vi.mock("@/app/(app)/projects/[key]/issues/detail-actions", () => ({
+  getIssueDetailAction: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
   fetchDevDashboardDataAction: vi.fn().mockResolvedValue({
     hasConnectedRepo: true,

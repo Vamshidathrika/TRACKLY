@@ -12,6 +12,19 @@ export function extractTaskKeys(text: string): string[] {
 }
 
 /**
+ * Constant-time string comparison used for webhook signature checks.
+ * crypto.timingSafeEqual throws RangeError on a length mismatch, so a forged
+ * short signature would surface as a 500 instead of a clean rejection.
+ */
+export function timingSafeCompare(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const aBuf = Buffer.from(a, "utf8");
+  const bBuf = Buffer.from(b, "utf8");
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
+/**
  * Verifies incoming GitHub Webhook HMAC SHA256 signatures.
  */
 export function verifyGithubWebhookSignature(
@@ -22,7 +35,7 @@ export function verifyGithubWebhookSignature(
   if (!signature || !secret) return false;
   const hmac = crypto.createHmac("sha256", secret);
   const digest = "sha256=" + hmac.update(payload).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
+  return timingSafeCompare(digest, signature);
 }
 
 export type GithubRepoStats = {

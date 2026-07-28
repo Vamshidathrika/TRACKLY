@@ -72,7 +72,7 @@ describe("Integrations Providers Suite", () => {
       commits: [{ message: "fix(TRK-123): resolve bug" }],
     };
 
-    const res = await processGitLabWebhook(headers, payload);
+    const res = await processGitLabWebhook(headers, payload, "site-1");
     expect(res.success).toBe(true);
     expect(res.eventType).toBe("gitlab:push");
     expect(res.issueKeys).toContain("TRK-123");
@@ -84,7 +84,7 @@ describe("Integrations Providers Suite", () => {
       pullrequest: { title: "feat(TRK-123): new feature", source: { branch: { name: "feature/TRK-123" } } },
     };
 
-    const res = await processBitbucketWebhook(headers, payload);
+    const res = await processBitbucketWebhook(headers, payload, "site-1");
     expect(res.success).toBe(true);
     expect(res.eventType).toBe("pullrequest:created");
     expect(res.issueKeys).toContain("TRK-123");
@@ -159,7 +159,7 @@ describe("Integrations Providers Suite", () => {
       },
     };
 
-    const res = await processVercelWebhook(headers, payload);
+    const res = await processVercelWebhook(headers, payload, "site-1");
     expect(res.success).toBe(true);
     expect(res.deploymentUrl).toBe("https://trackly-preview.vercel.app");
     expect(res.issueKeys).toContain("TRK-123");

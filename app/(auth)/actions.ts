@@ -9,7 +9,19 @@ const signupSchema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   siteName: z.string().min(1, "Site name is required"),
+  inviteToken: z.string().optional(),
+  callbackUrl: z.string().optional(),
 });
+
+/**
+ * Only same-origin paths are accepted as a post-signup destination. An
+ * attacker-supplied absolute URL here would turn signup into an open redirect,
+ * and `//evil.com` is a protocol-relative URL, not a local path.
+ */
+function safeCallback(raw?: string): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/your-work";
+  return raw;
+}
 
 export async function signupAction(_prev: { error?: string }, formData: FormData) {
   const parsed = signupSchema.safeParse(Object.fromEntries(formData));
@@ -18,9 +30,19 @@ export async function signupAction(_prev: { error?: string }, formData: FormData
     await createAccount(parsed.data);
   } catch (e) {
     if (e instanceof Error && e.message === "EMAIL_TAKEN") return { error: "An account with this email already exists" };
+    if (e instanceof Error && e.message === "INVITE_INVALID") {
+      return { error: "This invitation is not valid for that email address, or it has expired." };
+    }
     throw e;
   }
-  await signIn("credentials", { email: parsed.data.email, password: parsed.data.password, redirectTo: "/your-work" });
+  // Honour the invite's callbackUrl. This previously always sent the user to
+  // /your-work, so an invited user never reached /invite/[token] and their
+  // invite was never accepted through the token-checked path.
+  await signIn("credentials", {
+    email: parsed.data.email,
+    password: parsed.data.password,
+    redirectTo: safeCallback(parsed.data.callbackUrl),
+  });
   return {};
 }
 

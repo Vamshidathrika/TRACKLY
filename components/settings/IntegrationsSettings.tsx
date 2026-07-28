@@ -17,8 +17,7 @@ import {
   testIntegrationConnection,
   generateWebhookSecret,
 } from "@/lib/integrations/actions";
-import type { IntegrationProvider, IntegrationCategory } from "@/lib/integrations/types";
-import type { IntegrationConnection } from "@/lib/integrations/actions";
+import type { IntegrationProvider, IntegrationCategory, IntegrationConnection } from "@/lib/integrations/types";
 
 // ─────────────────────────────────────────────────────────────────
 // Figma SVG Icon

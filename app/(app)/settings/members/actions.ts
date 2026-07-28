@@ -39,6 +39,28 @@ export async function inviteMemberAction(
 
 export async function updateMemberRoleAction(membershipId: string, role: Role) {
   try {
+    // membershipId comes from the client. Without these checks any authenticated
+    // user could pass their own membership id with "ADMIN" and self-promote, or
+    // pass a foreign id and rewrite roles in a workspace they do not belong to.
+    const { siteId, userId } = await requireAdmin();
+
+    const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
+    if (!membership || membership.siteId !== siteId) {
+      return { error: "Membership not found" };
+    }
+
+    if (membership.role === "ADMIN" && role !== "ADMIN") {
+      const otherAdmins = await prisma.membership.count({
+        where: { siteId, role: "ADMIN", id: { not: membershipId } },
+      });
+      if (otherAdmins === 0) {
+        return { error: "You cannot remove the last admin of this workspace" };
+      }
+      if (membership.userId === userId) {
+        return { error: "You cannot change your own admin role" };
+      }
+    }
+
     await updateMemberRole(membershipId, role);
     revalidatePath("/settings/members");
     revalidatePath("/teams");
@@ -86,8 +108,11 @@ export async function removeMemberAction(targetUserId: string) {
 
 export async function revokeInviteAction(inviteId: string) {
   try {
-    await requireAdmin();
-    await prisma.invite.delete({ where: { id: inviteId } });
+    const { siteId } = await requireAdmin();
+    // Scope the delete to the admin's own workspace — being an admin somewhere
+    // must not grant the ability to revoke another tenant's invites by id.
+    const res = await prisma.invite.deleteMany({ where: { id: inviteId, siteId } });
+    if (res.count === 0) return { error: "Invite not found" };
     revalidatePath("/settings/members");
     revalidatePath("/teams");
     return { success: true };
@@ -100,8 +125,8 @@ export async function revokeInviteAction(inviteId: string) {
 export async function resendInviteAction(inviteId: string) {
   try {
     const user = await getAuthUser();
-    const { siteName } = await requireAdmin();
-    const invite = await prisma.invite.findUnique({ where: { id: inviteId } });
+    const { siteName, siteId } = await requireAdmin();
+    const invite = await prisma.invite.findFirst({ where: { id: inviteId, siteId } });
     if (!invite) return { error: "Invite not found" };
 
     const baseUrl = process.env.AUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");

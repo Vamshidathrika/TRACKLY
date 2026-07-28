@@ -1,3 +1,14 @@
+export type IntegrationConnection = {
+  provider: string;
+  status: "CONNECTED" | "DISCONNECTED" | "ERROR";
+  accountName?: string | null;
+  accountAvatar?: string | null;
+  webhookSecret?: string | null;
+  webhookUrl?: string | null;
+  connectedAt?: Date | null;
+  metadata?: string | null;
+};
+
 export type IntegrationProvider =
   | "GITHUB"
   | "GITLAB"
