@@ -203,16 +203,14 @@ export async function deleteProject(siteId: string, projectId: string, deletingU
     }
   }
 
-  // Clean up all related models explicitly so no dangling references remain in Starred or Recent lists
-  await prisma.star?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.projectMember?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.customField?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.automationRule?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.sprint?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.issue?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.invite?.deleteMany({ where: { projectId } }).catch(() => {});
-  await prisma.gitRepository?.deleteMany({ where: { projectId } }).catch(() => {});
-
+  // Star, ProjectMember, CustomField, AutomationRule, Sprint, Issue, Invite and
+  // GitRepository all declare `onDelete: Cascade` on their project relation, so
+  // the database removes them atomically with the project row.
+  //
+  // This used to be eight sequential deleteMany calls, each wrapped in
+  // `.catch(() => {})`, outside any transaction. A failure partway through was
+  // swallowed: the members, fields, rules and sprints were already gone while
+  // the project row survived, gutted, and the caller saw success.
   await prisma.project.delete({ where: { id: projectId } });
 
   await delCache(`site:projects:${siteId}`);

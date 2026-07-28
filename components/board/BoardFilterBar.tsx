@@ -93,6 +93,7 @@ function BoardFilterBarComponent({
                 }`}
               >
                 <Avatar name={u.name} src={u.avatarUrl} size={26} />
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-surface" />
               </button>
             );
           })}

@@ -34,11 +34,15 @@ export function parseJQLToPrisma(jql: string): Record<string, any> {
     if (notEqualsMatch) {
       const [, field, val] = notEqualsMatch;
       const f = field.toLowerCase();
+      // Enum values are stored underscore-delimited ("IN_PROGRESS"), so "In Review"
+      // and "in-review" both normalise. Keys and project keys must NOT be normalised:
+      // "DEMO-1" would become "DEMO_1" and match nothing.
       const norm = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+      const plain = val.trim().toUpperCase();
       if (f === "status") where.status = { not: norm as IssueStatus };
       if (f === "type") where.type = { not: norm as IssueType };
       if (f === "priority") where.priority = { not: norm as IssuePriority };
-      if (f === "project") where.project = { key: { not: norm } };
+      if (f === "project") where.project = { key: { not: plain } };
       continue;
     }
 
@@ -48,11 +52,12 @@ export function parseJQLToPrisma(jql: string): Record<string, any> {
       const [, field, val] = equalsMatch;
       const f = field.toLowerCase();
       const norm = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+      const plain = val.trim().toUpperCase();
       if (f === "status") where.status = norm as IssueStatus;
       if (f === "type") where.type = norm as IssueType;
       if (f === "priority") where.priority = norm as IssuePriority;
-      if (f === "project") where.project = { key: norm };
-      if (f === "key") where.key = norm;
+      if (f === "project") where.project = { key: plain };
+      if (f === "key") where.key = plain;
       continue;
     }
   }

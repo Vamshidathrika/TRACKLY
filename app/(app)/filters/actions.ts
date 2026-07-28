@@ -12,10 +12,12 @@ export async function executeJQLQueryAction(jql: string) {
 
   const whereClause = parseJQLToPrisma(jql);
 
+  // AND, not spread: a JQL "project = X" clause also produces a `project` key,
+  // and `{ project: { siteId }, ...whereClause }` would let it silently
+  // overwrite the siteId scope — searching every workspace for that key.
   return prisma.issue.findMany({
     where: {
-      project: { siteId },
-      ...whereClause,
+      AND: [{ project: { siteId } }, whereClause],
     },
     include: {
       project: { select: { key: true, name: true } },

@@ -13,6 +13,12 @@ type WorkflowScheme = {
   rules: string[];
 };
 
+/**
+ * No WorkflowScheme model exists — statuses are Trackly's fixed IssueStatus
+ * enum, not yet configurable per board. "Make Default" below only affects
+ * this browser's view of this reference list; it does not change what any
+ * board actually uses.
+ */
 export function WorkflowSchemesView() {
   const [schemes, setSchemes] = useState<WorkflowScheme[]>(() => {
     if (typeof window !== "undefined") {
@@ -62,7 +68,7 @@ export function WorkflowSchemesView() {
     if (typeof window !== "undefined") {
       localStorage.setItem("trackly_workflow_schemes", JSON.stringify(next));
     }
-    showToast(`"${name}" is now the default workflow scheme.`);
+    showToast(`Marked "${name}" as default in this browser only — boards are unaffected.`);
   };
 
   return (
@@ -79,7 +85,10 @@ export function WorkflowSchemesView() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-default">Workflow Schemes & Transition Post-Functions</h2>
-          <p className="text-xs text-subtle">Define board status lifecycle pipelines, transition validators, and automated post-functions</p>
+          <p className="text-xs text-subtle">
+            Reference examples of how workflow schemes could look. Not yet configurable — every
+            board currently uses the same fixed To Do / In Progress / In Review / Done pipeline.
+          </p>
         </div>
       </div>
 

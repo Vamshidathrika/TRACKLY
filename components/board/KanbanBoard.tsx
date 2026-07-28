@@ -389,6 +389,7 @@ export function KanbanBoard({
                     onSelectIssue={setSelectedIssue}
                     availableUsers={boardUsers}
                     currentUserId={currentUserId}
+                    isAdmin={isOwnerOrAdmin}
                     projectId={projectId}
                     projectKey={projectKey}
                     onQuickCreated={handleQuickCreated}
@@ -402,6 +403,7 @@ export function KanbanBoard({
                     onSelectIssue={setSelectedIssue}
                     availableUsers={boardUsers}
                     currentUserId={currentUserId}
+                    isAdmin={isOwnerOrAdmin}
                     projectId={projectId}
                     projectKey={projectKey}
                     onQuickCreated={handleQuickCreated}
@@ -415,6 +417,7 @@ export function KanbanBoard({
                     onSelectIssue={setSelectedIssue}
                     availableUsers={boardUsers}
                     currentUserId={currentUserId}
+                    isAdmin={isOwnerOrAdmin}
                     projectId={projectId}
                     projectKey={projectKey}
                     onQuickCreated={handleQuickCreated}
@@ -427,6 +430,7 @@ export function KanbanBoard({
                     onSelectIssue={setSelectedIssue}
                     availableUsers={boardUsers}
                     currentUserId={currentUserId}
+                    isAdmin={isOwnerOrAdmin}
                     projectId={projectId}
                     projectKey={projectKey}
                     onQuickCreated={handleQuickCreated}
@@ -470,6 +474,7 @@ export function KanbanBoard({
                               onSelectIssue={setSelectedIssue}
                               availableUsers={boardUsers}
                               currentUserId={currentUserId}
+                              isAdmin={isOwnerOrAdmin}
                               projectId={projectId}
                               projectKey={projectKey}
                               onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
@@ -483,6 +488,7 @@ export function KanbanBoard({
                               onSelectIssue={setSelectedIssue}
                               availableUsers={boardUsers}
                               currentUserId={currentUserId}
+                              isAdmin={isOwnerOrAdmin}
                               projectId={projectId}
                               projectKey={projectKey}
                               onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
@@ -496,6 +502,7 @@ export function KanbanBoard({
                               onSelectIssue={setSelectedIssue}
                               availableUsers={boardUsers}
                               currentUserId={currentUserId}
+                              isAdmin={isOwnerOrAdmin}
                               projectId={projectId}
                               projectKey={projectKey}
                               onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}
@@ -508,6 +515,7 @@ export function KanbanBoard({
                               onSelectIssue={setSelectedIssue}
                               availableUsers={boardUsers}
                               currentUserId={currentUserId}
+                              isAdmin={isOwnerOrAdmin}
                               projectId={projectId}
                               projectKey={projectKey}
                               onQuickCreated={(newIssue) => setIssues((prev) => [newIssue, ...prev])}

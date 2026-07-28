@@ -23,10 +23,10 @@ import { TypeIcon } from "@/components/ui/TypeIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { DashboardCard } from "./DashboardCard";
-import { PieChartGadget } from "./PieChartGadget";
-import { CreatedVsResolvedGadget } from "./CreatedVsResolvedGadget";
-import { SprintHealthGadget } from "./SprintHealthGadget";
-import { AIRiskDetectorGadget } from "./AIRiskDetectorGadget";
+import { PieChartGadget, type DistributionSlice } from "./PieChartGadget";
+import { CreatedVsResolvedGadget, type CreatedVsResolvedPoint } from "./CreatedVsResolvedGadget";
+import { SprintHealthGadget, type SprintHealthData } from "./SprintHealthGadget";
+import { AIRiskDetectorGadget, type RiskItem } from "./AIRiskDetectorGadget";
 import { JQLFilterResultsGadget } from "./JQLFilterResultsGadget";
 
 import {
@@ -109,6 +109,9 @@ export function DashboardView({
   epics = [],
   unassignedCount = 0,
   projectKey,
+  sprintHealth,
+  createdVsResolved,
+  risks,
 }: {
   statusCounts: Record<string, number>;
   priorityCounts: Record<string, number>;
@@ -120,6 +123,9 @@ export function DashboardView({
   epics?: EpicProgressItem[];
   unassignedCount?: number;
   projectKey?: string;
+  sprintHealth: SprintHealthData;
+  createdVsResolved: CreatedVsResolvedPoint[];
+  risks: RiskItem[];
 }) {
   const [layout, setLayout] = useState<LayoutFormat>("HALF");
   const [autoRefresh, setAutoRefresh] = useState<number>(0);
@@ -139,6 +145,42 @@ export function DashboardView({
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const priorityColors: Record<string, string> = {
+    HIGHEST: "bg-rose-500",
+    HIGH: "bg-amber-500",
+    MEDIUM: "bg-blue-500",
+    LOW: "bg-emerald-500",
+    LOWEST: "bg-neutral-500",
+  };
+  const statusColors: Record<string, string> = {
+    TO_DO: "bg-neutral-500",
+    IN_PROGRESS: "bg-blue-500",
+    IN_REVIEW: "bg-purple-500",
+    DONE: "bg-emerald-500",
+  };
+  const assigneeColors = ["bg-brand", "bg-purple-500", "bg-sky-500", "bg-amber-500", "bg-rose-500", "bg-emerald-500"];
+
+  const distributionData: Record<"PRIORITY" | "STATUS" | "ASSIGNEE", DistributionSlice[]> = {
+    PRIORITY: Object.entries(priorityCounts).map(([label, count]) => ({
+      label,
+      count,
+      color: priorityColors[label] ?? "bg-neutral-500",
+    })),
+    STATUS: Object.entries(statusCounts).map(([label, count]) => ({
+      label,
+      count,
+      color: statusColors[label] ?? "bg-neutral-500",
+    })),
+    ASSIGNEE: [
+      ...memberWorkloads.map((m, idx) => ({
+        label: m.name,
+        count: m.count,
+        color: assigneeColors[idx % assigneeColors.length],
+      })),
+      ...(unassignedCount > 0 ? [{ label: "Unassigned", count: unassignedCount, color: "bg-neutral-400" }] : []),
+    ],
   };
 
   // Auto-refresh timer simulation
@@ -246,10 +288,10 @@ export function DashboardView({
 
       {/* 2. Superpowers Jira Gadgets Row */}
       <div className={getGridClass()}>
-        {enabledGadgets.pie_chart && <PieChartGadget />}
-        {enabledGadgets.created_vs_resolved && <CreatedVsResolvedGadget />}
-        {enabledGadgets.sprint_health && <SprintHealthGadget />}
-        {enabledGadgets.ai_risks && <AIRiskDetectorGadget />}
+        {enabledGadgets.pie_chart && <PieChartGadget data={distributionData} />}
+        {enabledGadgets.created_vs_resolved && <CreatedVsResolvedGadget points={createdVsResolved} />}
+        {enabledGadgets.sprint_health && <SprintHealthGadget data={sprintHealth} />}
+        {enabledGadgets.ai_risks && <AIRiskDetectorGadget risks={risks} />}
         {enabledGadgets.jql_filter && <JQLFilterResultsGadget />}
       </div>
 

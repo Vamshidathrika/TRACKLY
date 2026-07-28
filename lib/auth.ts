@@ -111,36 +111,11 @@ export const getAuthUser = cache(async (): Promise<AuthUser> => {
     });
 
     if (dbUser) {
-      const pendingInvite = await prisma.invite.findFirst({
-        where: {
-          email: dbUser.email.toLowerCase(),
-          acceptedAt: null,
-          expiresAt: { gt: new Date() },
-        },
-      });
-
-      if (pendingInvite) {
-        await prisma.$transaction([
-          prisma.membership.upsert({
-            where: { userId_siteId: { userId: dbUser.id, siteId: pendingInvite.siteId } },
-            create: { userId: dbUser.id, siteId: pendingInvite.siteId, role: pendingInvite.role },
-            update: {},
-          }),
-          prisma.invite.update({ where: { id: pendingInvite.id }, data: { acceptedAt: new Date() } }),
-        ]);
-
-        // Grant per-project access based on invite type
-        const { grantProjectAccess, grantAllProjectAccess } = await import("./tenant");
-        if (pendingInvite.projectId) {
-          await grantProjectAccess(pendingInvite.projectId, dbUser.id);
-        } else {
-          await grantAllProjectAccess(pendingInvite.siteId, dbUser.id);
-        }
-
-        const { delCache } = await import("./redis");
-        await delCache(`user:chrome:${dbUser.id}`);
-      }
-
+      // Invite acceptance happens ONLY at /invite/[token], which requires the
+      // caller to hold the secret token. This used to also auto-accept the
+      // first unexpired invite matching the user's email on every request —
+      // meaning anyone who knew your email could invite you into their
+      // workspace and you'd silently join it just by using the app.
       const authUser: AuthUser = {
         id: dbUser.id,
         name: dbUser.name,

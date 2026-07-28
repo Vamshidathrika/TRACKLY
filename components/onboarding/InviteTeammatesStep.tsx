@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Shield, ArrowRight, ArrowLeft, Mail, Sparkles } from "lucide-react";
+import { Shield, ArrowRight, ArrowLeft, Mail, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export function InviteTeammatesStep({
@@ -14,17 +14,6 @@ export function InviteTeammatesStep({
   onBack: () => void;
 }) {
   const [emailsText, setEmailsText] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  const inviteLink = `https://trackly.dev/invite/join?space=${encodeURIComponent(
-    projectName.toLowerCase().replace(/\s+/g, "-")
-  )}`;
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleInviteSubmit = (isSkip = false) => {
     if (isSkip) {
@@ -54,34 +43,19 @@ export function InviteTeammatesStep({
         </p>
       </div>
 
-      {/* Shareable Link Card */}
-      <div className="rounded-xl border border-border bg-surface p-4 shadow-xs flex flex-col gap-2.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-text-subtle font-mono">
-          Shareable Workspace Link
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            readOnly
-            value={inviteLink}
-            className="flex-1 rounded-lg border border-border bg-neutral/60 px-3 py-2 text-xs font-mono text-text-subtle select-all"
-          />
-          <Button
-            appearance="subtle"
-            onClick={handleCopyLink}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold shrink-0"
-          >
-            {copied ? (
-              <>
-                <Check size={14} className="text-emerald-500" /> Copied!
-              </>
-            ) : (
-              <>
-                <Copy size={14} /> Copy link
-              </>
-            )}
-          </Button>
-        </div>
+      {/* This card used to show a "Shareable Workspace Link" pointing at
+          https://trackly.dev/invite/join?space=<slug> — a domain and route this
+          app does not serve. Anyone pasting it into Slack sent their team to a
+          dead URL. There is also no workspace to link to yet: it is created when
+          this wizard is submitted. Invites are per-recipient and tokenised, so
+          the email field below is the real mechanism. */}
+      <div className="rounded-xl border border-border bg-brand/5 p-4 flex items-start gap-2.5">
+        <Shield size={15} className="text-brand shrink-0 mt-0.5" aria-hidden />
+        <p className="text-xs text-text-subtle leading-relaxed">
+          Each teammate gets their own single-use invite link, valid for 7 days. Add their
+          addresses below, or invite them any time from{" "}
+          <span className="font-semibold text-text">Settings &rsaquo; Members</span>.
+        </p>
       </div>
 
       {/* Email Invite Box */}

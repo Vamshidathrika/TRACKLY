@@ -150,6 +150,23 @@ export const checkProjectAccess = cache(
 );
 
 /**
+ * Access check for operations that reconfigure a board rather than use it —
+ * membership changes, custom fields, rename/re-key, repo connections.
+ *
+ * Returns null when the user cannot administer the project. Callers must treat
+ * null as a refusal: plain `checkProjectAccess` only proves the user can SEE
+ * the board, which is not enough to change who else can.
+ */
+export const checkProjectAdmin = cache(
+  async (userId: string, projectId: string): Promise<ProjectContext | null> => {
+    const access = await checkProjectAccess(userId, projectId);
+    if (!access) return null;
+    if (access.projectRole !== "ADMIN" && access.projectRole !== "WORKSPACE_ADMIN") return null;
+    return access;
+  }
+);
+
+/**
  * Like checkProjectAccess but redirects to /your-work on failure.
  */
 export const requireProjectAccess = cache(

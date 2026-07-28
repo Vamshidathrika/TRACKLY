@@ -1,81 +1,32 @@
 "use server";
 
+/**
+ * CLIENT-CALLABLE ACTIONS ONLY.
+ *
+ * Every export in a "use server" file is a public endpoint reachable by any
+ * authenticated user with a crafted POST — the client component that imports
+ * this file cannot restrict that. So each export below must resolve its own
+ * siteId from a tenant guard and must never accept one from the caller.
+ *
+ * Crypto helpers live in ./crypto, and siteId-parameterised persistence lives
+ * in ./store. Both are plain server modules, deliberately not actions.
+ */
+
 import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/tenant";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
+import { encryptToken } from "./crypto";
+import type { IntegrationConnection } from "./types";
 
 // ─────────────────────────────────────────────────────────────────
-// Types
+// READ: Connection states for the CALLER'S OWN site
 // ─────────────────────────────────────────────────────────────────
 
-export type IntegrationConnection = {
-  provider: string;
-  status: "CONNECTED" | "DISCONNECTED" | "ERROR";
-  accountName?: string | null;
-  accountAvatar?: string | null;
-  webhookSecret?: string | null;
-  webhookUrl?: string | null;
-  connectedAt?: Date | null;
-  metadata?: string | null;
-};
-
-// ─────────────────────────────────────────────────────────────────
-// Encryption helpers (AES-256-GCM via INTEGRATION_SECRET env var)
-// ─────────────────────────────────────────────────────────────────
-
-function getEncryptionKey(): Buffer {
-  const secret = process.env.INTEGRATION_SECRET || "trackly-integration-secret-dev-32b";
-  return crypto.scryptSync(secret, "trackly-salt", 32);
-}
-
-export async function encryptToken(plaintext: string): Promise<string> {
-  const iv = crypto.randomBytes(12);
-  const key = getEncryptionKey();
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return [iv.toString("hex"), tag.toString("hex"), encrypted.toString("hex")].join(":");
-}
-
-export async function decryptToken(ciphertext: string): Promise<string> {
-  try {
-    const [ivHex, tagHex, encHex] = ciphertext.split(":");
-    const iv = Buffer.from(ivHex, "hex");
-    const tag = Buffer.from(tagHex, "hex");
-    const encrypted = Buffer.from(encHex, "hex");
-    const key = getEncryptionKey();
-    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-    decipher.setAuthTag(tag);
-    return decipher.update(encrypted) + decipher.final("utf8");
-  } catch {
-    return "";
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// READ: Fetch all connection states for a site
-// ─────────────────────────────────────────────────────────────────
-
-export async function getIntegrationConnections(siteId: string): Promise<IntegrationConnection[]> {
-  const rows = await prisma.siteIntegration.findMany({
-    where: { siteId },
-    select: {
-      provider: true,
-      status: true,
-      accountName: true,
-      accountAvatar: true,
-      webhookSecret: true,
-      webhookUrl: true,
-      connectedAt: true,
-      metadata: true,
-    },
-  });
-
-  return rows.map((r) => ({
-    ...r,
-    status: r.status as "CONNECTED" | "DISCONNECTED" | "ERROR",
-  }));
+export async function getMyIntegrationConnections(): Promise<IntegrationConnection[]> {
+  const { siteId } = await requireMembership();
+  const { getIntegrationConnections } = await import("./store");
+  return getIntegrationConnections(siteId);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -90,7 +41,7 @@ export async function saveApiKeyIntegration(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { siteId } = await requireMembership();
-    const encryptedKey = await encryptToken(apiKey);
+    const encryptedKey = encryptToken(apiKey);
 
     await prisma.siteIntegration.upsert({
       where: { siteId_provider: { siteId, provider } },
@@ -126,47 +77,6 @@ export async function saveApiKeyIntegration(
 }
 
 // ─────────────────────────────────────────────────────────────────
-// WRITE: Save an OAuth-based integration after callback
-// ─────────────────────────────────────────────────────────────────
-
-export async function saveOAuthIntegration(
-  siteId: string,
-  provider: string,
-  accessToken: string,
-  accountName: string,
-  accountAvatar?: string,
-  refreshToken?: string,
-  metadata?: string
-): Promise<void> {
-  const encryptedAccess = await encryptToken(accessToken);
-  const encryptedRefresh = refreshToken ? await encryptToken(refreshToken) : null;
-
-  await prisma.siteIntegration.upsert({
-    where: { siteId_provider: { siteId, provider } },
-    create: {
-      siteId,
-      provider,
-      status: "CONNECTED",
-      accessToken: encryptedAccess,
-      refreshToken: encryptedRefresh,
-      accountName,
-      accountAvatar: accountAvatar || null,
-      metadata: metadata || null,
-      connectedAt: new Date(),
-    },
-    update: {
-      status: "CONNECTED",
-      accessToken: encryptedAccess,
-      refreshToken: encryptedRefresh,
-      accountName,
-      accountAvatar: accountAvatar || null,
-      metadata: metadata || null,
-      connectedAt: new Date(),
-    },
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────
 // DELETE: Disconnect / revoke an integration
 // ─────────────────────────────────────────────────────────────────
 
@@ -196,6 +106,9 @@ export async function testIntegrationConnection(
   apiKey: string
 ): Promise<{ success: boolean; accountName?: string; accountAvatar?: string; error?: string }> {
   try {
+    // Makes outbound requests with a caller-supplied credential — gate it so it
+    // cannot be driven by an unauthenticated caller as a request relay.
+    await requireMembership();
     const cleanKey = apiKey.trim();
 
     switch (provider.toUpperCase()) {
@@ -382,19 +295,7 @@ export async function testIntegrationConnection(
 export async function generateWebhookSecret(
   provider: string
 ): Promise<{ secret: string }> {
+  await requireMembership();
   const secret = `whsec_${provider.toLowerCase()}_${crypto.randomBytes(20).toString("hex")}`;
   return { secret };
-}
-
-// ─────────────────────────────────────────────────────────────────
-// UTIL: Get decrypted access token (server-only — never sent to client)
-// ─────────────────────────────────────────────────────────────────
-
-export async function getDecryptedToken(siteId: string, provider: string): Promise<string | null> {
-  const row = await prisma.siteIntegration.findUnique({
-    where: { siteId_provider: { siteId, provider } },
-    select: { accessToken: true },
-  });
-  if (!row?.accessToken) return null;
-  return await decryptToken(row.accessToken);
 }

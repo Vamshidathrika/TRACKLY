@@ -40,14 +40,23 @@ export async function deleteCustomField(fieldId: string) {
   });
 }
 
+import { delCache } from "./redis";
+
 export async function updateMemberRole(membershipId: string, role: Role) {
-  return prisma.membership.update({
+  const updated = await prisma.membership.update({
     where: { id: membershipId },
     data: { role },
   });
-}
 
-import { delCache } from "./redis";
+  // getChromeData caches the user's project list for 5 minutes, and an ADMIN's
+  // list is derived from workspace-wide visibility. Without this bust, a user
+  // demoted to MEMBER keeps their admin sidebar — and links into every board —
+  // until the TTL expires. removeWorkspaceMember already does this.
+  await delCache(`user:chrome:${updated.userId}`).catch(() => {});
+  await delCache(`site:projects:${updated.siteId}`).catch(() => {});
+
+  return updated;
+}
 
 export async function removeWorkspaceMember(siteId: string, userId: string) {
   // 1. Unassign all issues assigned to this user across all projects in the site so they disappear from board issues

@@ -212,7 +212,9 @@ export async function processBranchEvent(payload: any, siteId: string, action: "
   }
 }
 
-export async function processGithubWebhook(headers: Headers, payload: any, siteId = "demo-site") {
+// siteId has no default on purpose: a caller that fails to resolve a real
+// tenant must hit a compile error, not silently write into a fake "demo-site".
+export async function processGithubWebhook(headers: Headers, payload: any, siteId: string) {
   const eventHeader = headers.get("x-github-event") || "push";
   if (eventHeader === "push") {
     await processPushEvent(payload, siteId);

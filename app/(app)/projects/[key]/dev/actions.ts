@@ -3,7 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkProjectAccess, checkProjectAdmin } from "@/lib/tenant";
 import { fetchGithubRepoStats, validateAndSyncGithubRepo } from "@/lib/github";
+
+/**
+ * Resolves a repository and confirms the caller may administer the project that
+ * owns it. Every action here takes a bare `repositoryId` from the client, and a
+ * GitRepository row carries a stored access token — without this check, passing
+ * a foreign id lets an attacker repoint another tenant's repo while that
+ * tenant's credential is used to fetch it.
+ */
+async function requireRepoAdmin(userId: string, repositoryId: string) {
+  const repo = await prisma.gitRepository.findUnique({ where: { id: repositoryId } });
+  if (!repo) return { error: "Repository not found" as const };
+  if (!(await checkProjectAdmin(userId, repo.projectId))) {
+    return { error: "Only board owners and workspace admins can manage repositories" as const };
+  }
+  return { repo };
+}
 
 export async function connectGithubRepoAction(input: {
   projectId: string;
@@ -11,7 +28,7 @@ export async function connectGithubRepoAction(input: {
   repoName: string;
   accessToken?: string;
 }) {
-  await getAuthUser();
+  const user = await getAuthUser();
   if (!input.owner.trim() || !input.repoName.trim()) {
     return { error: "Owner and repository name are required" };
   }
@@ -25,6 +42,12 @@ export async function connectGithubRepoAction(input: {
       select: { siteId: true },
     });
     if (!project) return { error: "Project not found" };
+
+    // The project was previously read only to lift its siteId — the client's
+    // projectId was never checked against the caller.
+    if (!(await checkProjectAdmin(user.id, input.projectId))) {
+      return { error: "Only board owners and workspace admins can connect repositories" };
+    }
 
     const syncRes = await validateAndSyncGithubRepo({
       owner,
@@ -56,12 +79,11 @@ export async function connectGithubRepoAction(input: {
 }
 
 export async function syncGithubRepoAction(repositoryId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
-    const repo = await prisma.gitRepository.findUnique({
-      where: { id: repositoryId },
-    });
-    if (!repo) return { error: "Repository not found" };
+    const guard = await requireRepoAdmin(user.id, repositoryId);
+    if ("error" in guard) return { error: guard.error };
+    const { repo } = guard;
 
     const syncRes = await validateAndSyncGithubRepo({
       repositoryId: repo.id,
@@ -90,12 +112,11 @@ export async function updateGithubRepoAction(input: {
   repoName?: string;
   accessToken?: string;
 }) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
-    const existing = await prisma.gitRepository.findUnique({
-      where: { id: input.repositoryId },
-    });
-    if (!existing) return { error: "Repository not found" };
+    const guard = await requireRepoAdmin(user.id, input.repositoryId);
+    if ("error" in guard) return { error: guard.error };
+    const existing = guard.repo;
 
     const targetOwner = input.owner?.trim() || existing.owner;
     const targetRepoName = input.repoName?.trim() || existing.repoName;
@@ -123,8 +144,11 @@ export async function updateGithubRepoAction(input: {
 }
 
 export async function disconnectGithubRepoAction(repositoryId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
+    const guard = await requireRepoAdmin(user.id, repositoryId);
+    if ("error" in guard) return { error: guard.error };
+
     await prisma.gitRepository.delete({
       where: { id: repositoryId },
     });
@@ -136,9 +160,28 @@ export async function disconnectGithubRepoAction(repositoryId: string) {
   }
 }
 
+const EMPTY_DEV_DASHBOARD = {
+  hasConnectedRepo: false,
+  repos: [] as { id: string; owner: string; repoName: string; createdAt: Date }[],
+  webhookLogs: [] as any[],
+  stats: {
+    activeBranches: 0,
+    openPRs: 0,
+    mergedPRs: 0,
+    pipelineStatus: "Idle",
+    commits: [] as any[],
+  },
+};
+
 export async function fetchDevDashboardDataAction(projectId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
+    // Returns commit messages, PR titles, author names and the site's webhook
+    // log — read access to the board is the minimum bar for seeing any of it.
+    if (!(await checkProjectAccess(user.id, projectId))) {
+      return EMPTY_DEV_DASHBOARD;
+    }
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: { siteId: true, key: true },

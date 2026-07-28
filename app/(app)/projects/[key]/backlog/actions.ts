@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSprint, updateSprint, startSprint, completeSprint, moveIssueToSprint } from "@/lib/sprints";
 import { createIssue, updateIssue } from "@/lib/issues";
 import { getAuthUser } from "@/lib/auth";
+import { checkProjectAccess } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import type { IssueStatus, IssuePriority, IssueType } from "@prisma/client";
 
@@ -15,6 +16,12 @@ export async function createSprintAction(
   endDate?: string
 ) {
   try {
+    const user = await getAuthUser();
+    // Never trust a client-supplied projectId — resolve it and verify the caller
+    // actually belongs to that project before creating anything under it.
+    const access = await checkProjectAccess(user.id, projectId);
+    if (!access) return { error: "You don't have access to this project" };
+
     const sprint = await createSprint({
       projectId,
       name,
@@ -35,6 +42,19 @@ export async function updateSprintAction(
   data: { name?: string; goal?: string; startDate?: string; endDate?: string }
 ) {
   try {
+    const user = await getAuthUser();
+    // sprintId is client-supplied and server actions are reachable by global
+    // action id regardless of route — resolve the sprint's project ourselves,
+    // never trust that the caller is actually looking at this project's board.
+    const existingSprint = await prisma.sprint.findUnique({
+      where: { id: sprintId },
+      select: { projectId: true },
+    });
+    if (!existingSprint) return { error: "Sprint not found" };
+
+    const access = await checkProjectAccess(user.id, existingSprint.projectId);
+    if (!access) return { error: "You don't have access to this project" };
+
     const sprint = await updateSprint(sprintId, {
       name: data.name,
       goal: data.goal,
@@ -51,6 +71,16 @@ export async function updateSprintAction(
 
 export async function startSprintAction(sprintId: string, goal?: string) {
   try {
+    const user = await getAuthUser();
+    const existingSprint = await prisma.sprint.findUnique({
+      where: { id: sprintId },
+      select: { projectId: true },
+    });
+    if (!existingSprint) return { error: "Sprint not found" };
+
+    const access = await checkProjectAccess(user.id, existingSprint.projectId);
+    if (!access) return { error: "You don't have access to this project" };
+
     await startSprint(sprintId, { goal });
     revalidatePath("/projects");
     return { success: true };
@@ -62,6 +92,20 @@ export async function startSprintAction(sprintId: string, goal?: string) {
 
 export async function completeSprintAction(sprintId: string) {
   try {
+    const user = await getAuthUser();
+    // Without this, POSTing a bare Next-Action header with a victim's sprintId
+    // and no session would close another tenant's active sprint and dump all
+    // of its incomplete work back to backlog — see lib/tenant.ts for why
+    // client-supplied ids must always be resolved and checked, never trusted.
+    const existingSprint = await prisma.sprint.findUnique({
+      where: { id: sprintId },
+      select: { projectId: true },
+    });
+    if (!existingSprint) return { error: "Sprint not found" };
+
+    const access = await checkProjectAccess(user.id, existingSprint.projectId);
+    if (!access) return { error: "You don't have access to this project" };
+
     await completeSprint(sprintId);
     revalidatePath("/projects");
     return { success: true };
@@ -73,6 +117,29 @@ export async function completeSprintAction(sprintId: string) {
 
 export async function moveIssueToSprintAction(issueId: string, sprintId: string | null) {
   try {
+    const user = await getAuthUser();
+    const issue = await prisma.issue.findUnique({
+      where: { id: issueId },
+      select: { projectId: true },
+    });
+    if (!issue) return { error: "Issue not found" };
+
+    const access = await checkProjectAccess(user.id, issue.projectId);
+    if (!access) return { error: "You don't have access to this project" };
+
+    // The target sprint must belong to the SAME project as the issue — otherwise
+    // proving access to the issue's project would be enough to dangle it into an
+    // arbitrary sprint id from a different tenant's project.
+    if (sprintId) {
+      const targetSprint = await prisma.sprint.findUnique({
+        where: { id: sprintId },
+        select: { projectId: true },
+      });
+      if (!targetSprint || targetSprint.projectId !== issue.projectId) {
+        return { error: "Sprint not found in this project" };
+      }
+    }
+
     await moveIssueToSprint(issueId, sprintId);
     revalidatePath("/projects");
     return { success: true };

@@ -35,30 +35,53 @@ export async function createIssue(input: {
   dueDate?: Date;
   labels?: string[];
 }) {
+  // The counter is bumped by atomic increment (below), but other write paths
+  // create issues without advancing it, so it can sit behind MAX(number).
+  // Retry past that drift instead of surfacing the unique violation — each
+  // attempt increments again, so the counter self-heals and concurrent
+  // creates still never land on the same number.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await createIssueOnce(input);
+    } catch (e: any) {
+      if (e?.code === "P2002" && attempt < 5) continue;
+      throw e;
+    }
+  }
+}
+
+async function createIssueOnce(input: {
+  projectId: string;
+  summary: string;
+  description?: string;
+  type?: IssueType;
+  status?: IssueStatus;
+  priority?: IssuePriority;
+  storyPoints?: number;
+  originalEstimate?: number;
+  reporterId: string;
+  assigneeId?: string;
+  parentId?: string;
+  sprintId?: string;
+  dueDate?: Date;
+  labels?: string[];
+}) {
   return prisma.$transaction(async (tx) => {
     const project = await tx.project.findUnique({
       where: { id: input.projectId },
     });
     if (!project) throw new Error("PROJECT_NOT_FOUND");
 
-    const maxIssue = tx.issue?.findFirst
-      ? await tx.issue.findFirst({
-          where: { projectId: input.projectId },
-          orderBy: { number: "desc" },
-          select: { number: true },
-        })
-      : null;
-
-    const currentCounter = project.issueCounter || 0;
-    const maxNumber = maxIssue?.number || 0;
-    const nextNumber = Math.max(currentCounter, maxNumber) + 1;
-
-    await tx.project.update({
+    // Allocate atomically: reading the counter and writing back an absolute
+    // value let two concurrent creates pick the same number and collide on
+    // @@unique([projectId, number]).
+    const counted = await tx.project.update({
       where: { id: input.projectId },
-      data: { issueCounter: nextNumber },
+      data: { issueCounter: { increment: 1 } },
+      select: { issueCounter: true },
     });
 
-    const number = nextNumber;
+    const number = counted.issueCounter;
     const key = `${project.key}-${number}`;
 
     const newIssue = await tx.issue.create({
@@ -110,6 +133,7 @@ export async function updateIssue(
     assigneeId?: string | null;
     reporterId?: string | null;
     sprintId?: string | null;
+    releaseId?: string | null;
     startDate?: Date | null;
     dueDate?: Date | null;
     labels?: string[];
@@ -192,7 +216,9 @@ export async function deleteIssue(issueId: string, authorId: string) {
   });
 
   if (issue.key) {
-    await delCache(`issue:${issue.key.toUpperCase()}`);
+    // Must match the key the read path writes (`issue:${siteId}:${KEY}`) or the
+    // deleted issue keeps rendering from cache for the full TTL.
+    await delCache(`issue:${issue.project.siteId}:${issue.key.toUpperCase()}`);
   }
 
   return { success: true, projectKey: issue.project.key };

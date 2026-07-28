@@ -20,6 +20,7 @@ export const getIssueDetail = cache(async (userId: string, issueId: string) => {
     where: { id: issueId },
     include: {
       project: { select: { id: true, key: true, name: true, siteId: true } },
+      release: { select: { id: true, name: true } },
       reporter: { select: { id: true, name: true, avatarUrl: true } },
       assignee: { select: { id: true, name: true, avatarUrl: true } },
       watchers: { select: { userId: true } },
@@ -87,6 +88,8 @@ export const getIssueDetail = cache(async (userId: string, issueId: string) => {
     projectKey: issue.project.key,
     project: { id: issue.project.id, key: issue.project.key, name: issue.project.name },
     sprintId: issue.sprintId,
+    releaseId: issue.releaseId,
+    release: issue.release,
     reporterId: issue.reporterId,
     reporter: issue.reporter,
     assignee: issue.assignee,

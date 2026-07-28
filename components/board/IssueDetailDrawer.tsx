@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef } from "react";
+import { useState, useEffect, useTransition, useRef, useMemo } from "react";
 import Link from "next/link";
 import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
 import { getIssueDevelopmentDataAction } from "@/app/(app)/projects/[key]/issues/actions";
@@ -57,6 +57,7 @@ import {
   toggleWatcherAction,
 } from "@/app/(app)/projects/[key]/issues/actions";
 import { getIssueDetailAction } from "@/app/(app)/projects/[key]/issues/detail-actions";
+import { getReleasesAction } from "@/app/(app)/projects/[key]/releases/actions";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
 import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
 import {
@@ -178,16 +179,17 @@ export function IssueDetailDrawer({
   const [points, setPoints] = useState<number | string>("");
   const [estimateHours, setEstimateHours] = useState<number | string>("");
   const [reporterId, setReporterId] = useState<string>("");
+  const [releaseId, setReleaseId] = useState<string>("");
+  const [availableReleases, setAvailableReleases] = useState<{ id: string; name: string }[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
   const [labels, setLabels] = useState<string[]>([]);
   const [labelDraft, setLabelDraft] = useState<string>("");
 
   // Superpower State: Active Presence & Collaboration
-  const [activePresenceUsers] = useState<BoardUserOption[]>([
-    availableUsers[0] || { id: "u-1", name: "Alex Chen", avatarUrl: null },
-    availableUsers[1] || { id: "u-2", name: "Sarah Connor", avatarUrl: null },
-  ]);
+  const activePresenceUsers = useMemo<BoardUserOption[]>(() => {
+    return availableUsers.slice(0, 3);
+  }, [availableUsers]);
 
   // Superpower State: Engagement & Voting
   const [watchersCount, setWatchersCount] = useState(0);
@@ -281,6 +283,7 @@ export function IssueDetailDrawer({
           : ""
       );
       setReporterId(issue.reporterId || issue.reporter?.id || "");
+      setReleaseId(issue.releaseId || "");
       setStartDate(toDateInput(issue.startDate));
       setDueDate(toDateInput(issue.dueDate));
       setLabels(issue.labels || []);
@@ -307,13 +310,21 @@ export function IssueDetailDrawer({
       setWorkLogsList(logs);
       setCommentsList(issue.comments || []);
       setHistoryList(issue.history || []);
-      const totalLogged = issue.loggedHours ?? logs.reduce((sum, w) => sum + Number(w.hours || 0), 0);
+      const totalLogged = issue.loggedHours ?? logs.reduce((sum: number, w: any) => sum + Number(w.hours || 0), 0);
       setLoggedHours(totalLogged);
 
       if (issue.id && !issue.id.startsWith("demo-")) {
         setIsLoadingDetail(true);
         getIssueDevelopmentDataAction(issue.id).then((res) => {
-          if (res) setDevData(res);
+          if (res) {
+            setDevData(res);
+            if (res.pullRequests && res.pullRequests.length > 0) {
+              setPullRequests(res.pullRequests.map((p) => ({ number: p.prNumber, title: p.title, status: p.status as any, url: p.url ?? undefined })));
+            }
+            if (res.commits && res.commits.length > 0) {
+              setCommits(res.commits.map((c) => ({ hash: c.hash, message: c.message, url: c.url ?? undefined })));
+            }
+          }
         });
       } else {
         setIsLoadingDetail(false);
@@ -341,10 +352,18 @@ export function IssueDetailDrawer({
         setLoggedHours(detail.loggedHours);
         setWatchersCount(detail.watchers.length);
         setIsWatching(detail.isWatching);
+        setReleaseId(detail.releaseId || "");
       })
       .finally(() => {
         if (!cancelled) setIsLoadingDetail(false);
       });
+
+    const projectId = issue.projectId || issue.project?.id;
+    if (projectId) {
+      getReleasesAction(projectId).then((res) => {
+        if (!cancelled && res.success) setAvailableReleases(res.releases);
+      });
+    }
 
     return () => {
       cancelled = true;
@@ -437,6 +456,14 @@ export function IssueDetailDrawer({
     onUpdateIssue(updated);
     startTransition(async () => {
       await updateIssueFieldAction(issue.id, "type", newType);
+    });
+  };
+
+  const handleReleaseSelect = (newReleaseId: string) => {
+    if (newReleaseId === releaseId) return;
+    setReleaseId(newReleaseId);
+    startTransition(async () => {
+      await updateIssueFieldAction(issue.id, "releaseId", newReleaseId || null);
     });
   };
 
@@ -543,7 +570,9 @@ export function IssueDetailDrawer({
 
   // Superpower Action: AI Executive Summary Recap
   const handleAiSummarize = () => {
-    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and 1 PR merged.`);
+    const prCount = pullRequests.filter((p) => p.status === "MERGED").length;
+    const prText = prCount === 1 ? "1 PR merged" : `${prCount} PRs merged`;
+    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and ${prText}.`);
   };
 
   // Clipboard Image Paste Handler (`Cmd+V` / `Ctrl+V`)
@@ -871,11 +900,15 @@ export function IssueDetailDrawer({
               <span className="text-[11px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
                 {issue.projectKey}
               </span>
-              <span className="text-text-subtle/40">•</span>
               {/* Epic Context Badge */}
-              <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Layers size={11} /> Epic: Platform Infrastructure
-              </span>
+              {issue.parent && (
+                <>
+                  <span className="text-text-subtle/40">•</span>
+                  <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Layers size={11} /> Epic: {issue.parent.summary || issue.parent.key}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Quick Action Controls & Team Presence */}
@@ -1201,36 +1234,42 @@ export function IssueDetailDrawer({
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {/* PRs */}
-                  {pullRequests.map((pr) => (
-                    <div key={pr.number} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
-                      <div className="flex items-center gap-2 font-mono">
-                        <GitPullRequest size={14} className="text-purple-500" />
-                        <span className="font-bold text-text">#{pr.number}</span>
-                        <span className="text-text font-sans font-medium">{pr.title}</span>
-                      </div>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          pr.status === "MERGED"
-                            ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
-                            : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
-                        }`}
-                      >
-                        {pr.status}
-                      </span>
-                    </div>
-                  ))}
+                  {pullRequests.length === 0 && commits.length === 0 ? (
+                    <p className="text-xs text-text-subtle italic">No linked PRs or commits.</p>
+                  ) : (
+                    <>
+                      {/* PRs */}
+                      {pullRequests.map((pr) => (
+                        <div key={pr.number} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
+                          <div className="flex items-center gap-2 font-mono">
+                            <GitPullRequest size={14} className="text-purple-500" />
+                            <span className="font-bold text-text">#{pr.number}</span>
+                            <span className="text-text font-sans font-medium">{pr.title}</span>
+                          </div>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              pr.status === "MERGED"
+                                ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
+                                : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                            }`}
+                          >
+                            {pr.status}
+                          </span>
+                        </div>
+                      ))}
 
-                  {/* Commits */}
-                  {commits.map((cm) => (
-                    <div key={cm.hash} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs font-mono">
-                      <div className="flex items-center gap-2">
-                        <GitCommit size={14} className="text-brand" />
-                        <span className="font-bold text-brand">{cm.hash}</span>
-                        <span className="text-text font-sans font-medium">{cm.message}</span>
-                      </div>
-                    </div>
-                  ))}
+                      {/* Commits */}
+                      {commits.map((cm) => (
+                        <div key={cm.hash} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs font-mono">
+                          <div className="flex items-center gap-2">
+                            <GitCommit size={14} className="text-brand" />
+                            <span className="font-bold text-brand">{cm.hash}</span>
+                            <span className="text-text font-sans font-medium">{cm.message}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1274,20 +1313,24 @@ export function IssueDetailDrawer({
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {linkedIssues.map((lk) => (
-                    <div key={lk.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded">
-                          {lk.relation.replace(/_/g, " ")}
+                  {linkedIssues.length === 0 ? (
+                    <p className="text-xs text-text-subtle italic">No linked issues.</p>
+                  ) : (
+                    linkedIssues.map((lk) => (
+                      <div key={lk.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded">
+                            {lk.relation.replace(/_/g, " ")}
+                          </span>
+                          <span className="font-bold font-mono text-brand">{lk.key}</span>
+                          <span className="text-text font-medium">{lk.summary}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-text-subtle bg-neutral px-2 py-0.5 rounded">
+                          {lk.status}
                         </span>
-                        <span className="font-bold font-mono text-brand">{lk.key}</span>
-                        <span className="text-text font-medium">{lk.summary}</span>
                       </div>
-                      <span className="text-[10px] font-bold text-text-subtle bg-neutral px-2 py-0.5 rounded">
-                        {lk.status}
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -1569,23 +1612,21 @@ export function IssueDetailDrawer({
                   type="button"
                   onClick={handleWorkflowTransition}
                   className={`w-full h-9 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
-                    isBlocked && issue.status !== "DONE"
+                    isBlocked && issue.status === "IN_REVIEW"
                       ? "bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20"
                       : issue.status === "DONE"
                       ? "bg-neutral text-text hover:bg-neutral/80 border border-border"
                       : "bg-brand text-white hover:bg-brand-hovered"
                   }`}
                 >
-                  {isBlocked && issue.status !== "DONE" && <ShieldAlert size={14} className="text-amber-500" />}
+                  {isBlocked && issue.status === "IN_REVIEW" && <ShieldAlert size={14} className="text-amber-500" />}
                   <span>
-                    {isBlocked && issue.status !== "DONE"
-                      ? `Start Progress (${activeBlockers[0].key})`
-                      : issue.status === "TO_DO"
+                    {issue.status === "TO_DO"
                       ? "Start Progress"
                       : issue.status === "IN_PROGRESS"
                       ? "Submit for Review"
                       : issue.status === "IN_REVIEW"
-                      ? "Mark Complete ✓"
+                      ? (isBlocked ? `Mark Complete (Blocked by ${activeBlockers[0].key})` : "Mark Complete ✓")
                       : "Reopen Task"}
                   </span>
                   <ArrowRight size={14} />
@@ -1686,6 +1727,23 @@ export function IssueDetailDrawer({
                   {Object.entries(priorityIcons).map(([key, val]) => (
                     <option key={key} value={key}>
                       {val.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fix Version */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Fix Version</label>
+                <select
+                  value={releaseId}
+                  onChange={(e) => handleReleaseSelect(e.target.value)}
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
+                >
+                  <option value="">None</option>
+                  {availableReleases.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
                     </option>
                   ))}
                 </select>
@@ -1827,31 +1885,59 @@ export function IssueDetailDrawer({
                     Open Panel →
                   </button>
                 </div>
-                <div
-                  onClick={() => setActiveTab("development")}
-                  className="p-3 rounded-xl border border-border bg-neutral/20 hover:bg-neutral/40 transition-all cursor-pointer flex flex-col gap-2"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-text flex items-center gap-1.5 truncate">
-                      <GitPullRequest size={13} className="text-purple-600 shrink-0" /> 1 Pull Request
-                    </span>
-                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono bg-purple-500/10 text-purple-600 shrink-0">
-                      #42 MERGED
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-text-subtle">
-                    <span className="flex items-center gap-1 font-mono truncate">
-                      <GitBranch size={11} className="text-brand shrink-0" /> 1 Branch
-                    </span>
-                    <span className="text-[10px] font-mono text-emerald-600 font-bold shrink-0">● Vercel Ready</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[10px] text-purple-600 font-extrabold">
-                    <span className="flex items-center gap-1">
-                      <Sparkles size={11} className="text-amber-500" /> 8 Superpowers Available
-                    </span>
-                    <span>View All →</span>
-                  </div>
-                </div>
+                {/* Counts come from getIssueDevelopmentDataAction. This card used
+                    to hardcode "1 Pull Request / #42 MERGED / 1 Branch / Vercel
+                    Ready / 8 Superpowers" on every issue in every workspace. */}
+                {(() => {
+                  const prs = devData.pullRequests ?? [];
+                  const branches = devData.branches ?? [];
+                  const commits = devData.commits ?? [];
+
+                  if (prs.length === 0 && branches.length === 0 && commits.length === 0) {
+                    return (
+                      <div className="p-3 rounded-xl border border-dashed border-border bg-neutral/10 text-[11px] text-text-subtle">
+                        No linked branches, commits or pull requests yet. Reference this issue key
+                        in a branch name or commit message to link work here.
+                      </div>
+                    );
+                  }
+
+                  const latestPr = prs[0] as { number?: number; status?: string } | undefined;
+
+                  return (
+                    <div
+                      onClick={() => setActiveTab("development")}
+                      className="p-3 rounded-xl border border-border bg-neutral/20 hover:bg-neutral/40 transition-all cursor-pointer flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-text flex items-center gap-1.5 truncate">
+                          <GitPullRequest size={13} className="text-purple-600 shrink-0" />
+                          {prs.length} Pull Request{prs.length === 1 ? "" : "s"}
+                        </span>
+                        {latestPr?.number != null && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono bg-purple-500/10 text-purple-600 shrink-0">
+                            #{latestPr.number} {latestPr.status ?? ""}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-text-subtle">
+                        <span className="flex items-center gap-1 font-mono truncate">
+                          <GitBranch size={11} className="text-brand shrink-0" />
+                          {branches.length} Branch{branches.length === 1 ? "" : "es"}
+                        </span>
+                        <span className="text-[10px] font-mono text-text-subtle shrink-0">
+                          {commits.length} commit{commits.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[10px] text-purple-600 font-extrabold">
+                        <span className="flex items-center gap-1">
+                          <Sparkles size={11} className="text-amber-500" /> Development
+                        </span>
+                        <span>View All →</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

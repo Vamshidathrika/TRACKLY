@@ -14,6 +14,12 @@ type NotificationRule = {
   watchers: boolean;
 };
 
+/**
+ * No NotificationScheme model exists — real notifications (see
+ * lib/notifications.ts) fire on a fixed set of events to a fixed set of
+ * recipients. This matrix saves to this browser only and does not change
+ * who actually gets notified.
+ */
 export function NotificationSchemesView() {
   const [rules, setRules] = useState<NotificationRule[]>(() => {
     if (typeof window !== "undefined") {
@@ -54,17 +60,20 @@ export function NotificationSchemesView() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-default">Notification Scheme Event Matrix</h2>
-          <p className="text-xs text-subtle">Configure automatic email, web, and Slack notification dispatch rules for workspace events</p>
+          <p className="text-xs text-subtle">
+            Preview only, saved to this browser. Real notifications fire on a fixed set of
+            events — this matrix does not change who actually gets notified.
+          </p>
         </div>
         <Button appearance="primary" onClick={handleSave} className="flex items-center gap-1.5 text-xs">
           <Bell size={15} />
-          Save Scheme Rules
+          Save Preview
         </Button>
       </div>
 
       {savedSuccess && (
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 font-bold text-xs flex items-center gap-2">
-          <CheckCircle2 size={16} /> Notification scheme matrix updated successfully!
+          <CheckCircle2 size={16} /> Saved to this browser. Real dispatch rules are unaffected.
         </div>
       )}
 

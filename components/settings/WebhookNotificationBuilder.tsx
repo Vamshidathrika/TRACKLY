@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Send, CheckCircle2, MessageSquare, Plus, Trash2, Bell, Zap, Copy, Check } from "lucide-react";
+import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { WebhookNotificationRule } from "@/lib/integrations/types";
 
+/**
+ * No server-side dispatcher exists for these rules yet — routes saved here
+ * are a local draft only, and "Test Ping" cannot actually reach Slack or
+ * Discord (no backend sends the request). Both are labelled honestly below
+ * rather than claiming a webhook fired when nothing was sent.
+ */
 export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
   const [rules, setRules] = useState<WebhookNotificationRule[]>(() => {
     if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
@@ -12,31 +18,13 @@ export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [
-      {
-        id: "rule-1",
-        platform: "SLACK",
-        webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXXXX",
-        channelName: "#dev-alerts-live",
-        botName: "Trackly Dispatcher Bot",
-        enabledEvents: ["issue.created", "issue.status_changed", "sentry.auto_bug"],
-      },
-      {
-        id: "rule-2",
-        platform: "DISCORD",
-        webhookUrl: "https://discord.com/api/webhooks/12345/abcdef",
-        channelName: "#product-releases",
-        botName: "Release Bot",
-        enabledEvents: ["issue.status_changed"],
-      },
-    ];
+    return [];
   });
 
   const [platform, setPlatform] = useState<"SLACK" | "DISCORD">("SLACK");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [channelName, setChannelName] = useState("");
   const [botName, setBotName] = useState("");
-  const [testSentId, setTestSentId] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
 
   const saveRules = (next: WebhookNotificationRule[]) => {
@@ -77,10 +65,6 @@ export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
     saveRules(next);
   };
 
-  const handleTestPing = (id: string) => {
-    setTestSentId(id);
-    setTimeout(() => setTestSentId(null), 2500);
-  };
 
   return (
     <div className="rounded-[20px] border border-border bg-surface p-6 shadow-xs flex flex-col gap-4 text-xs">
@@ -92,8 +76,13 @@ export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
           </h3>
         </div>
         <span className="text-[11px] font-mono text-text-subtle">
-          {rules.length} Active Dispatch Routes
+          {rules.length} Draft Route{rules.length === 1 ? "" : "s"}
         </span>
+      </div>
+
+      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-700 dark:text-amber-400">
+        Draft only, saved to this browser. No dispatcher sends these events to Slack or
+        Discord yet, so nothing here fires on real activity.
       </div>
 
       {urlError && (
@@ -189,24 +178,6 @@ export function WebhookNotificationBuilder({ siteId }: { siteId: string }) {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleTestPing(rule.id)}
-                className="px-3 py-1 rounded-lg border border-border bg-neutral/40 hover:bg-neutral text-[11px] font-bold text-text flex items-center gap-1 cursor-pointer transition-all"
-              >
-                {testSentId === rule.id ? (
-                  <>
-                    <Check size={12} className="text-emerald-500" />
-                    <span>Ping Sent!</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={12} />
-                    <span>Test Ping</span>
-                  </>
-                )}
-              </button>
-
               <button
                 type="button"
                 onClick={() => handleRemove(rule.id)}

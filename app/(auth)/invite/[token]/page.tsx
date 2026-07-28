@@ -10,6 +10,7 @@ const messages = {
   INVALID: "This invite link is not valid.",
   EXPIRED: "This invite link has expired. Ask your admin to send a new one.",
   USED: "This invite has already been used.",
+  REVOKED: "This share link was revoked by a board admin.",
 } as const;
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {

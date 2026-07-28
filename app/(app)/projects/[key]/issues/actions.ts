@@ -8,6 +8,7 @@ import { extractMentions, createNotification, toggleWatcher } from "@/lib/notifi
 import { evaluateAutomationTriggers } from "@/lib/automation";
 import { prisma } from "@/lib/prisma";
 import { getBoardIssues } from "@/lib/dal";
+import { checkProjectAccess } from "@/lib/tenant";
 import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
 
 export async function updateIssueFieldAction(
@@ -23,6 +24,7 @@ export async function updateIssueFieldAction(
     | "assigneeId"
     | "reporterId"
     | "sprintId"
+    | "releaseId"
     | "startDate"
     | "dueDate"
     | "labels",
@@ -31,6 +33,18 @@ export async function updateIssueFieldAction(
   const user = await getAuthUser();
 
   try {
+    // updateIssue() only gates the `status` field (assignee/admin-only); every
+    // other field was writable on any issue in any workspace by cuid. Resolve
+    // the issue's project and require membership before trusting any field write.
+    const target = await prisma.issue.findUnique({
+      where: { id: issueId },
+      select: { projectId: true },
+    });
+    if (!target) return { error: "Issue not found" };
+
+    const access = await checkProjectAccess(user.id, target.projectId);
+    if (!access) return { error: "You do not have access to this issue" };
+
     const data: Record<string, any> = {};
     const strVal = value !== null ? String(value) : "";
     if (field === "status") data.status = value as IssueStatus;
@@ -43,6 +57,7 @@ export async function updateIssueFieldAction(
     if (field === "assigneeId") data.assigneeId = strVal || null;
     if (field === "reporterId") data.reporterId = strVal || null;
     if (field === "sprintId") data.sprintId = strVal || null;
+    if (field === "releaseId") data.releaseId = strVal || null;
     if (field === "startDate") data.startDate = strVal ? new Date(strVal) : null;
     if (field === "dueDate") data.dueDate = strVal ? new Date(strVal) : null;
     if (field === "labels") {
@@ -115,11 +130,34 @@ export async function updateIssueFieldAction(
   }
 }
 
+/**
+ * Confirms the caller can reach the board that owns `issueId`.
+ *
+ * Server actions are addressed by global action id, not by route, so every one
+ * of these is a public endpoint that receives a client-chosen cuid. Reading the
+ * issue is not authorization — the issue must be resolved to its project and
+ * that project checked against the caller.
+ */
+async function resolveAccessibleIssue(userId: string, issueId: string) {
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { id: true, key: true, projectId: true, project: { select: { key: true } } },
+  });
+  if (!issue) return { error: "Issue not found" as const };
+  if (!(await checkProjectAccess(userId, issue.projectId))) {
+    return { error: "You don't have access to this board" as const };
+  }
+  return { issue };
+}
+
 export async function postCommentAction(issueId: string, body: string) {
   const user = await getAuthUser();
   if (!body.trim()) return { error: "Comment cannot be empty" };
 
   try {
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { error: guard.error };
+
     await addComment({ issueId, authorId: user.id, body });
 
     revalidatePath("/projects");
@@ -152,8 +190,14 @@ export async function postCommentAction(issueId: string, body: string) {
         // Check for @mentions
         const mentionNames = extractMentions(body);
         for (const name of mentionNames) {
+          // Exact + site-scoped match: `contains` with no site filter let a
+          // mention resolve to a same-named user in a different workspace and
+          // notify them with an excerpt of a comment they have no access to.
           const mentionedUser = await prisma.user.findFirst({
-            where: { name: { contains: name, mode: "insensitive" } },
+            where: {
+              name: { equals: name, mode: "insensitive" },
+              memberships: { some: { siteId: issue.project.siteId } },
+            },
           });
           if (mentionedUser && mentionedUser.id !== user.id) {
             notificationPromises.push(
@@ -199,6 +243,9 @@ export async function logWorkAction(
   if (hours > 24 * 30) return { error: "Time spent is unrealistically large" };
 
   try {
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { error: guard.error };
+
     // Mock/unseeded issues have synthetic ids and no database row to attach to.
     const issue = await prisma.issue.findUnique({
       where: { id: issueId },
@@ -277,6 +324,9 @@ export async function createSubtaskAction(parentIssueId: string, title: string) 
       include: { project: true },
     });
     if (!parent) return { error: "This ticket is not persisted yet, so subtasks cannot be added." };
+    if (!(await checkProjectAccess(user.id, parent.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     // number/key are unique per project and derived from the current max, so two
     // concurrent creates can pick the same number. Retry on the resulting unique
@@ -329,9 +379,14 @@ export async function toggleSubtaskAction(subtaskId: string) {
     });
     if (!subtask) return { error: "Subtask not found" };
 
+    // Deliberately bypasses updateIssue's assignee-only status rule — ticking
+    // your own checklist item shouldn't require being the assignee — but a
+    // tenant check is still required so any authenticated user can't flip
+    // status on a foreign workspace's subtask.
+    const access = await checkProjectAccess(user.id, subtask.projectId);
+    if (!access) return { error: "You do not have access to this issue" };
+
     const nextStatus = subtask.status === "DONE" ? "TO_DO" : "DONE";
-    // Bypass updateIssue's assignee-only status rule: ticking your own checklist
-    // item should not require being the assignee of the subtask.
     await prisma.issue.update({ where: { id: subtaskId }, data: { status: nextStatus } });
     await prisma.issueHistory.create({
       data: {
@@ -354,7 +409,7 @@ export async function toggleSubtaskAction(subtaskId: string) {
 }
 
 export async function deleteSubtaskAction(subtaskId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
     const subtask = await prisma.issue.findUnique({
       where: { id: subtaskId },
@@ -362,6 +417,9 @@ export async function deleteSubtaskAction(subtaskId: string) {
     });
     if (!subtask) return { error: "Subtask not found" };
     if (!subtask.parentId) return { error: "This ticket is not a subtask" };
+    if (!(await checkProjectAccess(user.id, subtask.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     await prisma.issue.delete({ where: { id: subtaskId } });
 
@@ -398,6 +456,12 @@ export async function linkIssueAction(
     });
     if (!source) return { error: "This ticket is not persisted yet, so links cannot be added." };
 
+    // The target lookup below was already scoped by siteIds, but source was
+    // trusted by bare id — without this an IssueLink row could be created
+    // against a foreign tenant's issue.
+    const access = await checkProjectAccess(user.id, source.projectId);
+    if (!access) return { error: "You do not have access to this issue" };
+
     const target = await prisma.issue.findFirst({
       where: {
         key: targetKey.trim().toUpperCase(),
@@ -425,13 +489,16 @@ export async function linkIssueAction(
 }
 
 export async function unlinkIssueAction(linkId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
     const link = await prisma.issueLink.findUnique({
       where: { id: linkId },
       include: { sourceIssue: { include: { project: true } } },
     });
     if (!link) return { error: "Link not found" };
+    if (!(await checkProjectAccess(user.id, link.sourceIssue.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     await prisma.issueLink.delete({ where: { id: linkId } });
 
@@ -460,6 +527,9 @@ export async function uploadAttachmentAction(issueId: string, formData: FormData
       include: { project: true },
     });
     if (!issue) return { error: "This ticket is not persisted yet, so files cannot be attached." };
+    if (!(await checkProjectAccess(user.id, issue.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
 
     const files = formData.getAll("files").filter((f): f is File => f instanceof File);
     if (files.length === 0) return { error: "No files provided" };
@@ -511,6 +581,9 @@ export async function deleteAttachmentAction(attachmentId: string) {
       include: { issue: { include: { project: true } } },
     });
     if (!attachment) return { error: "Attachment not found" };
+    if (!(await checkProjectAccess(user.id, attachment.issue.projectId))) {
+      return { error: "You don't have access to this board" };
+    }
     if (attachment.uploaderId !== user.id) {
       return { error: "You can only delete attachments you uploaded" };
     }
@@ -532,6 +605,9 @@ export async function deleteAttachmentAction(attachmentId: string) {
 export async function toggleWatcherAction(issueId: string) {
   const user = await getAuthUser();
   try {
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { error: guard.error };
+
     const isWatching = await toggleWatcher(issueId, user.id);
     revalidatePath("/projects");
     return { success: true, isWatching };
@@ -544,6 +620,17 @@ export async function toggleWatcherAction(issueId: string) {
 export async function deleteIssueAction(issueId: string) {
   const user = await getAuthUser();
   try {
+    // deleteIssue() only checks that the issue exists, not that the caller
+    // belongs to its project — verify tenant access before deleting.
+    const target = await prisma.issue.findUnique({
+      where: { id: issueId },
+      select: { projectId: true },
+    });
+    if (!target) return { error: "Issue not found" };
+
+    const access = await checkProjectAccess(user.id, target.projectId);
+    if (!access) return { error: "You do not have access to this issue" };
+
     const res = await deleteIssue(issueId, user.id);
     revalidatePath(`/projects/${res.projectKey}`);
     revalidatePath("/projects");
@@ -568,8 +655,13 @@ export async function deleteCommentAction(commentId: string) {
 }
 
 export async function getIssueDevelopmentDataAction(issueId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
+    // Returns commit hashes, messages, author names and PR titles — board
+    // access is required before any of it leaves the server.
+    const guard = await resolveAccessibleIssue(user.id, issueId);
+    if ("error" in guard) return { commits: [], pullRequests: [], branches: [] };
+
     const [commits, pullRequests, branches] = await Promise.all([
       prisma.gitCommit.findMany({
         where: { issueId },
@@ -624,12 +716,25 @@ export async function bulkUpdateIssuesAction(
     sprintId?: string | null;
   }
 ) {
-  await getAuthUser();
+  const user = await getAuthUser();
   if (!issueIds || issueIds.length === 0) {
     return { error: "No issues selected for bulk update" };
   }
 
   try {
+    // Bulk writes take raw ids from the client with no inherent tenant scope —
+    // resolve every selected issue's project and require access to all of them
+    // before applying the update to any.
+    const targets = await prisma.issue.findMany({
+      where: { id: { in: issueIds } },
+      select: { id: true, projectId: true },
+    });
+    const projectIds = Array.from(new Set(targets.map((t) => t.projectId)));
+    for (const projectId of projectIds) {
+      const access = await checkProjectAccess(user.id, projectId);
+      if (!access) return { error: "You do not have access to one or more selected issues" };
+    }
+
     const updatePayload: any = {};
     if (data.status) updatePayload.status = data.status;
     if (data.priority) updatePayload.priority = data.priority;
@@ -637,7 +742,7 @@ export async function bulkUpdateIssuesAction(
     if (data.sprintId !== undefined) updatePayload.sprintId = data.sprintId;
 
     const res = await prisma.issue.updateMany({
-      where: { id: { in: issueIds } },
+      where: { id: { in: targets.map((t) => t.id) } },
       data: updatePayload,
     });
 
@@ -650,8 +755,13 @@ export async function bulkUpdateIssuesAction(
 }
 
 export async function fetchLiveBoardIssuesAction(projectId: string, projectKey: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
   try {
+    // The 5-second board poller passes a client-supplied projectId — without
+    // this check any authenticated user could read any tenant's full board.
+    const access = await checkProjectAccess(user.id, projectId);
+    if (!access) return { success: false, issues: [] };
+
     const issues = await getBoardIssues(projectId);
     return {
       success: true,

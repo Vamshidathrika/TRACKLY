@@ -32,6 +32,7 @@ export type BoardIssue = {
   reporter?: { id: string; name: string; avatarUrl?: string | null } | null;
   reporterId?: string | null;
   sprintId?: string | null;
+  releaseId?: string | null;
   dueDate?: Date | string | null;
   startDate?: Date | string | null;
   labels?: string[];
@@ -46,6 +47,7 @@ export type BoardIssue = {
   comments?: any[];
   history?: any[];
   workLogs?: any[];
+  parent?: { id: string; key: string; summary: string; type?: string } | null;
   subtasks?: { id: string; key: string; summary: string; status: IssueStatus }[];
   attachments?: { id: string; filename: string; url: string; sizeBytes: number; mimeType: string }[];
   linksOut?: { id: string; relation: string; targetIssue: { key: string; summary: string; status: IssueStatus } }[];

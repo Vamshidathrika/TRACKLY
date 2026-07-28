@@ -15,15 +15,17 @@ export type AuditLogRecord = {
   ip: string;
 };
 
-export function SecurityAuditLogsView() {
-  const [logs] = useState<AuditLogRecord[]>([
-    { id: "audit-1", timestamp: "2026-07-25 23:58:12", actor: "Vamshi Dathrika", actorEmail: "vamshi@uskcorp.com", category: "AUTH", action: "Generated Personal Access Token", target: "PAT: GitHub Actions CI Runner", ip: "192.168.1.45" },
-    { id: "audit-2", timestamp: "2026-07-25 23:42:54", actor: "Vamshi Dathrika", actorEmail: "vamshi@uskcorp.com", category: "PERMISSIONS", action: "Updated Workspace Settings", target: "SettingsNav & Route Redirects", ip: "192.168.1.45" },
-    { id: "audit-3", timestamp: "2026-07-25 23:28:49", actor: "Vamshi Dathrika", actorEmail: "vamshi@uskcorp.com", category: "INTEGRATIONS", action: "Updated Automation Engine Rules", target: "No-Code Jira Rules Suite", ip: "192.168.1.45" },
-    { id: "audit-4", timestamp: "2026-07-25 23:14:14", actor: "Vamshi Dathrika", actorEmail: "vamshi@uskcorp.com", category: "DATA", action: "Exported Full Workspace Backup", target: "trackly_workspace_backup.json", ip: "192.168.1.45" },
-    { id: "audit-5", timestamp: "2026-07-25 22:45:00", actor: "System Agent", actorEmail: "system@trackly.dev", category: "AUTH", action: "OAuth Token Refresh", target: "GitHub Integration App", ip: "10.0.4.12" },
-  ]);
-
+/**
+ * Renders REAL recorded events only.
+ *
+ * This component used to ship five hardcoded audit records attributed to a real
+ * named person, their real email address, and IP 192.168.1.45 — complete with a
+ * working CSV export. An admin investigating "who generated a PAT" would read
+ * invented events and could export them as evidence. Fabricated security
+ * records are worse than an empty log, so the fallback is now an honest empty
+ * state and the caller supplies whatever the database actually holds.
+ */
+export function SecurityAuditLogsView({ logs = [] }: { logs?: AuditLogRecord[] }) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
 
@@ -118,7 +120,9 @@ export function SecurityAuditLogsView() {
             {filteredLogs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="p-6 text-center text-xs text-subtle italic">
-                  No security audit log records match your filter.
+                  {logs.length === 0
+                    ? "No audit events recorded yet."
+                    : "No audit events match your filter."}
                 </td>
               </tr>
             ) : (

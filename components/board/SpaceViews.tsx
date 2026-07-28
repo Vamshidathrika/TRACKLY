@@ -217,16 +217,77 @@ export function TimelineView({ issues }: { issues: BoardIssue[] }) {
 }
 
 // 3. Calendar View Component
+//
+// This previously hardcoded "July 2026", always drew exactly 31 cells, and
+// placed issues by ARRAY INDEX (`idx % 31`) rather than by date — so every
+// issue appeared on an arbitrary day and `dueDate` was never read at all.
+// Planning from it was actively misleading.
 export function CalendarView({ issues }: { issues: BoardIssue[] }) {
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+
+  const { year, month } = cursor;
+  const monthLabel = new Date(year, month, 1).toLocaleString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingBlanks = new Date(year, month, 1).getDay();
+
+  // Bucket by local calendar day. Parsing to a Date first means an ISO string
+  // and a Date instance land in the same bucket.
+  const byDay = new Map<number, BoardIssue[]>();
+  for (const issue of issues) {
+    if (!issue.dueDate) continue;
+    const d = new Date(issue.dueDate);
+    if (Number.isNaN(d.getTime())) continue;
+    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+    const day = d.getDate();
+    const bucket = byDay.get(day);
+    if (bucket) bucket.push(issue);
+    else byDay.set(day, [issue]);
+  }
+
+  const undated = issues.filter((i) => !i.dueDate).length;
+  const step = (delta: number) => {
+    const next = new Date(year, month + delta, 1);
+    setCursor({ year: next.getFullYear(), month: next.getMonth() });
+  };
 
   return (
     <div className="flex flex-col gap-4 py-4 animate-in fade-in duration-200">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-text flex items-center gap-2">
-          <CalendarIcon size={16} className="text-brand" /> Monthly Schedule - July 2026
+          <CalendarIcon size={16} className="text-brand" /> {monthLabel}
         </h3>
+        <div className="flex items-center gap-2">
+          {undated > 0 && (
+            <span className="text-[11px] text-text-subtle">
+              {undated} without a due date
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => step(-1)}
+            aria-label="Previous month"
+            className="px-2 py-1 rounded-md border border-border text-xs font-bold text-text hover:bg-neutral/40 cursor-pointer"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={() => step(1)}
+            aria-label="Next month"
+            className="px-2 py-1 rounded-md border border-border text-xs font-bold text-text hover:bg-neutral/40 cursor-pointer"
+          >
+            →
+          </button>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-surface shadow-xs overflow-hidden">
@@ -239,8 +300,11 @@ export function CalendarView({ issues }: { issues: BoardIssue[] }) {
 
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-border/60 min-h-[420px]">
-          {daysInMonth.map((day) => {
-            const dayIssues = issues.filter((_, idx) => (idx % 31) + 1 === day);
+          {Array.from({ length: leadingBlanks }, (_, i) => (
+            <div key={`blank-${i}`} className="p-2 min-h-[90px] bg-neutral/10" />
+          ))}
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+            const dayIssues = byDay.get(day) ?? [];
             return (
               <div key={day} className="p-2 min-h-[90px] flex flex-col gap-1 bg-surface hover:bg-neutral/20">
                 <span className="text-xs font-bold text-text-subtle">{day}</span>
@@ -248,7 +312,7 @@ export function CalendarView({ issues }: { issues: BoardIssue[] }) {
                   <div
                     key={issue.id}
                     className="p-1 rounded bg-brand/10 border border-brand/20 text-[11px] font-semibold text-brand truncate"
-                    title={issue.summary}
+                    title={`${issue.key}: ${issue.summary}`}
                   >
                     {issue.key}: {issue.summary}
                   </div>

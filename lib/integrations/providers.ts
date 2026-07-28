@@ -4,6 +4,20 @@ import { createIssue } from "../issues";
 import type { NormalizedDevEvent, ParsedFigmaUrl, ParsedLoomUrl, ParsedMiroUrl } from "./types";
 
 /**
+ * Resolves an issue reporter scoped to the target site instead of picking an
+ * arbitrary user from the whole database. An ADMIN membership is used as the
+ * stand-in "site owner" for auto-created issues (Sentry/Zendesk/Datadog have
+ * no concept of a Trackly user to attribute the report to).
+ */
+async function resolveSiteReporterId(siteId: string): Promise<string | null> {
+  const membership = await prisma.membership.findFirst({
+    where: { siteId, role: "ADMIN" },
+    select: { userId: true },
+  });
+  return membership?.userId ?? null;
+}
+
+/**
  * 1. Figma URL Parser & Embed Generator
  */
 export function parseFigmaUrl(url: string): ParsedFigmaUrl | null {
@@ -93,7 +107,7 @@ export function parseMiroUrl(url: string): ParsedMiroUrl | null {
 export async function processGitLabWebhook(
   headers: Headers,
   payload: any,
-  siteId = "demo-site"
+  siteId: string
 ): Promise<{ success: boolean; eventType: string; issueKeys: string[] }> {
   const eventHeader = headers.get("x-gitlab-event") || "Push Hook";
   const issueKeys: string[] = [];
@@ -150,7 +164,7 @@ export async function processGitLabWebhook(
 export async function processBitbucketWebhook(
   headers: Headers,
   payload: any,
-  siteId = "demo-site"
+  siteId: string
 ): Promise<{ success: boolean; eventType: string; issueKeys: string[] }> {
   const eventHeader = headers.get("x-event-key") || "repo:push";
   const issueKeys: string[] = [];
@@ -209,7 +223,7 @@ export async function processBitbucketWebhook(
 export async function processSentryWebhook(
   headers: Headers,
   payload: any,
-  siteId = "demo-site",
+  siteId: string,
   projectId?: string
 ): Promise<{ success: boolean; issueKey?: string; createdIssueId?: string }> {
   const issueData = payload.data?.issue || payload.issue || payload;
@@ -252,7 +266,7 @@ export async function processSentryWebhook(
 export async function processZendeskWebhook(
   headers: Headers,
   payload: any,
-  siteId = "demo-site",
+  siteId: string,
   projectId?: string
 ): Promise<{ success: boolean; issueKey?: string }> {
   const ticket = payload.ticket || payload;
@@ -291,7 +305,7 @@ export async function processZendeskWebhook(
 export async function processDatadogWebhook(
   headers: Headers,
   payload: any,
-  siteId = "demo-site",
+  siteId: string,
   projectId?: string
 ): Promise<{ success: boolean; issueKey?: string }> {
   const alertTitle = payload.event_title || payload.title || "Datadog APM Incident";
@@ -326,7 +340,7 @@ export async function processDatadogWebhook(
 export async function processVercelWebhook(
   headers: Headers,
   payload: any,
-  siteId = "demo-site"
+  siteId: string
 ): Promise<{ success: boolean; deploymentUrl?: string; issueKeys: string[] }> {
   const deployment = payload.payload?.deployment || payload.deployment || payload;
   const url = deployment.url ? `https://${deployment.url}` : undefined;

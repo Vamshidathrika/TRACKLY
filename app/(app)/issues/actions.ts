@@ -29,6 +29,11 @@ export async function createIssueAction(
   const parsed = createIssueSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
+  // projectId comes straight from client FormData — verify project membership
+  // before creating an issue in a workspace/project the caller can't access.
+  const access = await checkProjectAccess(user.id, parsed.data.projectId);
+  if (!access) return { error: "You do not have access to this project" };
+
   try {
     await createIssue({
       projectId: parsed.data.projectId,
@@ -52,8 +57,24 @@ export async function createIssueAction(
   }
 }
 
-import { requireMembership } from "@/lib/tenant";
+import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getProjectsForUser } from "@/lib/projects";
+
+/**
+ * Throws unless the caller can reach the board that owns `issueId`.
+ * These actions receive a client-chosen issue cuid and write rows against it,
+ * so the issue must be resolved to its project and that project checked.
+ */
+async function assertIssueAccess(userId: string, issueId: string) {
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { projectId: true },
+  });
+  if (!issue) throw new Error("Issue not found");
+  if (!(await checkProjectAccess(userId, issue.projectId))) {
+    throw new Error("You do not have access to this issue");
+  }
+}
 
 export async function fetchUserProjectsAction() {
   const { userId, siteId } = await requireMembership();
@@ -81,6 +102,11 @@ export async function createSubtaskAction(input: {
   summary: string;
 }) {
   const user = await getAuthUser();
+
+  // projectId is client-supplied — verify access before creating a subtask there.
+  const access = await checkProjectAccess(user.id, input.projectId);
+  if (!access) throw new Error("You do not have access to this project");
+
   const subtask = await createIssue({
     projectId: input.projectId,
     summary: input.summary,
@@ -97,7 +123,19 @@ export async function createIssueLinkAction(input: {
   targetIssueKey: string;
   relation: "RELATES_TO" | "BLOCKS" | "IS_BLOCKED_BY" | "DUPLICATES";
 }) {
-  const { siteId } = await requireMembership();
+  const { siteId, userId } = await requireMembership();
+
+  // The TARGET was already scoped by siteId, but the SOURCE was taken on trust —
+  // so a foreign sourceIssueId would write a link row onto another tenant's
+  // issue, which then renders in their issue view.
+  const source = await prisma.issue.findUnique({
+    where: { id: input.sourceIssueId },
+    select: { projectId: true },
+  });
+  if (!source) throw new Error("Source issue not found.");
+  if (!(await checkProjectAccess(userId, source.projectId))) {
+    throw new Error("You do not have access to this issue.");
+  }
 
   const target = await prisma.issue.findFirst({
     where: {
@@ -120,7 +158,20 @@ export async function createIssueLinkAction(input: {
 }
 
 export async function deleteIssueLinkAction(linkId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
+
+  // Resolve the link's source issue and require project access — deleting by
+  // raw id with no check would let any authenticated user remove a link on a
+  // foreign tenant's issue.
+  const link = await prisma.issueLink.findUnique({
+    where: { id: linkId },
+    select: { sourceIssue: { select: { projectId: true } } },
+  });
+  if (!link) return { error: "Link not found" };
+
+  const access = await checkProjectAccess(user.id, link.sourceIssue.projectId);
+  if (!access) return { error: "You do not have access to this issue" };
+
   await prisma.issueLink.delete({ where: { id: linkId } });
   revalidatePath("/projects");
   return { success: true };
@@ -132,6 +183,7 @@ export async function logWorkAction(input: {
   description?: string;
 }) {
   const user = await getAuthUser();
+  await assertIssueAccess(user.id, input.issueId);
   const log = await prisma.workLog.create({
     data: {
       issueId: input.issueId,
@@ -152,6 +204,7 @@ export async function uploadAttachmentAction(input: {
   sizeBytes: number;
 }) {
   const user = await getAuthUser();
+  await assertIssueAccess(user.id, input.issueId);
   const attachment = await prisma.attachment.create({
     data: {
       issueId: input.issueId,
@@ -167,7 +220,23 @@ export async function uploadAttachmentAction(input: {
 }
 
 export async function deleteAttachmentAction(attachmentId: string) {
-  await getAuthUser();
+  const user = await getAuthUser();
+
+  // Align with the stricter sibling in projects/[key]/issues/actions.ts: only
+  // the uploader may delete their own attachment (deleting by raw id with no
+  // check was the weaker rule the UI happened to reach).
+  const attachment = await prisma.attachment.findUnique({
+    where: { id: attachmentId },
+    include: { issue: { select: { projectId: true } } },
+  });
+  if (!attachment) return { error: "Attachment not found" };
+  if (!(await checkProjectAccess(user.id, attachment.issue.projectId))) {
+    return { error: "You do not have access to this issue" };
+  }
+  if (attachment.uploaderId !== user.id) {
+    return { error: "You can only delete attachments you uploaded" };
+  }
+
   await prisma.attachment.delete({ where: { id: attachmentId } });
   revalidatePath("/projects");
   return { success: true };

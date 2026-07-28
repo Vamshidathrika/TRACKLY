@@ -20,6 +20,12 @@ export type ResolutionItem = {
   isDefault: boolean;
 };
 
+/**
+ * Priorities below match the real, fixed IssuePriority enum every issue
+ * actually uses. Resolution codes have no backing field on Issue yet —
+ * they save to this browser only and aren't applied when resolving a real
+ * issue anywhere else in the app.
+ */
 export function PrioritiesSettings() {
   const [priorities] = useState<PriorityItem[]>([
     { id: "p-1", name: "Highest", level: 1, badgeColor: "red", description: "Blocks production or critical release path" },
@@ -76,7 +82,7 @@ export function PrioritiesSettings() {
     saveResolutions(next);
     setResName("");
     setResDesc("");
-    showToast(`Resolution code "${newRes.name}" added and saved!`);
+    showToast(`Saved "${newRes.name}" to this browser — not applied when resolving real issues yet.`);
   };
 
   const handleDeleteResolution = (id: string, name: string) => {
@@ -131,7 +137,10 @@ export function PrioritiesSettings() {
       <div className="flex flex-col gap-4 border-t border-border-default pt-6">
         <div>
           <h2 className="text-base font-bold text-default">Resolution Codes Manager</h2>
-          <p className="text-xs text-subtle">Configure outcome status codes applied when closing or resolving issues</p>
+          <p className="text-xs text-subtle">
+            Preview only, saved to this browser. Issues don&apos;t have a resolution field yet, so
+            nothing here is applied when closing a real issue.
+          </p>
         </div>
 
         {/* Add Form */}

@@ -1,22 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Package, Plus, CheckCircle2, Clock, Copy, Check, FileText, Calendar, Sparkles, FolderGit2, AlertCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect, useTransition } from "react";
+import { Package, Plus, CheckCircle2, Copy, Check, FileText, Calendar, FolderGit2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConnectRepoModal } from "@/components/dev/ConnectRepoModal";
 import { fetchDevDashboardDataAction } from "@/app/(app)/projects/[key]/dev/actions";
+import { createReleaseAction, getReleasesAction, updateReleaseNotesAction } from "@/app/(app)/projects/[key]/releases/actions";
 
 export type ReleaseVersion = {
   id: string;
   name: string; // e.g. "v1.0.0"
-  description?: string;
+  description?: string | null;
   status: "UNRELEASED" | "RELEASED" | "ARCHIVED";
-  releaseDate?: string;
+  releaseDate?: string | null;
   completedIssues: number;
   totalIssues: number;
-  notesMarkdown?: string;
+  notesMarkdown?: string | null;
 };
 
+/**
+ * Real Release rows (see lib/releases.ts), not localStorage. completedIssues
+ * and totalIssues come from real Issue.releaseId links and are recomputed by
+ * the server on every fetch — they can't drift the way a hand-typed count
+ * used to. "AI Generate Notes" was removed: no generation backend exists for
+ * it, so it was fabricating markdown on a click.
+ */
 export function ReleaseHub({
   projectId = "demo-proj",
   projectKey,
@@ -26,67 +34,71 @@ export function ReleaseHub({
   projectKey: string;
   initialReleases?: ReleaseVersion[];
 }) {
+  const hasRealProject = !projectId.startsWith("demo-");
+  const [, startTransition] = useTransition();
   const [hasConnectedRepo, setHasConnectedRepo] = useState(false);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!hasRealProject) return;
     fetchDevDashboardDataAction(projectId).then((res) => {
       setHasConnectedRepo(res?.hasConnectedRepo ?? false);
     });
   }, [projectId]);
-  const [releases, setReleases] = useState<ReleaseVersion[]>(() => {
-    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-      const saved = localStorage.getItem(`trackly_release_hub_versions_${projectKey}`);
-      if (saved) {
-        try { return JSON.parse(saved); } catch {}
-      }
-    }
-    return initialReleases;
-  });
 
-  const saveReleases = (next: ReleaseVersion[]) => {
-    setReleases(next);
-    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-      localStorage.setItem(`trackly_release_hub_versions_${projectKey}`, JSON.stringify(next));
-    }
+  const [releases, setReleases] = useState<ReleaseVersion[]>(initialReleases);
+
+  const refreshReleases = async () => {
+    if (!hasRealProject) return;
+    const res = await getReleasesAction(projectId);
+    if (res.success) setReleases(res.releases as ReleaseVersion[]);
   };
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newVersionName, setNewVersionName] = useState("");
   const [newVersionDesc, setNewVersionDesc] = useState("");
   const [activeNotes, setActiveNotes] = useState<ReleaseVersion | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
+
+  const openNotes = (rel: ReleaseVersion) => {
+    setActiveNotes(rel);
+    setNotesDraft(rel.notesMarkdown || "");
+  };
+
+  const handleSaveNotes = () => {
+    if (!activeNotes) return;
+    const updated = { ...activeNotes, notesMarkdown: notesDraft };
+    setReleases((prev) => prev.map((r) => (r.id === activeNotes.id ? updated : r)));
+    setActiveNotes(updated);
+    if (!hasRealProject || activeNotes.id.startsWith("pending-")) return;
+    startTransition(async () => {
+      await updateReleaseNotesAction(activeNotes.id, notesDraft);
+    });
+  };
 
   const handleCreateVersion = () => {
-    if (!newVersionName.trim()) return;
-    const newRel: ReleaseVersion = {
-      id: `rel-${Date.now()}`,
-      name: newVersionName.trim(),
-      description: newVersionDesc.trim() || undefined,
-      status: "UNRELEASED",
-      releaseDate: new Date().toISOString().split("T")[0],
-      completedIssues: 0,
-      totalIssues: 0,
-      notesMarkdown: `## 🚀 Release ${newVersionName.trim()} Notes\n\n### New Features\n- Initial feature work under development.`,
-    };
-    const next = [newRel, ...releases];
-    saveReleases(next);
+    const name = newVersionName.trim();
+    if (!name) return;
+    const description = newVersionDesc.trim() || undefined;
     setNewVersionName("");
     setNewVersionDesc("");
     setShowCreateModal(false);
-  };
 
-  const handleAiGenerateNotes = (rel: ReleaseVersion) => {
-    setGeneratingId(rel.id);
-    setTimeout(() => {
-      const generatedMarkdown = `## 🚀 Release ${rel.name} Changelog & Notes (AI Synthesized)\n\n### 🌟 Key Highlights & New Features\n- ⚡ **Superpowered Ticket Slide**: Built interactive subtasks checklist with dynamic completion percentage bar.\n- 🐙 **Developer Context Integration**: Connected GitHub PR diffs (#42 Merged) & Commit hash links.\n- 👁️ **Team Engagement & Voting**: Added 1-click issue upvoting and watcher notification counters.\n\n### 🐛 Bug Fixes & Patches\n- 🛡️ **Keyboard Ergonomics**: Resolved global Escape key drawer closing & single-key hotkey focus.\n- ⏰ **Smart Overdue Alerts**: Color-accented relative due-date warnings on overdue tasks.\n\n### ⚡ Performance & Optimization\n- 🚀 **Optimistic UI Updates**: Reduced field edit UI updates to <10ms with zero loading latency.`;
+    const optimisticId = `pending-${Date.now()}`;
+    setReleases((prev) => [
+      { id: optimisticId, name, description, status: "UNRELEASED", completedIssues: 0, totalIssues: 0 },
+      ...prev,
+    ]);
 
-      const next = releases.map((r) => (r.id === rel.id ? { ...r, notesMarkdown: generatedMarkdown } : r));
-      saveReleases(next);
-      setGeneratingId(null);
-      setActiveNotes({ ...rel, notesMarkdown: generatedMarkdown });
-    }, 1000);
+    if (!hasRealProject) return;
+    startTransition(async () => {
+      const res = await createReleaseAction(projectId, name, description);
+      if (res?.error) {
+        setReleases((prev) => prev.filter((r) => r.id !== optimisticId));
+        return;
+      }
+      await refreshReleases();
+    });
   };
 
   const handleCopyNotes = (rel: ReleaseVersion) => {
@@ -125,7 +137,7 @@ export function ReleaseHub({
             )}
           </div>
           <p className="text-xs text-subtle mt-0.5">
-            Manage release versions, track fixVersion progress, and generate AI release notes for {projectKey}.
+            Manage release versions and track fixVersion progress for {projectKey}.
           </p>
         </div>
 
@@ -165,7 +177,6 @@ export function ReleaseHub({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {releases.map((rel) => {
             const pct = rel.totalIssues > 0 ? Math.round((rel.completedIssues / rel.totalIssues) * 100) : 0;
-            const isGenerating = generatingId === rel.id;
 
             return (
               <div
@@ -202,7 +213,7 @@ export function ReleaseHub({
                   <div className="flex items-center justify-between text-xs font-semibold text-subtle">
                     <span>Progress ({pct}%)</span>
                     <span>
-                      {rel.completedIssues} of {rel.totalIssues} tasks completed
+                      {rel.completedIssues} of {rel.totalIssues} issues done
                     </span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
@@ -217,27 +228,14 @@ export function ReleaseHub({
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-2 border-t border-border-default flex-wrap gap-2">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setActiveNotes(rel)}
-                      className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
-                    >
-                      <FileText size={13} />
-                      <span>View Release Notes</span>
-                    </button>
-
-                    {/* AI Generate Release Notes Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleAiGenerateNotes(rel)}
-                      disabled={isGenerating}
-                      className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline disabled:opacity-50"
-                    >
-                      <Sparkles size={13} className={isGenerating ? "animate-spin" : ""} />
-                      <span>{isGenerating ? "Generating..." : "✨ AI Generate Notes"}</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openNotes(rel)}
+                    className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                  >
+                    <FileText size={13} />
+                    <span>View Release Notes</span>
+                  </button>
 
                   <button
                     type="button"
@@ -322,9 +320,13 @@ export function ReleaseHub({
               </button>
             </div>
 
-            <div className="bg-neutral/40 rounded-xl p-4 font-mono text-xs text-default whitespace-pre-wrap max-h-96 overflow-y-auto leading-relaxed">
-              {activeNotes.notesMarkdown}
-            </div>
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              placeholder="Write release notes in Markdown..."
+              rows={10}
+              className="bg-neutral/40 rounded-xl p-4 font-mono text-xs text-default whitespace-pre-wrap max-h-96 overflow-y-auto leading-relaxed outline-none focus:ring-1 focus:ring-brand resize-none"
+            />
 
             <div className="flex items-center justify-between pt-2">
               <button
@@ -335,13 +337,24 @@ export function ReleaseHub({
                 <Copy size={13} />
                 <span>Copy Markdown</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveNotes(null)}
-                className="px-4 py-1.5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hovered"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveNotes(null)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-subtle hover:bg-neutral"
+                >
+                  Cancel
+                </button>
+                <Button
+                  onClick={() => {
+                    handleSaveNotes();
+                    setActiveNotes(null);
+                  }}
+                  className="text-xs"
+                >
+                  Save Notes
+                </Button>
+              </div>
             </div>
           </div>
         </div>

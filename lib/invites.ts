@@ -21,13 +21,53 @@ export async function createInvite(input: {
   });
 }
 
+/**
+ * Reusable "copy link to share" invite for one board — no single recipient,
+ * so no email. Multiple people may accept the same token until it expires or
+ * an admin revokes it. Only one active link is kept per project; callers
+ * should look for an existing one via getActiveShareLink before creating.
+ */
+export async function createShareLink(input: { siteId: string; projectId: string; role?: Role }) {
+  return prisma.invite.create({
+    data: {
+      siteId: input.siteId,
+      email: null,
+      role: input.role ?? "MEMBER",
+      projectId: input.projectId,
+      isReusable: true,
+      token: randomBytes(32).toString("base64url"),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+}
+
+export async function getActiveShareLink(projectId: string) {
+  return prisma.invite.findFirst({
+    where: {
+      projectId,
+      isReusable: true,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function revokeShareLink(inviteId: string) {
+  return prisma.invite.update({
+    where: { id: inviteId },
+    data: { revokedAt: new Date() },
+  });
+}
+
 export async function acceptInvite(token: string, userId: string) {
   const invite = await prisma.invite.findUnique({
     where: { token },
     include: { project: { select: { key: true } } },
   });
   if (!invite) return { ok: false as const, reason: "INVALID" as const };
-  if (invite.acceptedAt) return { ok: false as const, reason: "USED" as const };
+  if (invite.revokedAt) return { ok: false as const, reason: "REVOKED" as const };
+  if (!invite.isReusable && invite.acceptedAt) return { ok: false as const, reason: "USED" as const };
   if (invite.expiresAt < new Date()) return { ok: false as const, reason: "EXPIRED" as const };
 
   // 1. Create workspace membership
