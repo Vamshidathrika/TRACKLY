@@ -18,7 +18,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { appearance?: keyof typeof styles }) {
   return (
     <button
-      className={`inline-flex h-8 items-center gap-1.5 rounded-[8px] px-3 text-[13px] font-medium transition-all disabled:opacity-50 disabled:pointer-events-none ${styles[appearance]} ${className}`}
+      className={`inline-flex h-10 sm:h-8 items-center justify-center gap-1.5 rounded-[8px] px-3 text-[13px] font-medium transition-all disabled:opacity-50 disabled:pointer-events-none ${styles[appearance]} ${className}`}
       {...props}
     />
   );

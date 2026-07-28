@@ -891,7 +891,7 @@ export function IssueDetailDrawer({
       >
         <div
           className={`relative w-full bg-surface border-l border-border h-full shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-slide-in-right ${
-            isWideMode ? "max-w-4xl" : "max-w-2xl"
+            isWideMode ? "md:max-w-4xl" : "md:max-w-2xl"
           }`}
         >
           {/* File Dragging Visual Dropzone Overlay */}
@@ -913,19 +913,19 @@ export function IssueDetailDrawer({
           {/* Top Action Bar */}
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-surface shrink-0">
             {/* Breadcrumb, Key & Epic Badge */}
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle flex-wrap">
-              <span className={`p-1 rounded ${currentType.color}`}>{currentType.icon}</span>
-              <span className="font-mono text-text font-bold">{issue.key}</span>
-              <span className="text-text-subtle/40">•</span>
-              <span className="text-[11px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-subtle flex-wrap min-w-0">
+              <span className={`p-1 rounded shrink-0 ${currentType.color}`}>{currentType.icon}</span>
+              <span className="font-mono text-text font-bold truncate min-w-0">{issue.key}</span>
+              <span className="text-text-subtle/40 shrink-0">•</span>
+              <span className="text-[11px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wider truncate min-w-0">
                 {issue.projectKey}
               </span>
               {/* Epic Context Badge */}
               {issue.parent && (
                 <>
-                  <span className="text-text-subtle/40">•</span>
-                  <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Layers size={11} /> Epic: {issue.parent.summary || issue.parent.key}
+                  <span className="text-text-subtle/40 shrink-0">•</span>
+                  <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1 truncate min-w-0">
+                    <Layers size={11} className="shrink-0" /> <span className="truncate min-w-0">Epic: {issue.parent.summary || issue.parent.key}</span>
                   </span>
                 </>
               )}
@@ -946,17 +946,17 @@ export function IssueDetailDrawer({
               <button
                 onClick={handleAiSummarize}
                 title="AI Executive Recap"
-                className="p-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1 text-xs font-bold"
+                className="hidden md:flex p-2.5 sm:p-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-colors items-center gap-1 text-xs font-bold"
               >
                 <Sparkles size={14} />
-                <span className="hidden md:inline">AI Recap</span>
+                <span>AI Recap</span>
               </button>
 
               {/* Watcher Button */}
               <button
                 onClick={handleToggleWatch}
                 title="Watch task for updates"
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                className={`hidden md:flex px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold transition-all items-center gap-1.5 border ${
                   isWatching
                     ? "bg-selected text-selected-text border-selected-text/30"
                     : "bg-surface border-border text-text-subtle hover:text-text hover:bg-neutral"
@@ -966,13 +966,13 @@ export function IssueDetailDrawer({
                 <span>{watchersCount}</span>
               </button>
 
-              <div className="h-4 w-px bg-border my-auto mx-0.5" />
+              <div className="hidden md:block h-4 w-px bg-border my-auto mx-0.5" />
 
               {/* Drawer Width Switcher */}
               <button
                 onClick={() => setIsWideMode(!isWideMode)}
                 title={isWideMode ? "Switch to standard width" : "Switch to wide width"}
-                className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
+                className="hidden md:flex p-2.5 sm:p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors items-center justify-center"
               >
                 {isWideMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
@@ -983,7 +983,7 @@ export function IssueDetailDrawer({
                 target="_blank"
                 rel="noreferrer"
                 title="Open full page"
-                className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors flex items-center gap-1 text-xs"
+                className="hidden md:flex p-2.5 sm:p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors items-center gap-1 text-xs"
               >
                 <ExternalLink size={15} />
               </Link>
@@ -993,33 +993,33 @@ export function IssueDetailDrawer({
                 <button
                   onClick={() => setShowShareMenu(!showShareMenu)}
                   title="Share or copy links"
-                  className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
+                  className="p-2.5 sm:p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
                 >
                   <Share2 size={16} />
                 </button>
 
                 {showShareMenu && (
-                  <div className="absolute right-0 mt-2 w-52 bg-surface border border-border rounded-xl shadow-xl z-50 py-1 text-xs animate-fade-in">
+                  <div className="absolute right-0 mt-2 w-52 max-w-[calc(100vw-2rem)] bg-surface border border-border rounded-xl shadow-xl z-50 py-1 text-xs animate-fade-in">
                     <button
                       onClick={() => copyToClipboard(`[${issue.key}: ${summary}](${issueUrl})`, "Copied Markdown link!")}
                       className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium"
                     >
-                      <Copy size={13} className="text-brand" />
-                      <span>Copy Markdown Link</span>
+                      <Copy size={13} className="text-brand shrink-0" />
+                      <span className="truncate">Copy Markdown Link</span>
                     </button>
                     <button
                       onClick={() => copyToClipboard(issue.key, "Copied task key!")}
                       className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium"
                     >
-                      <Tag size={13} className="text-text-subtle" />
-                      <span>Copy Task Key</span>
+                      <Tag size={13} className="text-text-subtle shrink-0" />
+                      <span className="truncate">Copy Task Key</span>
                     </button>
                     <button
                       onClick={() => copyToClipboard(issueUrl, "Copied direct link!")}
                       className="w-full text-left px-3 py-2 hover:bg-neutral flex items-center gap-2 text-text font-medium border-t border-border/50"
                     >
-                      <ExternalLink size={13} className="text-text-subtle" />
-                      <span>Copy Direct URL</span>
+                      <ExternalLink size={13} className="text-text-subtle shrink-0" />
+                      <span className="truncate">Copy Direct URL</span>
                     </button>
                   </div>
                 )}
@@ -1029,7 +1029,7 @@ export function IssueDetailDrawer({
               <button
                 onClick={handleDelete}
                 title="Delete task"
-                className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                className="p-2.5 sm:p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
               >
                 <Trash2 size={16} />
               </button>
@@ -1038,7 +1038,7 @@ export function IssueDetailDrawer({
               <button
                 onClick={onClose}
                 title="Close (Esc)"
-                className="p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
+                className="p-2.5 sm:p-1.5 rounded-lg text-text-subtle hover:bg-neutral hover:text-text transition-colors"
               >
                 <X size={18} />
               </button>
@@ -1052,9 +1052,9 @@ export function IssueDetailDrawer({
               {/* Dependency Blocker Warning Guard Banner */}
               {isBlocked && (
                 <div className="p-3.5 rounded-[12px] bg-danger/10 border border-danger/30 text-danger text-xs font-semibold flex items-center justify-between gap-2 shadow-2xs">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <ShieldAlert size={16} className="shrink-0 text-danger" />
-                    <span>
+                    <span className="truncate min-w-0">
                       <strong>Blocked by task:</strong> {activeBlockers[0].key} ({activeBlockers[0].summary})
                     </span>
                   </div>
@@ -1185,15 +1185,15 @@ export function IssueDetailDrawer({
                       onClick={() => handleToggleSubtask(st.id)}
                       className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken hover:bg-neutral/50 border border-border/40 cursor-pointer text-xs transition-colors group"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <button type="button" className="text-brand">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button type="button" className="text-brand shrink-0">
                           {st.status === "DONE" ? (
                             <CheckSquare size={16} className="text-emerald-500" />
                           ) : (
                             <Square size={16} className="text-text-subtle group-hover:text-brand" />
                           )}
                         </button>
-                        <span className={`font-medium ${st.status === "DONE" ? "line-through text-text-subtle" : "text-text"}`}>
+                        <span className={`font-medium truncate min-w-0 ${st.status === "DONE" ? "line-through text-text-subtle" : "text-text"}`}>
                           {st.summary}
                         </span>
                       </div>
@@ -1209,11 +1209,11 @@ export function IssueDetailDrawer({
                     value={newSubtaskTitle}
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
                     placeholder="+ Add subtask (press Enter)"
-                    className="flex-1 h-8 px-3 text-xs rounded-lg border border-border bg-surface text-text outline-none focus:border-brand"
+                    className="flex-1 h-10 sm:h-8 px-3 text-xs rounded-lg border border-border bg-surface text-text outline-none focus:border-brand"
                   />
                   <button
                     type="submit"
-                    className="h-8 px-3 bg-neutral hover:bg-neutral/80 text-text font-bold text-xs rounded-lg"
+                    className="h-10 sm:h-8 px-3 bg-neutral hover:bg-neutral/80 text-text font-bold text-xs rounded-lg shrink-0"
                   >
                     Add
                   </button>
@@ -1236,15 +1236,15 @@ export function IssueDetailDrawer({
                 </div>
 
                 {showAddPrModal && (
-                  <form onSubmit={handleAddPr} className="flex gap-2 p-2.5 bg-neutral/30 rounded-lg border border-border">
+                  <form onSubmit={handleAddPr} className="flex flex-col sm:flex-row gap-2 p-2.5 bg-neutral/30 rounded-lg border border-border">
                     <input
                       type="text"
                       value={newPrInput}
                       onChange={(e) => setNewPrInput(e.target.value)}
                       placeholder="PR Title or #number..."
-                      className="flex-1 h-7 px-2 text-xs rounded border border-border bg-surface text-text outline-none"
+                      className="flex-1 h-10 sm:h-7 px-2 text-xs rounded border border-border bg-surface text-text outline-none"
                     />
-                    <button type="submit" className="h-7 px-2.5 bg-brand text-white font-bold text-xs rounded">
+                    <button type="submit" className="h-10 sm:h-7 px-2.5 bg-brand text-white font-bold text-xs rounded shrink-0">
                       Save
                     </button>
                   </form>
@@ -1258,10 +1258,10 @@ export function IssueDetailDrawer({
                       {/* PRs */}
                       {pullRequests.map((pr) => (
                         <div key={pr.number} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
-                          <div className="flex items-center gap-2 font-mono">
-                            <GitPullRequest size={14} className="text-purple-500" />
-                            <span className="font-bold text-text">#{pr.number}</span>
-                            <span className="text-text font-sans font-medium">{pr.title}</span>
+                          <div className="flex items-center gap-2 font-mono min-w-0">
+                            <GitPullRequest size={14} className="text-purple-500 shrink-0" />
+                            <span className="font-bold text-text shrink-0">#{pr.number}</span>
+                            <span className="text-text font-sans font-medium truncate min-w-0">{pr.title}</span>
                           </div>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -1278,10 +1278,10 @@ export function IssueDetailDrawer({
                       {/* Commits */}
                       {commits.map((cm) => (
                         <div key={cm.hash} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs font-mono">
-                          <div className="flex items-center gap-2">
-                            <GitCommit size={14} className="text-brand" />
-                            <span className="font-bold text-brand">{cm.hash}</span>
-                            <span className="text-text font-sans font-medium">{cm.message}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <GitCommit size={14} className="text-brand shrink-0" />
+                            <span className="font-bold text-brand shrink-0">{cm.hash}</span>
+                            <span className="text-text font-sans font-medium truncate min-w-0">{cm.message}</span>
                           </div>
                         </div>
                       ))}
@@ -1306,11 +1306,11 @@ export function IssueDetailDrawer({
                 </div>
 
                 {showAddLinkModal && (
-                  <form onSubmit={handleAddLink} className="flex gap-2 p-2.5 bg-neutral/30 rounded-lg border border-border">
+                  <form onSubmit={handleAddLink} className="flex flex-col sm:flex-row gap-2 p-2.5 bg-neutral/30 rounded-lg border border-border">
                     <select
                       value={linkRelationInput}
                       onChange={(e) => setLinkRelationInput(e.target.value)}
-                      className="h-7 px-2 text-xs rounded border border-border bg-surface text-text font-medium"
+                      className="h-10 sm:h-7 px-2 text-xs rounded border border-border bg-surface text-text font-medium"
                     >
                       <option value="BLOCKS">Blocks</option>
                       <option value="IS_BLOCKED_BY">Is blocked by</option>
@@ -1321,9 +1321,9 @@ export function IssueDetailDrawer({
                       value={linkKeyInput}
                       onChange={(e) => setLinkKeyInput(e.target.value)}
                       placeholder="Issue Key (e.g. TRACK-12)..."
-                      className="flex-1 h-7 px-2 text-xs rounded border border-border bg-surface text-text outline-none"
+                      className="flex-1 h-10 sm:h-7 px-2 text-xs rounded border border-border bg-surface text-text outline-none"
                     />
-                    <button type="submit" className="h-7 px-2.5 bg-brand text-white font-bold text-xs rounded">
+                    <button type="submit" className="h-10 sm:h-7 px-2.5 bg-brand text-white font-bold text-xs rounded shrink-0">
                       Link
                     </button>
                   </form>
@@ -1335,12 +1335,12 @@ export function IssueDetailDrawer({
                   ) : (
                     linkedIssues.map((lk) => (
                       <div key={lk.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded shrink-0">
                             {lk.relation.replace(/_/g, " ")}
                           </span>
-                          <span className="font-bold font-mono text-brand">{lk.key}</span>
-                          <span className="text-text font-medium">{lk.summary}</span>
+                          <span className="font-bold font-mono text-brand shrink-0">{lk.key}</span>
+                          <span className="text-text font-medium truncate min-w-0">{lk.summary}</span>
                         </div>
                         <span className="text-[10px] font-bold text-text-subtle bg-neutral px-2 py-0.5 rounded">
                           {lk.status}
@@ -1371,7 +1371,7 @@ export function IssueDetailDrawer({
                   </label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {attachments.map((att) => (
                     <div
                       key={att.id}
@@ -1398,7 +1398,7 @@ export function IssueDetailDrawer({
               <div className="flex flex-col gap-4 pt-4 border-t border-border">
                 {/* Tabs Header */}
                 <div className="flex items-center justify-between border-b border-border pb-3">
-                  <div className="flex gap-4 text-xs font-bold text-text-subtle">
+                  <div className="flex gap-4 text-xs font-bold text-text-subtle overflow-x-auto whitespace-nowrap scrollbar-hide">
                     <button
                       onClick={() => setActiveTab("comments")}
                       className={`pb-3 -mb-3 transition-colors flex items-center gap-1.5 ${
@@ -1463,7 +1463,7 @@ export function IssueDetailDrawer({
                               key={chip}
                               type="button"
                               onClick={() => handleChipClick(chip)}
-                              className="px-2 py-0.5 rounded-full bg-surface border border-border text-[11px] font-semibold text-text-subtle hover:text-brand hover:border-brand transition-colors"
+                              className="px-3 py-1.5 sm:px-2 sm:py-0.5 rounded-full bg-surface border border-border text-[11px] font-semibold text-text-subtle hover:text-brand hover:border-brand transition-colors"
                             >
                               {chip}
                             </button>
@@ -1500,7 +1500,7 @@ export function IssueDetailDrawer({
                                     <button
                                       key={emoji}
                                       onClick={() => handleToggleCommentReaction(c.id, emoji)}
-                                      className={`px-2 py-0.5 rounded-full border text-[11px] font-semibold transition-colors ${
+                                      className={`px-3 py-1.5 sm:px-2 sm:py-0.5 rounded-full border text-[11px] font-semibold transition-colors ${
                                         count > 0 ? "bg-brand/10 border-brand/40 text-brand" : "bg-neutral/40 border-border text-text-subtle hover:bg-neutral"
                                       }`}
                                     >
@@ -1548,7 +1548,7 @@ export function IssueDetailDrawer({
                 {/* Tab 3: Work Log */}
                 {activeTab === "worklog" && (
                   <div className="flex flex-col gap-3">
-                    <div className="p-3 rounded-xl bg-neutral/30 border border-border flex items-center justify-between text-xs font-semibold flex-wrap gap-3">
+                    <div className="p-3 rounded-xl bg-neutral/30 border border-border flex flex-col sm:flex-row items-center sm:justify-between text-xs font-semibold flex-wrap gap-3">
                       <div className="flex items-center gap-4 flex-wrap">
                         <span>
                           Total Logged:{" "}
@@ -1564,7 +1564,7 @@ export function IssueDetailDrawer({
                             placeholder="None"
                             min={0}
                             step={0.5}
-                            className="h-7 w-20 px-2 text-right text-xs font-mono font-bold rounded border border-border bg-surface text-text outline-none focus:border-brand"
+                            className="h-10 sm:h-7 w-20 px-2 text-right text-xs font-mono font-bold rounded border border-border bg-surface text-text outline-none focus:border-brand"
                           />
                         </div>
                       </div>
@@ -1635,7 +1635,7 @@ export function IssueDetailDrawer({
                 <button
                   type="button"
                   onClick={handleWorkflowTransition}
-                  className={`w-full h-9 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
+                  className={`w-full h-10 sm:h-9 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
                     isBlocked && issue.status === "IN_REVIEW"
                       ? "bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20"
                       : issue.status === "DONE"
@@ -1663,7 +1663,7 @@ export function IssueDetailDrawer({
                 <select
                   value={issue.status}
                   onChange={(e) => handleStatusSelect(e.target.value as IssueStatus)}
-                  className={`h-9 px-3 text-xs font-bold rounded-lg border border-border outline-none transition-all cursor-pointer ${currentStatus.bg} ${currentStatus.text}`}
+                  className={`h-10 sm:h-9 px-3 text-xs font-bold rounded-lg border border-border outline-none transition-all cursor-pointer ${currentStatus.bg} ${currentStatus.text}`}
                 >
                   {statuses.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -1730,7 +1730,7 @@ export function IssueDetailDrawer({
                 <select
                   value={issue.type}
                   onChange={(e) => handleTypeSelect(e.target.value as IssueType)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
+                  className="h-10 sm:h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
                 >
                   {issueTypes.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -1746,7 +1746,7 @@ export function IssueDetailDrawer({
                 <select
                   value={issue.priority}
                   onChange={(e) => handlePrioritySelect(e.target.value as IssuePriority)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
+                  className="h-10 sm:h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
                 >
                   {Object.entries(priorityIcons).map(([key, val]) => (
                     <option key={key} value={key}>
@@ -1762,7 +1762,7 @@ export function IssueDetailDrawer({
                 <select
                   value={releaseId}
                   onChange={(e) => handleReleaseSelect(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
+                  className="h-10 sm:h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
                 >
                   <option value="">None</option>
                   {availableReleases.map((r) => (
@@ -1784,7 +1784,7 @@ export function IssueDetailDrawer({
                   placeholder="None"
                   min={0}
                   max={100}
-                  className="h-9 px-3 text-xs font-mono font-bold rounded-lg border border-border bg-surface text-text outline-none focus:border-brand"
+                  className="h-10 sm:h-9 px-3 text-xs font-mono font-bold rounded-lg border border-border bg-surface text-text outline-none focus:border-brand"
                 />
               </div>
 
@@ -1813,7 +1813,7 @@ export function IssueDetailDrawer({
                     placeholder="None"
                     min={0}
                     step={0.5}
-                    className="h-8 w-24 px-2 text-right text-xs font-mono font-bold rounded-lg border border-border bg-neutral/30 text-text outline-none focus:border-brand"
+                    className="h-10 sm:h-8 w-24 px-2 text-right text-xs font-mono font-bold rounded-lg border border-border bg-neutral/30 text-text outline-none focus:border-brand"
                   />
                 </div>
 
@@ -1842,7 +1842,7 @@ export function IssueDetailDrawer({
                   type="date"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none focus:border-brand cursor-pointer"
+                  className="h-10 sm:h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none focus:border-brand cursor-pointer"
                 />
               </div>
 
@@ -1860,7 +1860,7 @@ export function IssueDetailDrawer({
                   type="date"
                   value={dueDate}
                   onChange={(e) => handleDueDateChange(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none focus:border-brand cursor-pointer"
+                  className="h-10 sm:h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none focus:border-brand cursor-pointer"
                 />
               </div>
 
@@ -1890,11 +1890,11 @@ export function IssueDetailDrawer({
                     value={labelDraft}
                     onChange={(e) => setLabelDraft(e.target.value)}
                     placeholder="+ Add tag..."
-                    className="flex-1 h-7 px-2 text-[11px] rounded border border-border bg-surface text-text outline-none focus:border-brand"
+                    className="flex-1 h-10 sm:h-7 px-2 text-[11px] rounded border border-border bg-surface text-text outline-none focus:border-brand"
                   />
                   <button
                     type="submit"
-                    className="h-7 px-2 bg-neutral hover:bg-neutral/80 text-text font-bold text-[11px] rounded"
+                    className="h-10 sm:h-7 px-2 bg-neutral hover:bg-neutral/80 text-text font-bold text-[11px] rounded shrink-0"
                   >
                     Add
                   </button>

@@ -111,7 +111,7 @@ export function ProjectSettingsView({
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       {/* Settings Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
+      <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto whitespace-nowrap">
         {[
           { id: "general", label: "General Details", icon: Settings },
           { id: "components", label: "Components & Sub-systems", icon: Layers },
@@ -121,7 +121,7 @@ export function ProjectSettingsView({
           <button
             key={id}
             onClick={() => setActiveTab(id as any)}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 rounded-xl px-4 py-3 sm:px-3.5 sm:py-1.5 text-xs font-semibold transition-all cursor-pointer ${
               activeTab === id
                 ? id === "danger"
                   ? "bg-danger text-white shadow-2xs font-bold"
@@ -243,7 +243,7 @@ export function ProjectSettingsView({
           </form>
 
           {/* Component List */}
-          <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+          <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs overflow-x-auto">
             <div className="p-3 border-b border-border-default bg-neutral/40 flex items-center justify-between">
               <span className="text-xs font-bold text-subtle">
                 Project Components ({components.length})
@@ -332,7 +332,7 @@ export function ProjectSettingsView({
           </form>
 
           {/* Custom Fields Table */}
-          <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+          <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs overflow-x-auto">
             <div className="p-3 border-b border-border-default bg-neutral/40">
               <span className="text-xs font-bold text-subtle">
                 Project Custom Fields ({customFields.length})
@@ -397,7 +397,7 @@ export function ProjectSettingsView({
             </p>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
             <div>
               <p className="text-xs font-semibold text-default">Delete this project</p>
               <p className="text-[11px] text-subtle">

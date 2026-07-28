@@ -163,7 +163,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
           <button
             type="button"
             onClick={handleAiSynthesizeRetro}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2.5 sm:px-3.5 sm:py-1.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer shadow-xs"
           >
             <Sparkles size={14} />
             <span>✨ AI Synthesize Actions</span>
@@ -173,7 +173,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
           <button
             type="button"
             onClick={() => setIsAnonymous((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
               isAnonymous
                 ? "bg-slate-900 text-white border-slate-700 shadow-xs"
                 : "bg-surface text-text-subtle border-border hover:bg-neutral"
@@ -187,7 +187,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
           <button
             type="button"
             onClick={handleExportRetroMarkdown}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-border bg-surface text-text-subtle hover:text-default hover:bg-neutral text-xs font-semibold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2.5 sm:px-3.5 sm:py-1.5 rounded-full border border-border bg-surface text-text-subtle hover:text-default hover:bg-neutral text-xs font-semibold transition-all shadow-xs"
           >
             <Download size={14} />
             <span>Export Notes</span>
@@ -270,7 +270,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
                   <button
                     type="button"
                     onClick={() => handleAddCard(col.id)}
-                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-brand text-white text-[11px] font-bold hover:bg-brand-hovered transition-colors shadow-2xs"
+                    className="flex items-center gap-1 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-brand text-white text-[11px] font-bold hover:bg-brand-hovered transition-colors shadow-2xs"
                   >
                     <Plus size={12} />
                     <span>Add</span>
@@ -295,7 +295,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
                         <button
                           type="button"
                           onClick={() => handleDeleteCard(card.id)}
-                          className="opacity-0 group-hover:opacity-100 text-subtlest hover:text-danger transition-opacity p-0.5 rounded"
+                          className="opacity-0 group-hover:opacity-100 text-subtlest hover:text-danger transition-opacity p-2 sm:p-0.5 rounded"
                           title="Delete card"
                         >
                           <Trash2 size={12} />
@@ -311,7 +311,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
                           <button
                             type="button"
                             onClick={() => handleVote(card.id)}
-                            className="flex items-center gap-1 text-text-subtle hover:text-brand font-extrabold transition-colors px-1.5 py-0.5 rounded hover:bg-neutral"
+                            className="flex items-center gap-1 text-text-subtle hover:text-brand font-extrabold transition-colors px-3 py-1.5 sm:px-1.5 sm:py-0.5 rounded hover:bg-neutral"
                           >
                             <ThumbsUp size={12} />
                             <span>{card.votes}</span>
@@ -328,7 +328,7 @@ export function SprintRetroBoard({ projectKey }: { projectKey: string }) {
                                     onChange={(e) =>
                                       setCardAssignees((prev) => ({ ...prev, [card.id]: e.target.value }))
                                     }
-                                    className="h-5 rounded border border-border bg-surface px-1 text-[10px] text-text-subtle font-medium outline-none cursor-pointer"
+                                    className="h-10 sm:h-5 rounded border border-border bg-surface px-1 text-[10px] text-text-subtle font-medium outline-none cursor-pointer"
                                   >
                                     {teamMembers.map((m) => (
                                       <option key={m} value={m}>

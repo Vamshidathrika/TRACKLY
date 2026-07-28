@@ -27,7 +27,7 @@ export function CardSkeleton() {
 
 export function BoardColumnSkeleton() {
   return (
-    <div className="flex w-72 flex-col rounded-lg border border-border bg-surface-sunken p-3 gap-3">
+    <div className="flex w-[85vw] sm:w-72 flex-col rounded-lg border border-border bg-surface-sunken p-3 gap-3">
       <div className="flex items-center justify-between pb-2">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-5 w-6 rounded-full" />

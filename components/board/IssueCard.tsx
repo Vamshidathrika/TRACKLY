@@ -133,7 +133,7 @@ function IssueCardComponent({
           <button
             type="button"
             onClick={() => onSelectIssue?.(issue)}
-            className="font-mono text-xs font-bold text-subtle group-hover:text-brand hover:underline tracking-tight"
+            className="font-mono text-xs font-bold text-subtle group-hover:text-brand hover:underline tracking-tight truncate min-w-0"
           >
             {issue.key}
           </button>
@@ -143,7 +143,7 @@ function IssueCardComponent({
             value={issue.status}
             onChange={(e) => onStatusChange(issue.id, e.target.value as IssueStatus)}
             title={canEditStatus ? "Change status" : "Status changes restricted to Assignee or Admin"}
-            className={`h-6 rounded-full border border-border-default bg-surface-sunken/80 px-2.5 text-[10px] font-bold text-subtle outline-none focus:border-brand transition-all ${
+            className={`h-8 sm:h-6 rounded-full border border-border-default bg-surface-sunken/80 px-2.5 text-[10px] font-bold text-subtle outline-none focus:border-brand transition-all ${
               !canEditStatus ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-surface hover:text-default"
             }`}
           >
@@ -199,7 +199,7 @@ function IssueCardComponent({
                 e.stopPropagation();
                 setShowAssignDropdown((prev) => !prev);
               }}
-              className="rounded-full hover:ring-2 hover:ring-brand/40 transition-all cursor-pointer"
+              className="rounded-full hover:ring-2 hover:ring-brand/40 transition-all cursor-pointer p-2 sm:p-0 -m-2 sm:m-0"
               title={issue.assignee ? `Assigned to: ${issue.assignee.name} (Click to reassign)` : "Unassigned (Click to assign)"}
             >
               <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={22} />
@@ -207,7 +207,7 @@ function IssueCardComponent({
 
             {/* Quick Assign Popover */}
             {showAssignDropdown && (
-              <div className="absolute right-0 top-7 z-40 w-48 rounded-md border border-border bg-surface py-1 shadow-xl text-xs animate-in fade-in duration-150">
+              <div className="absolute right-0 top-7 z-40 w-56 sm:w-48 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-surface py-1 shadow-xl text-xs animate-in fade-in duration-150">
                 <div className="px-3 py-1 font-bold text-[10px] uppercase tracking-wider text-text-subtle border-b border-border">
                   Assign To
                 </div>
@@ -217,7 +217,7 @@ function IssueCardComponent({
                     onAssigneeChange?.(issue.id, null);
                     setShowAssignDropdown(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-neutral-hovered text-text font-medium text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 sm:py-1.5 hover:bg-neutral-hovered text-text font-medium text-left"
                 >
                   <User size={14} className="text-text-subtle" />
                   <span>Unassigned</span>
@@ -230,7 +230,7 @@ function IssueCardComponent({
                       onAssigneeChange?.(issue.id, user.id);
                       setShowAssignDropdown(false);
                     }}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-neutral-hovered text-left text-text font-medium ${
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 sm:py-1.5 hover:bg-neutral-hovered text-left text-text font-medium ${
                       issue.assignee?.id === user.id ? "bg-selected/40 font-bold" : ""
                     }`}
                   >

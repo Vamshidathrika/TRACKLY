@@ -70,7 +70,7 @@ export function ReportsView({
             <button
               key={id}
               onClick={() => setActiveTab(id as any)}
-              className={`flex items-center gap-2 rounded-ds px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-2 rounded-ds px-4 py-3 sm:px-3 sm:py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
                 activeTab === id
                   ? "bg-brand text-white"
                   : "border border-border-default bg-surface text-default hover:bg-neutral-hovered"
@@ -105,14 +105,14 @@ export function ReportsView({
       {/* BURNDOWN CHART TAB */}
       {activeTab === "burndown" && (
         <div className="flex flex-col gap-4 rounded-ds border border-border bg-surface p-6 shadow-xs">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-text">{burndown.sprintName} Burndown</h3>
               <p className="text-xs text-text-subtle">
                 Ideal remaining story points vs actual progress
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Tag color="blue">Total: {burndown.totalPoints} pts</Tag>
               <Tag color="green">Done: {burndown.pointsDone} pts</Tag>
               <Tag color="gray">Remaining: {burndown.pointsRemaining} pts</Tag>
@@ -120,7 +120,8 @@ export function ReportsView({
           </div>
 
           {/* SVG Burndown Visual */}
-          <div className="mt-4 flex h-64 w-full items-end justify-between gap-2 border-b border-l border-border/80 px-4 pb-2">
+          <div className="overflow-x-auto w-full">
+            <div className="mt-4 flex h-64 min-w-[500px] sm:min-w-0 items-end justify-between gap-2 border-b border-l border-border/80 px-4 pb-2">
             {burndown.timeline.map((pt, idx) => (
               <div key={pt.day} className="flex flex-1 flex-col items-center gap-1">
                 <div className="flex h-48 w-full items-end justify-center gap-1">
@@ -140,6 +141,7 @@ export function ReportsView({
                 <span className="font-mono text-[10px] text-text-subtle">{pt.day}</span>
               </div>
             ))}
+            </div>
           </div>
           <div className="flex items-center justify-center gap-6 pt-2 text-xs text-text-subtle">
             <span className="flex items-center gap-1.5">
@@ -162,7 +164,8 @@ export function ReportsView({
             </p>
           </div>
 
-          <div className="mt-4 flex h-64 w-full items-end justify-around border-b border-l border-border/80 px-4 pb-2">
+          <div className="overflow-x-auto w-full">
+            <div className="mt-4 flex h-64 min-w-[400px] sm:min-w-0 items-end justify-around border-b border-l border-border/80 px-4 pb-2">
             {velocity.length === 0 ? (
               <div className="flex h-full w-full items-center justify-center text-xs text-text-subtle italic">
                 No closed sprint velocity data available yet.
@@ -186,6 +189,7 @@ export function ReportsView({
                 </div>
               ))
             )}
+            </div>
           </div>
           <div className="flex items-center justify-center gap-6 pt-2 text-xs text-text-subtle">
             <span className="flex items-center gap-1.5">

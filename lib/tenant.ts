@@ -37,23 +37,6 @@ export type ProjectContext = {
 export const requireMembership = cache(async (): Promise<TenantContext> => {
   const user = await getAuthUser();
 
-  if (
-    user.siteId &&
-    user.role &&
-    typeof user.membershipVersion === "number"
-  ) {
-    const { getAccessVersion } = await import("./access-cache");
-    const currentVersion = await getAccessVersion(user.id);
-    if (user.membershipVersion === currentVersion) {
-      return {
-        userId: user.id,
-        siteId: user.siteId,
-        role: user.role,
-        siteName: "",
-      };
-    }
-  }
-
   const { getCache, setCache } = await import("./redis");
   const cacheKey = `user:membership:${user.id}`;
   const cached = await getCache<TenantContext>(cacheKey);

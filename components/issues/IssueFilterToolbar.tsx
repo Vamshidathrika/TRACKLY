@@ -102,7 +102,7 @@ export function IssueFilterToolbar({
               {onToggleUnassigned && (
                 <button
                   onClick={onToggleUnassigned}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border ${
+                  className={`flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs font-bold transition-all border ${
                     filterUnassigned
                       ? "bg-slate-800 text-white border-slate-900 ring-2 ring-brand ring-offset-1 scale-110 shadow-md"
                       : "bg-neutral text-text-subtle border-border hover:bg-neutral-hovered hover:scale-105"
@@ -121,7 +121,7 @@ export function IssueFilterToolbar({
                   <button
                     key={usr.id}
                     onClick={() => onSelectUser(isSelected ? null : usr.id)}
-                    className={`relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all border shadow-xs ${userColor} ${
+                    className={`relative flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs font-bold transition-all border shadow-xs ${userColor} ${
                       isSelected
                         ? "ring-2 ring-brand ring-offset-2 border-brand scale-110 z-10 shadow-md"
                         : "hover:scale-105 hover:shadow-md opacity-90 hover:opacity-100"
@@ -143,7 +143,7 @@ export function IssueFilterToolbar({
 
               {extraUserCount > 0 && (
                 <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral text-xs font-bold text-text-subtle border border-border"
+                  className="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-neutral text-xs font-bold text-text-subtle border border-border"
                   title={`${extraUserCount} more team members`}
                 >
                   +{extraUserCount}
@@ -183,7 +183,7 @@ export function IssueFilterToolbar({
                 placeholder="Filter tasks..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="h-8 w-44 rounded-md border border-border bg-surface pl-8 pr-2.5 text-xs outline-none transition-all focus:w-60 focus:border-brand"
+                className="h-8 w-full sm:w-44 rounded-md border border-border bg-surface pl-8 pr-2.5 text-xs outline-none transition-all sm:focus:w-60 focus:border-brand"
               />
               {searchQuery && (
                 <button
@@ -246,7 +246,7 @@ export function IssueFilterToolbar({
           {activeFilterCount > 0 && onClearFilters && (
             <button
               onClick={onClearFilters}
-              className="h-8 px-2.5 rounded-md text-xs font-semibold text-brand bg-brand/10 border border-brand/20 hover:bg-brand/20 transition-colors flex items-center gap-1"
+              className="h-10 sm:h-8 px-2.5 rounded-md text-xs font-semibold text-brand bg-brand/10 border border-brand/20 hover:bg-brand/20 transition-colors flex items-center gap-1"
             >
               <X size={13} /> Clear ({activeFilterCount})
             </button>

@@ -52,7 +52,7 @@ export function SpecDocEditor({ issueKey }: { issueKey: string }) {
   return (
     <div className="flex flex-col gap-4 p-4 rounded-2xl border border-border bg-surface shadow-xs animate-fade-in">
       {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-border pb-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border pb-3 gap-3">
         <div className="flex items-center gap-2">
           <FileText className="text-brand" size={18} />
           <div>
@@ -66,7 +66,7 @@ export function SpecDocEditor({ issueKey }: { issueKey: string }) {
             type="button"
             onClick={handleAiGenerateSpec}
             disabled={isAiGenerating}
-            className="h-7 px-2.5 rounded-lg bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+            className="h-10 sm:h-7 px-3 sm:px-2.5 rounded-lg bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
           >
             <Sparkles size={13} className={isAiGenerating ? "animate-spin" : ""} />
             <span>{isAiGenerating ? "Generating…" : "AI Spec Assist"}</span>
@@ -75,7 +75,7 @@ export function SpecDocEditor({ issueKey }: { issueKey: string }) {
           <button
             type="button"
             onClick={() => setIsEditing(!isEditing)}
-            className="h-7 px-2.5 rounded-lg border border-border bg-surface hover:bg-neutral/50 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+            className="h-10 sm:h-7 px-3 sm:px-2.5 rounded-lg border border-border bg-surface hover:bg-neutral/50 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
           >
             {isEditing ? <Eye size={13} /> : <Edit3 size={13} />}
             <span>{isEditing ? "Preview" : "Edit Spec"}</span>
@@ -84,7 +84,7 @@ export function SpecDocEditor({ issueKey }: { issueKey: string }) {
           <button
             type="button"
             onClick={handleCopy}
-            className="p-1.5 rounded-lg border border-border text-text-subtle hover:text-text transition-colors cursor-pointer"
+            className="p-2 sm:p-1.5 rounded-lg border border-border text-text-subtle hover:text-text transition-colors cursor-pointer"
           >
             {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
           </button>

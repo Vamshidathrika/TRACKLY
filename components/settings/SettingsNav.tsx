@@ -32,7 +32,7 @@ export function SettingsNav() {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-t-xl border-b-2 text-xs transition-all duration-180 whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-3 sm:py-2 rounded-t-xl border-b-2 text-xs transition-all duration-180 whitespace-nowrap cursor-pointer ${
               isActive
                 ? "border-brand bg-brand/10 text-brand font-bold shadow-2xs"
                 : "border-transparent text-subtle hover:text-default hover:bg-neutral/60"

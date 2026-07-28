@@ -202,12 +202,12 @@ export function JQLNavigator({
               if (e.key === "Enter") handleAiConvertAndSearch();
             }}
             placeholder="Try: 'high priority open tasks' or 'in progress bugs'..."
-            className="flex-1 h-9 px-3.5 rounded-full border border-purple-500/30 bg-surface text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-purple-500 shadow-2xs font-medium"
+            className="flex-1 h-10 sm:h-9 px-3.5 rounded-full border border-purple-500/30 bg-surface text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-purple-500 shadow-2xs font-medium"
           />
           <button
             type="button"
             onClick={handleAiConvertAndSearch}
-            className="h-9 px-4 rounded-full bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-all flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+            className="h-10 sm:h-9 px-4 rounded-full bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-all flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
           >
             <Zap size={13} />
             <span>✨ AI Convert & Search</span>
@@ -224,7 +224,7 @@ export function JQLNavigator({
               <button
                 type="button"
                 onClick={() => setBuilderMode("VISUAL")}
-                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2 sm:px-3 sm:py-1 text-xs font-semibold rounded-md transition-all ${
                   builderMode === "VISUAL" ? "bg-surface text-brand shadow-xs" : "text-text-subtle hover:text-text"
                 }`}
               >
@@ -233,7 +233,7 @@ export function JQLNavigator({
               <button
                 type="button"
                 onClick={() => setBuilderMode("RAW")}
-                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2 sm:px-3 sm:py-1 text-xs font-semibold rounded-md transition-all ${
                   builderMode === "RAW" ? "bg-surface text-brand shadow-xs" : "text-text-subtle hover:text-text"
                 }`}
               >
@@ -407,7 +407,7 @@ export function JQLNavigator({
                   setJql(f.jql);
                   handleSearch(f.jql);
                 }}
-                className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-text hover:border-brand hover:text-brand transition-colors shadow-2xs"
+                className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2 sm:px-3 sm:py-1 text-xs font-semibold text-text hover:border-brand hover:text-brand transition-colors shadow-2xs"
               >
                 <Bookmark size={12} className="text-brand" /> {f.name}
                 {f.visibility === "PRIVATE" ? <Lock size={10} className="text-text-subtle" /> : <Globe size={10} className="text-emerald-500" />}

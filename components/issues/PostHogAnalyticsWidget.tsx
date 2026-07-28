@@ -12,7 +12,7 @@ export function PostHogAnalyticsWidget({
 }) {
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-neutral/20 text-xs">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
             <Activity size={16} />

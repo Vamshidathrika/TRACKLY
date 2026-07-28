@@ -301,12 +301,12 @@ export function CalendarView({ issues }: { issues: BoardIssue[] }) {
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-border/60 min-h-[420px]">
           {Array.from({ length: leadingBlanks }, (_, i) => (
-            <div key={`blank-${i}`} className="p-2 min-h-[90px] bg-neutral/10" />
+            <div key={`blank-${i}`} className="p-1 sm:p-2 min-h-[70px] sm:min-h-[90px] bg-neutral/10" />
           ))}
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
             const dayIssues = byDay.get(day) ?? [];
             return (
-              <div key={day} className="p-2 min-h-[90px] flex flex-col gap-1 bg-surface hover:bg-neutral/20">
+              <div key={day} className="p-1 sm:p-2 min-h-[70px] sm:min-h-[90px] flex flex-col gap-1 bg-surface hover:bg-neutral/20">
                 <span className="text-xs font-bold text-text-subtle">{day}</span>
                 {dayIssues.map((issue) => (
                   <div
@@ -417,7 +417,7 @@ export function FormsView({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[12px] font-bold text-default mb-1">Issue Type</label>
                 <select
@@ -503,8 +503,8 @@ export function AutomationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-lg border border-border bg-surface p-6 shadow-xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text">
+      <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-lg border border-border bg-surface p-6 shadow-xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text p-2 sm:p-1 -m-2 sm:m-0">
           <X size={16} />
         </button>
         <div className="flex items-center gap-2 mb-4">
@@ -608,8 +608,8 @@ export function InviteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-scale-in">
-      <div className="w-full max-w-md rounded-[16px] border border-border-default bg-surface p-6 shadow-xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-subtlest hover:text-default">
+      <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md rounded-[16px] border border-border-default bg-surface p-6 shadow-xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-subtlest hover:text-default p-2 sm:p-1 -m-2 sm:m-0">
           <X size={18} />
         </button>
         <div className="flex items-center gap-2 mb-3">
@@ -718,8 +718,8 @@ export function AddViewModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onCl
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text">
+      <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text p-2 sm:p-1 -m-2 sm:m-0">
           <X size={16} />
         </button>
         <div className="flex items-center gap-2 mb-3">
@@ -817,13 +817,13 @@ export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 z-40 w-96 border-l border-border bg-surface shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed top-0 right-0 bottom-0 z-40 w-full sm:w-96 border-l border-border bg-surface shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
       <div className="flex items-center justify-between p-4 border-b border-border bg-neutral/40">
         <div className="flex items-center gap-2">
           <Sparkles className="text-brand" size={18} />
           <h3 className="text-sm font-bold text-text">AI PM Co-Pilot</h3>
         </div>
-        <button onClick={onClose} className="text-text-subtle hover:text-text">
+        <button onClick={onClose} className="text-text-subtle hover:text-text p-2 sm:p-1 -m-2 sm:m-0">
           <X size={16} />
         </button>
       </div>
@@ -834,19 +834,19 @@ export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClos
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => handleSuperpower("breakdown")}
-            className="px-2.5 py-1 rounded-full bg-brand/10 hover:bg-brand/20 border border-brand/30 text-[11px] font-semibold text-brand transition-colors text-left flex items-center gap-1"
+            className="px-3 py-2 sm:px-2.5 sm:py-1 rounded-full bg-brand/10 hover:bg-brand/20 border border-brand/30 text-[11px] font-semibold text-brand transition-colors text-left flex items-center gap-1"
           >
             <Zap size={12} /> Auto-Breakdown Feature
           </button>
           <button
             onClick={() => handleSuperpower("releasenotes")}
-            className="px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-semibold text-emerald-600 transition-colors text-left flex items-center gap-1"
+            className="px-3 py-2 sm:px-2.5 sm:py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-semibold text-emerald-600 transition-colors text-left flex items-center gap-1"
           >
             <FileText size={12} /> Release Notes
           </button>
           <button
             onClick={() => handleSuperpower("audit")}
-            className="px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-[11px] font-semibold text-purple-600 transition-colors text-left flex items-center gap-1"
+            className="px-3 py-2 sm:px-2.5 sm:py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-[11px] font-semibold text-purple-600 transition-colors text-left flex items-center gap-1"
           >
             <ShieldCheck size={12} /> Risk Audit
           </button>
@@ -879,9 +879,9 @@ export function AIAssistantDrawer({ isOpen, onClose }: { isOpen: boolean; onClos
           placeholder="Ask AI or type feature request..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 h-8 rounded border border-border px-2.5 text-xs outline-none focus:border-brand"
+          className="flex-1 h-10 sm:h-8 rounded border border-border px-2.5 text-xs outline-none focus:border-brand"
         />
-        <button type="submit" className="h-8 w-8 rounded bg-brand text-white flex items-center justify-center hover:bg-brand-hovered transition-all">
+        <button type="submit" className="h-10 w-10 sm:h-8 sm:w-8 rounded bg-brand text-white flex items-center justify-center hover:bg-brand-hovered transition-all">
           <Send size={13} />
         </button>
       </form>

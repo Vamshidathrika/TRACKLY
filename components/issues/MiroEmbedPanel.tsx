@@ -80,17 +80,17 @@ export function MiroEmbedPanel({
       )}
 
       {/* URL Attachment Input */}
-      <form onSubmit={handleAddMiro} className="flex gap-2">
+      <form onSubmit={handleAddMiro} className="flex flex-col sm:flex-row gap-2">
         <input
           type="url"
           value={inputUrl}
           onChange={(e) => setInputUrl(e.target.value)}
           placeholder="Paste Miro board link (https://miro.com/app/board/...)"
-          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text font-mono text-[11px] focus:outline-none focus:border-brand"
+          className="flex-1 px-3 py-2 h-10 sm:h-auto rounded-lg border border-border bg-surface text-text font-mono text-[11px] focus:outline-none focus:border-brand"
         />
         <button
           type="submit"
-          className="px-4 py-2 rounded-lg bg-amber-500 text-slate-900 font-extrabold hover:bg-amber-400 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+          className="h-10 sm:h-auto px-4 py-2 rounded-lg bg-amber-500 text-slate-900 font-extrabold hover:bg-amber-400 transition-all flex items-center gap-1 cursor-pointer shrink-0"
         >
           <Plus size={14} />
           <span>Attach Board</span>
@@ -119,7 +119,7 @@ export function MiroEmbedPanel({
                 <button
                   type="button"
                   onClick={() => handleRemove(idx)}
-                  className="text-text-subtle hover:text-red-500 transition-colors p-0.5 rounded"
+                  className="text-text-subtle hover:text-red-500 transition-colors p-2 sm:p-0.5 rounded"
                   title="Remove Miro board"
                 >
                   <Trash2 size={12} />
@@ -134,7 +134,7 @@ export function MiroEmbedPanel({
       {activeEmbedIndex !== null && urls[activeEmbedIndex] && (
         <div
           className={`relative rounded-xl border border-border bg-surface overflow-hidden shadow-md flex flex-col transition-all ${
-            isFullscreen ? "fixed inset-4 z-50 shadow-2xl" : "h-96 w-full"
+            isFullscreen ? "fixed inset-4 z-50 shadow-2xl" : "h-[60vh] sm:h-96 w-full"
           }`}
         >
           <div className="flex items-center justify-between px-4 py-2 bg-neutral/40 border-b border-border text-[11px]">
@@ -149,14 +149,14 @@ export function MiroEmbedPanel({
                 href={urls[activeEmbedIndex]}
                 target="_blank"
                 rel="noreferrer"
-                className="p-1 rounded text-text-subtle hover:text-text hover:bg-neutral flex items-center gap-1 text-[10px] font-bold"
+                className="p-2 sm:p-1 rounded text-text-subtle hover:text-text hover:bg-neutral flex items-center gap-1 text-[10px] font-bold"
               >
                 <ExternalLink size={12} /> Open Miro
               </a>
               <button
                 type="button"
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="p-1 rounded text-text-subtle hover:text-text hover:bg-neutral"
+                className="p-2 sm:p-1 rounded text-text-subtle hover:text-text hover:bg-neutral"
                 title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               >
                 {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}

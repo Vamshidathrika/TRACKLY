@@ -110,7 +110,7 @@ function BoardColumnComponent({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex w-72 shrink-0 flex-col rounded-[16px] border p-3.5 min-h-[520px] max-h-[calc(100vh-170px)] transition-all ${
+      className={`flex w-[85vw] sm:w-72 shrink-0 flex-col rounded-[16px] border p-3.5 min-h-[300px] sm:min-h-[520px] max-h-[calc(100vh-170px)] transition-all ${
         isWipExceeded
           ? "border-danger/50 bg-danger/5"
           : isDragOver
@@ -122,7 +122,7 @@ function BoardColumnComponent({
       <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${statusColors[status]}`} />
-          <h3 className={`text-[11px] font-extrabold uppercase tracking-wider ${isWipExceeded ? "text-danger" : "text-subtle"}`}>
+          <h3 className={`text-[11px] font-extrabold uppercase tracking-wider truncate ${isWipExceeded ? "text-danger" : "text-subtle"}`}>
             {columnTitles[status]}
           </h3>
           {status === "DONE" && (
@@ -204,13 +204,13 @@ function BoardColumnComponent({
             <div className="flex items-center gap-1">
               <button
                 onClick={handleQuickCreate}
-                className="h-7 px-2.5 rounded-[6px] bg-brand text-white text-[11px] font-semibold hover:bg-brand-hovered"
+                className="h-10 sm:h-7 px-2.5 rounded-[6px] bg-brand text-white text-[11px] font-semibold hover:bg-brand-hovered"
               >
                 Add
               </button>
               <button
                 onClick={() => setIsQuickCreating(false)}
-                className="h-7 px-2 text-subtlest hover:text-default text-[11px]"
+                className="h-10 sm:h-7 px-2 text-subtlest hover:text-default text-[11px]"
               >
                 Cancel
               </button>
@@ -222,7 +222,7 @@ function BoardColumnComponent({
               setIsQuickCreating(true);
               setQuickSummary("");
             }}
-            className="flex items-center gap-1 w-full rounded-[8px] py-1.5 px-2 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
+            className="flex items-center gap-1 w-full rounded-[8px] py-2.5 sm:py-1.5 px-2 text-[12px] font-semibold text-subtle hover:bg-neutral hover:text-default transition-all"
           >
             <Plus size={13} />
             <span>Create task</span>

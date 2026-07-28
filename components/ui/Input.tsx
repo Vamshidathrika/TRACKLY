@@ -16,7 +16,7 @@ export function Input({
       )}
       <input
         id={id}
-        className={`h-9 rounded-[8px] border bg-surface px-3 text-[13px] text-default outline-none transition-all placeholder:text-subtlest
+        className={`h-11 sm:h-9 rounded-[8px] border bg-surface px-3 text-[13px] text-default outline-none transition-all placeholder:text-subtlest
           ${error
             ? "border-danger focus:border-danger focus:ring-2 focus:ring-danger/15"
             : "border-border-default focus:border-brand focus:ring-2 focus:ring-brand/10"

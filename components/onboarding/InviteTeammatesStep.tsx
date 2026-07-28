@@ -68,7 +68,7 @@ export function InviteTeammatesStep({
           value={emailsText}
           onChange={(e) => setEmailsText(e.target.value)}
           placeholder="e.g. sarah@acme.com, dev-team@acme.com"
-          className="w-full rounded-lg border border-border bg-surface p-3 text-xs font-mono text-text focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="w-full h-10 sm:h-auto sm:p-3 rounded-lg border border-border bg-surface text-xs font-mono text-text focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
 
         {/* Security & Disclaimer */}
@@ -90,7 +90,7 @@ export function InviteTeammatesStep({
           <Button
             appearance="subtle"
             onClick={() => handleInviteSubmit(true)}
-            className="px-4 py-2.5 text-xs font-semibold text-text-subtle hover:text-text"
+            className="px-4 py-3 sm:py-2.5 text-xs font-semibold text-text-subtle hover:text-text"
           >
             Do this later
           </Button>
