@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef } from "react";
+import { useState, useEffect, useTransition, useRef, useMemo } from "react";
 import Link from "next/link";
 import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
 import { getIssueDevelopmentDataAction } from "@/app/(app)/projects/[key]/issues/actions";
@@ -187,10 +187,9 @@ export function IssueDetailDrawer({
   const [labelDraft, setLabelDraft] = useState<string>("");
 
   // Superpower State: Active Presence & Collaboration
-  const [activePresenceUsers] = useState<BoardUserOption[]>([
-    availableUsers[0] || { id: "u-1", name: "Alex Chen", avatarUrl: null },
-    availableUsers[1] || { id: "u-2", name: "Sarah Connor", avatarUrl: null },
-  ]);
+  const activePresenceUsers = useMemo<BoardUserOption[]>(() => {
+    return availableUsers.slice(0, 3);
+  }, [availableUsers]);
 
   // Superpower State: Engagement & Voting
   const [watchersCount, setWatchersCount] = useState(0);
@@ -311,13 +310,21 @@ export function IssueDetailDrawer({
       setWorkLogsList(logs);
       setCommentsList(issue.comments || []);
       setHistoryList(issue.history || []);
-      const totalLogged = issue.loggedHours ?? logs.reduce((sum, w) => sum + Number(w.hours || 0), 0);
+      const totalLogged = issue.loggedHours ?? logs.reduce((sum: number, w: any) => sum + Number(w.hours || 0), 0);
       setLoggedHours(totalLogged);
 
       if (issue.id && !issue.id.startsWith("demo-")) {
         setIsLoadingDetail(true);
         getIssueDevelopmentDataAction(issue.id).then((res) => {
-          if (res) setDevData(res);
+          if (res) {
+            setDevData(res);
+            if (res.pullRequests && res.pullRequests.length > 0) {
+              setPullRequests(res.pullRequests.map((p) => ({ number: p.prNumber, title: p.title, status: p.status as any, url: p.url ?? undefined })));
+            }
+            if (res.commits && res.commits.length > 0) {
+              setCommits(res.commits.map((c) => ({ hash: c.hash, message: c.message, url: c.url ?? undefined })));
+            }
+          }
         });
       } else {
         setIsLoadingDetail(false);
@@ -563,7 +570,9 @@ export function IssueDetailDrawer({
 
   // Superpower Action: AI Executive Summary Recap
   const handleAiSummarize = () => {
-    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and 1 PR merged.`);
+    const prCount = pullRequests.filter((p) => p.status === "MERGED").length;
+    const prText = prCount === 1 ? "1 PR merged" : `${prCount} PRs merged`;
+    showToast(`✨ AI Recap: ${issue.key} is an active ${issue.type.toLowerCase()} with ${completedSubtasks}/${subtasks.length} subtasks completed and ${prText}.`);
   };
 
   // Clipboard Image Paste Handler (`Cmd+V` / `Ctrl+V`)
@@ -891,11 +900,15 @@ export function IssueDetailDrawer({
               <span className="text-[11px] font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
                 {issue.projectKey}
               </span>
-              <span className="text-text-subtle/40">•</span>
               {/* Epic Context Badge */}
-              <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Layers size={11} /> Epic: Platform Infrastructure
-              </span>
+              {issue.parent && (
+                <>
+                  <span className="text-text-subtle/40">•</span>
+                  <span className="text-[11px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Layers size={11} /> Epic: {issue.parent.summary || issue.parent.key}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Quick Action Controls & Team Presence */}
@@ -1221,36 +1234,42 @@ export function IssueDetailDrawer({
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {/* PRs */}
-                  {pullRequests.map((pr) => (
-                    <div key={pr.number} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
-                      <div className="flex items-center gap-2 font-mono">
-                        <GitPullRequest size={14} className="text-purple-500" />
-                        <span className="font-bold text-text">#{pr.number}</span>
-                        <span className="text-text font-sans font-medium">{pr.title}</span>
-                      </div>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          pr.status === "MERGED"
-                            ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
-                            : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
-                        }`}
-                      >
-                        {pr.status}
-                      </span>
-                    </div>
-                  ))}
+                  {pullRequests.length === 0 && commits.length === 0 ? (
+                    <p className="text-xs text-text-subtle italic">No linked PRs or commits.</p>
+                  ) : (
+                    <>
+                      {/* PRs */}
+                      {pullRequests.map((pr) => (
+                        <div key={pr.number} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
+                          <div className="flex items-center gap-2 font-mono">
+                            <GitPullRequest size={14} className="text-purple-500" />
+                            <span className="font-bold text-text">#{pr.number}</span>
+                            <span className="text-text font-sans font-medium">{pr.title}</span>
+                          </div>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              pr.status === "MERGED"
+                                ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
+                                : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                            }`}
+                          >
+                            {pr.status}
+                          </span>
+                        </div>
+                      ))}
 
-                  {/* Commits */}
-                  {commits.map((cm) => (
-                    <div key={cm.hash} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs font-mono">
-                      <div className="flex items-center gap-2">
-                        <GitCommit size={14} className="text-brand" />
-                        <span className="font-bold text-brand">{cm.hash}</span>
-                        <span className="text-text font-sans font-medium">{cm.message}</span>
-                      </div>
-                    </div>
-                  ))}
+                      {/* Commits */}
+                      {commits.map((cm) => (
+                        <div key={cm.hash} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs font-mono">
+                          <div className="flex items-center gap-2">
+                            <GitCommit size={14} className="text-brand" />
+                            <span className="font-bold text-brand">{cm.hash}</span>
+                            <span className="text-text font-sans font-medium">{cm.message}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1294,20 +1313,24 @@ export function IssueDetailDrawer({
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {linkedIssues.map((lk) => (
-                    <div key={lk.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded">
-                          {lk.relation.replace(/_/g, " ")}
+                  {linkedIssues.length === 0 ? (
+                    <p className="text-xs text-text-subtle italic">No linked issues.</p>
+                  ) : (
+                    linkedIssues.map((lk) => (
+                      <div key={lk.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-sunken border border-border/50 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-subtle bg-neutral px-1.5 py-0.5 rounded">
+                            {lk.relation.replace(/_/g, " ")}
+                          </span>
+                          <span className="font-bold font-mono text-brand">{lk.key}</span>
+                          <span className="text-text font-medium">{lk.summary}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-text-subtle bg-neutral px-2 py-0.5 rounded">
+                          {lk.status}
                         </span>
-                        <span className="font-bold font-mono text-brand">{lk.key}</span>
-                        <span className="text-text font-medium">{lk.summary}</span>
                       </div>
-                      <span className="text-[10px] font-bold text-text-subtle bg-neutral px-2 py-0.5 rounded">
-                        {lk.status}
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -1589,23 +1612,21 @@ export function IssueDetailDrawer({
                   type="button"
                   onClick={handleWorkflowTransition}
                   className={`w-full h-9 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
-                    isBlocked && issue.status !== "DONE"
+                    isBlocked && issue.status === "IN_REVIEW"
                       ? "bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20"
                       : issue.status === "DONE"
                       ? "bg-neutral text-text hover:bg-neutral/80 border border-border"
                       : "bg-brand text-white hover:bg-brand-hovered"
                   }`}
                 >
-                  {isBlocked && issue.status !== "DONE" && <ShieldAlert size={14} className="text-amber-500" />}
+                  {isBlocked && issue.status === "IN_REVIEW" && <ShieldAlert size={14} className="text-amber-500" />}
                   <span>
-                    {isBlocked && issue.status !== "DONE"
-                      ? `Start Progress (${activeBlockers[0].key})`
-                      : issue.status === "TO_DO"
+                    {issue.status === "TO_DO"
                       ? "Start Progress"
                       : issue.status === "IN_PROGRESS"
                       ? "Submit for Review"
                       : issue.status === "IN_REVIEW"
-                      ? "Mark Complete ✓"
+                      ? (isBlocked ? `Mark Complete (Blocked by ${activeBlockers[0].key})` : "Mark Complete ✓")
                       : "Reopen Task"}
                   </span>
                   <ArrowRight size={14} />

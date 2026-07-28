@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Share2, Copy, Check, X, Globe, Users, ShieldCheck, Mail, Sparkles, AlertTriangle } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { Share2, Copy, Check, X, Globe, Users, ShieldCheck, Mail, Sparkles, AlertTriangle, Ban } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { shareBoardByEmailAction } from "@/app/(app)/projects/[key]/settings/actions";
+import {
+  shareBoardByEmailAction,
+  getOrCreateShareLinkAction,
+  revokeShareLinkAction,
+} from "@/app/(app)/projects/[key]/settings/actions";
 
 export function ShareBoardModal({
   projectName,
@@ -25,26 +29,55 @@ export function ShareBoardModal({
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [isSending, startSending] = useTransition();
 
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [isRevoking, startRevoking] = useTransition();
+
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const handleClose = () => {
     if (externalOnClose) externalOnClose();
     setInternalIsOpen(false);
   };
 
-  const getBoardUrl = () => {
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/projects/${projectKey}/board`;
-    }
-    return `/projects/${projectKey}/board`;
-  };
+  // A share link is fetched (or created on first open) rather than derived
+  // client-side — the previous version just copied the bare board URL, which
+  // never actually granted access to anyone who opened it.
+  useEffect(() => {
+    if (!isOpen) return;
+    setLinkLoading(true);
+    setLinkError(null);
+    getOrCreateShareLinkAction(projectKey)
+      .then((res) => {
+        if ("error" in res && res.error) {
+          setLinkError(res.error);
+          return;
+        }
+        setShareUrl(res.inviteUrl ?? null);
+      })
+      .finally(() => setLinkLoading(false));
+  }, [isOpen, projectKey]);
 
   const handleCopy = () => {
-    const url = getBoardUrl();
+    if (!shareUrl) return;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(url);
+      navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }
+  };
+
+  const handleRevoke = () => {
+    startRevoking(async () => {
+      const res = await revokeShareLinkAction(projectKey);
+      if ("error" in res && res.error) {
+        setLinkError(res.error);
+        return;
+      }
+      // Immediately mint the replacement so the box never sits on a dead link.
+      const next = await getOrCreateShareLinkAction(projectKey);
+      if ("inviteUrl" in next && next.inviteUrl) setShareUrl(next.inviteUrl);
+    });
   };
 
   const handleSendInvite = (e: React.FormEvent) => {
@@ -65,7 +98,7 @@ export function ShareBoardModal({
       setInvitedStatus(
         res.emailSent
           ? `Invitation emailed to ${res.recipient}.`
-          : `Invite created for ${res.recipient}. Email delivery is not configured — copy the link from Settings › Members.`
+          : `Invite created for ${res.recipient}, but email delivery is not configured — use the share link above instead.`
       );
     });
   };
@@ -95,7 +128,7 @@ export function ShareBoardModal({
               </span>
             </h3>
             <p className="text-xs text-text-subtle mt-0.5">
-              Invite teammates by email. The board link only opens for people who already have access.
+              Share a link that grants access on its own, or invite one person by email.
             </p>
           </div>
         </div>
@@ -104,29 +137,31 @@ export function ShareBoardModal({
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs text-emerald-700 flex items-start gap-2.5">
           <Globe size={16} className="shrink-0 text-emerald-600 mt-0.5" />
           <div className="flex-1">
-            <p className="font-extrabold text-emerald-800">Invite-only board</p>
+            <p className="font-extrabold text-emerald-800">Anyone with this link can join</p>
             <p className="text-[11px] text-emerald-700/90 mt-0.5 leading-relaxed">
-              Each invitation is a single-use link that expires in 7 days. Once accepted, the board appears in that person&apos;s <strong>Projects navigation</strong> and <strong>Your Work dashboard</strong>.
+              Whoever opens it and signs in gets access to this board — expires in 7 days, or revoke it
+              anytime below. Once accepted, the board appears in that person&apos;s <strong>Projects navigation</strong> and <strong>Your Work dashboard</strong>.
             </p>
           </div>
         </div>
 
-        {/* Copy Board Link Box */}
+        {/* Copy Share Link Box */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-text flex items-center gap-1.5">
-            <ShieldCheck size={14} className="text-brand" /> Board URL Link
+            <ShieldCheck size={14} className="text-brand" /> Share Link
           </label>
           <div className="flex items-center gap-2">
             <input
               type="text"
               readOnly
-              value={getBoardUrl()}
+              value={linkLoading ? "Generating link…" : shareUrl ?? ""}
               className="flex-1 h-10 px-3.5 rounded-xl border border-border bg-neutral/50 font-mono text-xs text-text focus:outline-none select-all"
             />
             <Button
               appearance="primary"
               onClick={handleCopy}
-              className={`h-10 px-4 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 ${
+              disabled={!shareUrl || linkLoading}
+              className={`h-10 px-4 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-60 ${
                 copied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-brand hover:bg-brand-hovered text-white"
               }`}
             >
@@ -141,6 +176,21 @@ export function ShareBoardModal({
               )}
             </Button>
           </div>
+          {linkError && (
+            <p className="text-xs font-semibold text-danger flex items-center gap-1 mt-1">
+              <AlertTriangle size={13} /> {linkError}
+            </p>
+          )}
+          {shareUrl && (
+            <button
+              type="button"
+              onClick={handleRevoke}
+              disabled={isRevoking}
+              className="self-start text-[11px] font-semibold text-text-subtle hover:text-danger flex items-center gap-1 mt-0.5 disabled:opacity-60"
+            >
+              <Ban size={12} /> {isRevoking ? "Revoking…" : "Revoke this link & generate a new one"}
+            </button>
+          )}
         </div>
 
         {/* Direct Invite Form */}

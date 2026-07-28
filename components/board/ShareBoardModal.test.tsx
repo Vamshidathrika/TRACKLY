@@ -2,8 +2,12 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const shareBoardByEmailAction = vi.fn();
+const getOrCreateShareLinkAction = vi.fn();
+const revokeShareLinkAction = vi.fn();
 vi.mock("@/app/(app)/projects/[key]/settings/actions", () => ({
   shareBoardByEmailAction: (...args: unknown[]) => shareBoardByEmailAction(...args),
+  getOrCreateShareLinkAction: (...args: unknown[]) => getOrCreateShareLinkAction(...args),
+  revokeShareLinkAction: (...args: unknown[]) => revokeShareLinkAction(...args),
 }));
 
 import { ShareBoardModal } from "./ShareBoardModal";
@@ -11,25 +15,49 @@ import { ShareBoardModal } from "./ShareBoardModal";
 describe("ShareBoardModal", () => {
   beforeEach(() => {
     shareBoardByEmailAction.mockReset();
+    getOrCreateShareLinkAction.mockReset();
+    revokeShareLinkAction.mockReset();
+    getOrCreateShareLinkAction.mockResolvedValue({
+      success: true,
+      inviteUrl: "http://localhost:3000/invite/real-token-abc",
+    });
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
       configurable: true,
     });
   });
 
-  it("copies a plain board link, not a self-enrolling join link", () => {
+  it("fetches a real share link on open and copies it, not a bare board URL", async () => {
     render(<ShareBoardModal projectName="Mobile Redesign" projectKey="MOB" isOpen={true} />);
 
     expect(screen.getByText("Share Mobile Redesign")).toBeInTheDocument();
     expect(screen.getByText("MOB")).toBeInTheDocument();
-    expect(screen.getByText("Invite-only board")).toBeInTheDocument();
+    expect(screen.getByText("Anyone with this link can join")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    await waitFor(() => expect(getOrCreateShareLinkAction).toHaveBeenCalledWith("MOB"));
+
+    const copyBtn = await screen.findByRole("button", { name: /copy link/i });
+    await waitFor(() => expect(copyBtn).not.toBeDisabled());
+    fireEvent.click(copyBtn);
 
     const copied = (navigator.clipboard.writeText as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(copied).toContain("/projects/MOB/board");
-    // The /join route used to grant workspace access to anyone who opened it.
-    expect(copied).not.toContain("/join");
+    expect(copied).toBe("http://localhost:3000/invite/real-token-abc");
+  });
+
+  it("revokes the link and replaces it with a new one", async () => {
+    revokeShareLinkAction.mockResolvedValue({ success: true });
+    getOrCreateShareLinkAction
+      .mockResolvedValueOnce({ success: true, inviteUrl: "http://localhost:3000/invite/first" })
+      .mockResolvedValueOnce({ success: true, inviteUrl: "http://localhost:3000/invite/second" });
+
+    render(<ShareBoardModal projectName="Mobile Redesign" projectKey="MOB" isOpen={true} />);
+
+    await screen.findByDisplayValue("http://localhost:3000/invite/first");
+
+    fireEvent.click(screen.getByRole("button", { name: /revoke this link/i }));
+
+    await waitFor(() => expect(revokeShareLinkAction).toHaveBeenCalledWith("MOB"));
+    expect(await screen.findByDisplayValue("http://localhost:3000/invite/second")).toBeInTheDocument();
   });
 
   it("creates a real invite through the server action", async () => {

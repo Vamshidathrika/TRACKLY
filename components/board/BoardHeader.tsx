@@ -46,34 +46,6 @@ function BoardHeaderComponent({
             {projectKey}
           </span>
         </div>
-
-        {/* Active Participants Profile Circles */}
-        {availableUsers.length > 0 && (
-          <div className="hidden sm:flex items-center -space-x-2 overflow-hidden ml-2 pl-2 border-l border-border">
-            {availableUsers.slice(0, 5).map((user) => (
-              <div
-                key={user.id}
-                title={`${user.name} (Active Board Participant)`}
-                className="relative inline-block h-7 w-7 rounded-full ring-2 ring-surface bg-brand/20 text-brand font-bold text-[10px] flex items-center justify-center shrink-0 uppercase shadow-xs transition-transform hover:scale-110 hover:z-10"
-              >
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="h-full w-full rounded-full object-cover" />
-                ) : (
-                  <span>{user.name.slice(0, 2)}</span>
-                )}
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-surface" />
-              </div>
-            ))}
-            {availableUsers.length > 5 && (
-              <div
-                title={`${availableUsers.length - 5} more active participants`}
-                className="relative inline-block h-7 w-7 rounded-full ring-2 ring-surface bg-neutral text-text-subtle font-extrabold text-[10px] flex items-center justify-center shrink-0"
-              >
-                +{availableUsers.length - 5}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Action Buttons */}

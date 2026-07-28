@@ -29,11 +29,18 @@ export async function createAccount(input: {
     : null;
 
   if (input.inviteToken) {
+    // A share link has no single recipient — token possession is the only
+    // consent evidence there is, so any signup email is accepted and the
+    // link isn't consumed by one use. A targeted email invite keeps the
+    // stricter rule: single-use, and the signup email must match the one it
+    // was issued to.
     const usable =
       pendingInvite &&
-      !pendingInvite.acceptedAt &&
+      !pendingInvite.revokedAt &&
       pendingInvite.expiresAt > new Date() &&
-      pendingInvite.email.toLowerCase() === normalizedEmail;
+      (pendingInvite.isReusable
+        ? true
+        : !pendingInvite.acceptedAt && pendingInvite.email?.toLowerCase() === normalizedEmail);
 
     // Fail loudly rather than silently falling through to "create your own
     // workspace" — otherwise a mistyped address looks like a successful join.

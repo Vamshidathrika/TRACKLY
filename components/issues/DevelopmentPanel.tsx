@@ -138,43 +138,9 @@ export function DevelopmentPanel({
     setAiNote(note);
   };
 
-  const defaultBranches: LinkedBranch[] = branches.length > 0
-    ? branches
-    : [
-        {
-          id: "b-1",
-          name: `feature/${issueKey.toLowerCase()}-auth`,
-          lastCommitHash: "8f3a12b",
-        },
-      ];
-
-  const defaultPullRequests: LinkedPullRequest[] = pullRequests.length > 0
-    ? pullRequests
-    : [
-        {
-          id: "pr-1",
-          prNumber: 42,
-          title: `fix(${issueKey}): resolve production issue`,
-          status: "MERGED",
-          authorName: "Sarah C.",
-          url: "https://github.com/Vamshidathrika/TRACKLY/pull/42",
-        },
-      ];
-
-  const defaultCommits: LinkedCommit[] = liveCommits.length > 0
-    ? liveCommits
-    : commits.length > 0
-    ? commits
-    : [
-        {
-          id: "c-1",
-          hash: "8f3a12b",
-          message: `fix(${issueKey}): resolve production issue`,
-          authorName: "Alex V.",
-          committedAt: "2 hours ago",
-          url: "https://github.com/Vamshidathrika/TRACKLY/commit/8f3a12b",
-        },
-      ];
+  const defaultBranches: LinkedBranch[] = branches;
+  const defaultPullRequests: LinkedPullRequest[] = pullRequests;
+  const defaultCommits: LinkedCommit[] = liveCommits.length > 0 ? liveCommits : commits;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-neutral/20 p-3 text-xs w-full overflow-hidden">
@@ -247,32 +213,36 @@ export function DevelopmentPanel({
             <span className="text-[10px] font-extrabold text-text-subtle uppercase tracking-wider flex items-center gap-1">
               <GitPullRequest size={12} className="text-purple-600" /> Pull Requests
             </span>
-            {defaultPullRequests.map((pr) => (
-              <div key={pr.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs gap-2 min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0 truncate">
-                  <span
-                    className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono shrink-0 ${
-                      pr.status === "MERGED"
-                        ? "bg-purple-500/15 text-purple-600"
-                        : pr.status === "OPEN"
-                        ? "bg-emerald-500/15 text-emerald-600"
-                        : "bg-red-500/15 text-red-600"
-                    }`}
-                  >
-                    #{pr.prNumber} {pr.status}
-                  </span>
-                  <a
-                    href={pr.url || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-bold text-text hover:text-brand truncate text-[11px]"
-                  >
-                    {pr.title}
-                  </a>
+            {defaultPullRequests.length === 0 ? (
+              <p className="text-[11px] text-text-subtle italic py-0.5">No pull requests linked.</p>
+            ) : (
+              defaultPullRequests.map((pr) => (
+                <div key={pr.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-xs gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 truncate">
+                    <span
+                      className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                        pr.status === "MERGED"
+                          ? "bg-purple-500/15 text-purple-600"
+                          : pr.status === "OPEN"
+                          ? "bg-emerald-500/15 text-emerald-600"
+                          : "bg-red-500/15 text-red-600"
+                      }`}
+                    >
+                      #{pr.prNumber} {pr.status}
+                    </span>
+                    <a
+                      href={pr.url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-text hover:text-brand truncate text-[11px]"
+                    >
+                      {pr.title}
+                    </a>
+                  </div>
+                  <span className="text-[10px] text-text-subtle shrink-0">{pr.authorName}</span>
                 </div>
-                <span className="text-[10px] text-text-subtle shrink-0">{pr.authorName}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Active Branches */}
@@ -290,12 +260,16 @@ export function DevelopmentPanel({
                 <span>{copiedBranch ? "Copied!" : "Copy Branch Cmd"}</span>
               </button>
             </div>
-            {defaultBranches.map((b) => (
-              <div key={b.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-[11px] font-mono min-w-0">
-                <span className="font-bold text-brand truncate">{b.name}</span>
-                {b.lastCommitHash && <span className="text-[10px] text-text-subtle shrink-0">{b.lastCommitHash}</span>}
-              </div>
-            ))}
+            {defaultBranches.length === 0 ? (
+              <p className="text-[11px] text-text-subtle italic py-0.5">No active branches linked.</p>
+            ) : (
+              defaultBranches.map((b) => (
+                <div key={b.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-[11px] font-mono min-w-0">
+                  <span className="font-bold text-brand truncate">{b.name}</span>
+                  {b.lastCommitHash && <span className="text-[10px] text-text-subtle shrink-0">{b.lastCommitHash}</span>}
+                </div>
+              ))
+            )}
           </div>
 
           {/* Commits Stream */}
@@ -323,21 +297,25 @@ export function DevelopmentPanel({
               </div>
             )}
 
-            {defaultCommits.slice(0, 2).map((c) => (
-              <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-[11px] gap-2 min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0 truncate">
-                  <a
-                    href={c.url || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono font-bold text-brand hover:underline shrink-0 text-[10px]"
-                  >
-                    {c.hash}
-                  </a>
-                  <span className="font-semibold text-text truncate">{c.message}</span>
+            {defaultCommits.length === 0 ? (
+              <p className="text-[11px] text-text-subtle italic py-0.5">No commits linked.</p>
+            ) : (
+              defaultCommits.slice(0, 2).map((c) => (
+                <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-surface text-[11px] gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 truncate">
+                    <a
+                      href={c.url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono font-bold text-brand hover:underline shrink-0 text-[10px]"
+                    >
+                      {c.hash}
+                    </a>
+                    <span className="font-semibold text-text truncate">{c.message}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Deployment Badge */}

@@ -128,6 +128,7 @@ export async function resendInviteAction(inviteId: string) {
     const { siteName, siteId } = await requireAdmin();
     const invite = await prisma.invite.findFirst({ where: { id: inviteId, siteId } });
     if (!invite) return { error: "Invite not found" };
+    if (!invite.email) return { error: "This is a share link, not an email invite — nothing to resend." };
 
     const baseUrl = process.env.AUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const fullInviteUrl = `${baseUrl}/invite/${invite.token}`;

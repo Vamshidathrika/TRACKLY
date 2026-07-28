@@ -224,3 +224,64 @@ export async function shareBoardByEmailAction(projectKey: string, email: string)
     throw e;
   }
 }
+
+function shareLinkUrl(token: string) {
+  const baseUrl =
+    process.env.AUTH_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  return `${baseUrl}/invite/${token}`;
+}
+
+async function requireBoardAdmin(projectKey: string) {
+  const { getAuthUser } = await import("@/lib/auth");
+  const { checkProjectAccess } = await import("@/lib/tenant");
+  const { getProjectByKey } = await import("@/lib/projects");
+
+  const user = await getAuthUser();
+  const { siteId } = await requireMembership();
+  const project = await getProjectByKey(siteId, projectKey);
+  if (!project) throw new Error("Board not found");
+
+  const access = await checkProjectAccess(user.id, project.id);
+  if (!access || (access.projectRole !== "ADMIN" && access.projectRole !== "WORKSPACE_ADMIN")) {
+    throw new Error("Only board owners and workspace admins can share this board");
+  }
+  return { project, siteId };
+}
+
+/**
+ * Returns a working, reusable "copy link to share" invite for this board —
+ * reuses an existing active one if present, otherwise creates it. Unlike
+ * shareBoardByEmailAction this needs no recipient email up front.
+ */
+export async function getOrCreateShareLinkAction(projectKey: string) {
+  try {
+    const { getActiveShareLink, createShareLink } = await import("@/lib/invites");
+    const { project, siteId } = await requireBoardAdmin(projectKey);
+
+    let invite = await getActiveShareLink(project.id);
+    if (!invite) {
+      invite = await createShareLink({ siteId, projectId: project.id });
+    }
+
+    return { success: true, inviteUrl: shareLinkUrl(invite.token), createdAt: invite.createdAt };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function revokeShareLinkAction(projectKey: string) {
+  try {
+    const { getActiveShareLink, revokeShareLink } = await import("@/lib/invites");
+    const { project } = await requireBoardAdmin(projectKey);
+
+    const invite = await getActiveShareLink(project.id);
+    if (invite) await revokeShareLink(invite.id);
+
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}

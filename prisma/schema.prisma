@@ -127,10 +127,16 @@ model Membership {
 model Invite {
   id         String    @id @default(cuid())
   siteId     String
-  email      String
+  email      String?
   token      String    @unique
   role       Role      @default(MEMBER)
   projectId  String?
+  // A share link (isReusable) has no single recipient — anyone holding the
+  // token may accept it, repeatedly, until expiry or revocation. A targeted
+  // email invite stays single-use: acceptedAt blocks reuse and the accepting
+  // signup email must match.
+  isReusable Boolean   @default(false)
+  revokedAt  DateTime?
   expiresAt  DateTime
   acceptedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -139,6 +145,7 @@ model Invite {
 
   @@index([email, acceptedAt, expiresAt])
   @@index([siteId])
+  @@index([projectId, isReusable, revokedAt])
 }
 
 model Project {
