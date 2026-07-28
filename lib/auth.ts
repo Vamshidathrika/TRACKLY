@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
+import type { Role } from "@prisma/client";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
 
@@ -50,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.userId = user.id;
         if (user.email) {
@@ -64,12 +65,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
       }
+
+      // Load workspace identity into the token at sign-in, whenever a session
+      // update is explicitly triggered, or whenever the live access version no
+      // longer matches what the token carries. That last case is what makes a
+      // revoked role self-heal: invalidateUserAccess bumps the version as part
+      // of the same mutation that changed access, so the very next request
+      // notices the mismatch here and re-reads membership from the database —
+      // never from a cache, which that same mutation already cleared. Without
+      // this, requireMembership's version check (lib/tenant.ts) would still
+      // deny stale access correctly, but every request would keep paying the
+      // database fallback until the user next logs in.
+      if (token.userId) {
+        try {
+          const { getAccessVersion } = await import("./access-cache");
+          const currentVersion = await getAccessVersion(token.userId as string);
+          const stale = token.membershipVersion !== currentVersion;
+
+          if (user || trigger === "update" || stale) {
+            const membership = await prisma.membership.findFirst({
+              where: { userId: token.userId as string },
+              include: { site: true },
+              orderBy: { createdAt: "asc" },
+            });
+            token.siteId = membership?.siteId;
+            token.role = membership?.role;
+            token.membershipVersion = currentVersion;
+          }
+        } catch (e) {
+          console.error("[JWT Callback membership Error]:", e);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as { id?: string }).id = (token.userId || token.sub) as string;
       }
+      session.siteId = token.siteId;
+      session.role = token.role;
+      session.membershipVersion = token.membershipVersion;
       return session;
     },
     authorized({ auth, request }) {
@@ -86,6 +122,9 @@ export type AuthUser = {
   name: string | null;
   email: string;
   image: string | null;
+  siteId?: string;
+  role?: Role;
+  membershipVersion?: number;
 };
 
 export const getAuthUser = cache(async (): Promise<AuthUser> => {
@@ -121,6 +160,9 @@ export const getAuthUser = cache(async (): Promise<AuthUser> => {
         name: dbUser.name,
         email: dbUser.email,
         image: dbUser.avatarUrl,
+        siteId: session?.siteId,
+        role: session?.role,
+        membershipVersion: session?.membershipVersion,
       };
       await setCache(cacheKey, authUser, 600); // 10 minutes cache
       return authUser;
