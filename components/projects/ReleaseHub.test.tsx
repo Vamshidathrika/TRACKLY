@@ -6,6 +6,12 @@ vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
   connectGithubRepoAction: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+vi.mock("@/app/(app)/projects/[key]/releases/actions", () => ({
+  createReleaseAction: vi.fn().mockResolvedValue({ success: true }),
+  getReleasesAction: vi.fn().mockResolvedValue({ success: true, releases: [] }),
+  updateReleaseNotesAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 import { ReleaseHub } from "./ReleaseHub";
 
 const testReleases = [
@@ -49,6 +55,7 @@ describe("ReleaseHub", () => {
     const viewNotesBtns = screen.getAllByText("View Release Notes");
     fireEvent.click(viewNotesBtns[0]);
 
-    expect(screen.getByText(/Release v1.0.0 Notes/i)).toBeInTheDocument();
+    expect(screen.getByText("v1.0.0 - Initial Launch - Release Notes")).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/Release v1.0.0 Notes/i)).toBeInTheDocument();
   });
 });

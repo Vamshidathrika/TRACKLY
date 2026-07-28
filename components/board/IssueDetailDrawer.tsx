@@ -57,6 +57,7 @@ import {
   toggleWatcherAction,
 } from "@/app/(app)/projects/[key]/issues/actions";
 import { getIssueDetailAction } from "@/app/(app)/projects/[key]/issues/detail-actions";
+import { getReleasesAction } from "@/app/(app)/projects/[key]/releases/actions";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
 import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
 import {
@@ -178,6 +179,8 @@ export function IssueDetailDrawer({
   const [points, setPoints] = useState<number | string>("");
   const [estimateHours, setEstimateHours] = useState<number | string>("");
   const [reporterId, setReporterId] = useState<string>("");
+  const [releaseId, setReleaseId] = useState<string>("");
+  const [availableReleases, setAvailableReleases] = useState<{ id: string; name: string }[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
   const [labels, setLabels] = useState<string[]>([]);
@@ -281,6 +284,7 @@ export function IssueDetailDrawer({
           : ""
       );
       setReporterId(issue.reporterId || issue.reporter?.id || "");
+      setReleaseId(issue.releaseId || "");
       setStartDate(toDateInput(issue.startDate));
       setDueDate(toDateInput(issue.dueDate));
       setLabels(issue.labels || []);
@@ -341,10 +345,18 @@ export function IssueDetailDrawer({
         setLoggedHours(detail.loggedHours);
         setWatchersCount(detail.watchers.length);
         setIsWatching(detail.isWatching);
+        setReleaseId(detail.releaseId || "");
       })
       .finally(() => {
         if (!cancelled) setIsLoadingDetail(false);
       });
+
+    const projectId = issue.projectId || issue.project?.id;
+    if (projectId) {
+      getReleasesAction(projectId).then((res) => {
+        if (!cancelled && res.success) setAvailableReleases(res.releases);
+      });
+    }
 
     return () => {
       cancelled = true;
@@ -437,6 +449,14 @@ export function IssueDetailDrawer({
     onUpdateIssue(updated);
     startTransition(async () => {
       await updateIssueFieldAction(issue.id, "type", newType);
+    });
+  };
+
+  const handleReleaseSelect = (newReleaseId: string) => {
+    if (newReleaseId === releaseId) return;
+    setReleaseId(newReleaseId);
+    startTransition(async () => {
+      await updateIssueFieldAction(issue.id, "releaseId", newReleaseId || null);
     });
   };
 
@@ -1686,6 +1706,23 @@ export function IssueDetailDrawer({
                   {Object.entries(priorityIcons).map(([key, val]) => (
                     <option key={key} value={key}>
                       {val.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fix Version */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Fix Version</label>
+                <select
+                  value={releaseId}
+                  onChange={(e) => handleReleaseSelect(e.target.value)}
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-surface text-text outline-none cursor-pointer"
+                >
+                  <option value="">None</option>
+                  {availableReleases.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
                     </option>
                   ))}
                 </select>

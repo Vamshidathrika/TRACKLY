@@ -16,6 +16,10 @@ vi.mock("@/app/(app)/projects/[key]/issues/detail-actions", () => ({
   getIssueDetailAction: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("@/app/(app)/projects/[key]/releases/actions", () => ({
+  getReleasesAction: vi.fn().mockResolvedValue({ success: true, releases: [] }),
+}));
+
 vi.mock("@/app/(app)/projects/[key]/dev/actions", () => ({
   fetchDevDashboardDataAction: vi.fn().mockResolvedValue({
     hasConnectedRepo: true,

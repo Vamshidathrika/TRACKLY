@@ -133,6 +133,7 @@ export async function updateIssue(
     assigneeId?: string | null;
     reporterId?: string | null;
     sprintId?: string | null;
+    releaseId?: string | null;
     startDate?: Date | null;
     dueDate?: Date | null;
     labels?: string[];

@@ -32,6 +32,7 @@ export type BoardIssue = {
   reporter?: { id: string; name: string; avatarUrl?: string | null } | null;
   reporterId?: string | null;
   sprintId?: string | null;
+  releaseId?: string | null;
   dueDate?: Date | string | null;
   startDate?: Date | string | null;
   labels?: string[];
