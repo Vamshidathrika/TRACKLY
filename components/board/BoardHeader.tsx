@@ -41,7 +41,7 @@ function BoardHeaderComponent({
       {/* View Title & Quick Info */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold text-text tracking-tight">{projectName}</h2>
+          <h2 className="text-lg font-bold text-text tracking-tight truncate">{projectName}</h2>
           <span className="text-xs text-text-subtle bg-neutral px-2 py-0.5 rounded-full font-mono">
             {projectKey}
           </span>
@@ -49,12 +49,12 @@ function BoardHeaderComponent({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center gap-2">
         {isOwnerOrAdmin && (
           <button
             onClick={onShare}
             title="Share board link (Admin Only)"
-            className="h-9 px-3 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all text-xs font-medium flex items-center gap-1.5"
+            className="h-10 sm:h-9 px-3 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all text-xs font-medium flex hidden sm:flex items-center gap-1.5"
           >
             <Share2 size={14} /> Share
           </button>
@@ -63,7 +63,7 @@ function BoardHeaderComponent({
         <button
           onClick={onExport}
           title="Export board data as JSON"
-          className="h-9 px-3 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all text-xs font-medium flex items-center gap-1.5"
+          className="h-10 sm:h-9 px-3 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all text-xs font-medium flex hidden sm:flex items-center gap-1.5"
         >
           <Download size={14} /> Export
         </button>
@@ -71,7 +71,7 @@ function BoardHeaderComponent({
         <button
           onClick={onFullscreen}
           title="Toggle fullscreen mode"
-          className="h-9 w-9 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all flex items-center justify-center"
+          className="h-10 w-10 sm:h-9 sm:w-9 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all hidden sm:flex items-center justify-center"
         >
           <Maximize2 size={14} />
         </button>
@@ -79,7 +79,7 @@ function BoardHeaderComponent({
         <div className="relative">
           <button
             onClick={onOpenSpaceMenu}
-            className="h-9 w-9 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all flex items-center justify-center"
+            className="h-10 w-10 sm:h-9 sm:w-9 rounded-lg border border-border bg-surface hover:bg-neutral text-text-subtle hover:text-text transition-all flex items-center justify-center sm:hidden"
           >
             <MoreHorizontal size={16} />
           </button>
@@ -105,7 +105,7 @@ function BoardHeaderComponent({
         <CreateIssueModal
           defaultProjectId={projectId}
           trigger={
-            <Button appearance="primary" className="h-9 px-4 rounded-lg bg-brand text-white hover:bg-brand-hovered font-semibold text-xs shadow-xs">
+            <Button appearance="primary" className="h-10 sm:h-9 px-4 rounded-lg bg-brand text-white hover:bg-brand-hovered font-semibold text-xs shadow-xs">
               Create task
             </Button>
           }

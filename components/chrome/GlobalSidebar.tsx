@@ -69,7 +69,7 @@ export function NavItem({
     <Link
       href={href}
       title={collapsed ? label : undefined}
-      className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs transition-all duration-180 group cursor-pointer
+      className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 sm:py-1.5 text-xs transition-all duration-180 group cursor-pointer
         ${collapsed ? "justify-center" : ""}
         ${active
           ? "bg-brand/10 text-brand font-bold shadow-2xs"
@@ -148,10 +148,14 @@ export function GlobalSidebar({
   projects,
   starredProjectIds,
   collapsed,
+  mobileOpen = false,
+  onCloseMobile,
 }: {
   projects: Proj[];
   starredProjectIds: string[];
   collapsed: boolean;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }) {
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
 
@@ -173,10 +177,11 @@ export function GlobalSidebar({
     .filter(Boolean) as Proj[];
 
   const w = collapsed ? "w-[52px]" : "w-[232px]";
+  const mobileClass = mobileOpen ? "sidebar-open fixed inset-y-0 left-0 z-40 flex" : "hidden md:flex";
 
   return (
     <nav
-      className={`${w} shrink-0 flex flex-col border-r border-border-default bg-surface overflow-hidden transition-[width] duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)]`}
+      className={`${w} ${mobileClass} shrink-0 flex-col border-r border-border-default bg-surface overflow-hidden transition-[transform,width] duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)] sidebar-expanded`}
     >
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 flex flex-col gap-4 px-2">
         {/* My Work */}

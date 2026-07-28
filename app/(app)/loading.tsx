@@ -1,8 +1,8 @@
 export default function AppRootLoading() {
   return (
-    <div className="flex-1 px-8 py-6 animate-pulse">
+    <div className="flex-1 px-4 md:px-8 py-6 animate-pulse">
       <div className="h-6 w-36 rounded bg-neutral/60 mb-4" />
-      <div className="h-8 w-64 rounded bg-neutral/80 mb-6" />
+      <div className="h-8 w-48 sm:w-64 max-w-full rounded bg-neutral/80 mb-6" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="h-28 rounded-lg bg-surface border border-border p-4 flex flex-col justify-between">
           <div className="h-4 w-24 rounded bg-neutral/60" />

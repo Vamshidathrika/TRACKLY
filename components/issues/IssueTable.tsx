@@ -159,11 +159,11 @@ export function IssueTable({
             <th className="w-24">Key</th>
             <th>Summary</th>
             <th className="w-36">Status</th>
-            <th className="w-28">Priority</th>
-            <th className="w-44">Assignee</th>
-            <th className="w-24 text-center">Logged</th>
-            <th className="w-20 text-center">Est</th>
-            <th className="w-16 text-right pr-3">Pts</th>
+            <th className="w-28 hidden sm:table-cell">Priority</th>
+            <th className="w-44 hidden sm:table-cell">Assignee</th>
+            <th className="w-24 text-center hidden sm:table-cell">Logged</th>
+            <th className="w-20 text-center hidden sm:table-cell">Est</th>
+            <th className="w-16 text-right pr-3 hidden sm:table-cell">Pts</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -197,7 +197,7 @@ export function IssueTable({
               </td>
 
               {/* Summary */}
-              <td className="font-medium text-text">
+              <td className="font-medium text-text truncate max-w-[200px] sm:max-w-none">
                 <Link href={`/projects/${projectKey}/issues/${issue.key}`} className="hover:underline">
                   {issue.summary}
                 </Link>
@@ -209,7 +209,7 @@ export function IssueTable({
                   <select
                     value={issue.status}
                     onChange={(e) => handleStatusUpdate(issue.id, e.target.value as IssueStatus)}
-                    className={`h-7 px-2 pr-6 rounded-md text-xs font-bold border transition-colors outline-none cursor-pointer appearance-none ${
+                    className={`h-10 sm:h-7 px-2 pr-6 rounded-md text-xs font-bold border transition-colors outline-none cursor-pointer appearance-none ${
                       statusColors[issue.status]
                     }`}
                   >
@@ -226,13 +226,13 @@ export function IssueTable({
               </td>
 
               {/* Priority Interactive Dropdown */}
-              <td className="py-2">
+              <td className="py-2 hidden sm:table-cell">
                 <div className="relative flex items-center gap-1">
                   <PriorityIcon priority={issue.priority} />
                   <select
                     value={issue.priority}
                     onChange={(e) => handlePriorityUpdate(issue.id, e.target.value as IssuePriority)}
-                    className="h-7 rounded border border-transparent bg-transparent hover:border-border px-1.5 text-xs font-medium text-text outline-none focus:border-brand cursor-pointer"
+                    className="h-10 sm:h-7 rounded border border-transparent bg-transparent hover:border-border px-1.5 text-xs font-medium text-text outline-none focus:border-brand cursor-pointer"
                   >
                     <option value="HIGHEST">Highest</option>
                     <option value="HIGH">High</option>
@@ -244,13 +244,13 @@ export function IssueTable({
               </td>
 
               {/* Assignee Interactive Dropdown */}
-              <td className="py-2">
+              <td className="py-2 hidden sm:table-cell">
                 <div className="flex items-center gap-1.5">
                   <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={22} />
                   <select
                     value={issue.assignee?.id ?? ""}
                     onChange={(e) => handleAssigneeUpdate(issue.id, e.target.value || null)}
-                    className="h-7 max-w-[130px] rounded border border-transparent bg-transparent hover:border-border px-1 text-xs font-medium text-text outline-none focus:border-brand cursor-pointer truncate"
+                    className="h-10 sm:h-7 max-w-[130px] rounded border border-transparent bg-transparent hover:border-border px-1 text-xs font-medium text-text outline-none focus:border-brand cursor-pointer truncate"
                   >
                     <option value="">Unassigned</option>
                     {availableUsers.map((u) => (
@@ -263,7 +263,7 @@ export function IssueTable({
               </td>
 
               {/* Logged Hours */}
-              <td className="text-center font-mono text-xs text-text-subtle">
+              <td className="text-center font-mono text-xs text-text-subtle hidden sm:table-cell">
                 <span className="inline-flex items-center gap-1">
                   <Clock size={11} className="text-brand" />
                   {issue.loggedHours ? `${issue.loggedHours.toFixed(1)}h` : "-"}
@@ -271,12 +271,12 @@ export function IssueTable({
               </td>
 
               {/* Original Estimate */}
-              <td className="text-center font-mono text-xs text-text-subtle">
+              <td className="text-center font-mono text-xs text-text-subtle hidden sm:table-cell">
                 {issue.originalEstimate ? `${issue.originalEstimate.toFixed(1)}h` : "-"}
               </td>
 
               {/* Story Points */}
-              <td className="pr-3 text-right font-mono text-xs text-text-subtle">
+              <td className="pr-3 text-right font-mono text-xs text-text-subtle hidden sm:table-cell">
                 {issue.storyPoints ?? "-"}
               </td>
             </tr>

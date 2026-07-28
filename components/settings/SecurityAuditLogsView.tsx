@@ -92,7 +92,7 @@ export function SecurityAuditLogsView({ logs = [] }: { logs?: AuditLogRecord[] }
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 selectedCategory === cat
                   ? "bg-brand text-white shadow-2xs"
                   : "text-subtle hover:text-default hover:bg-neutral"
@@ -105,7 +105,7 @@ export function SecurityAuditLogsView({ logs = [] }: { logs?: AuditLogRecord[] }
       </div>
 
       {/* Audit Stream Table */}
-      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-border-default bg-neutral/40 font-bold text-subtle">

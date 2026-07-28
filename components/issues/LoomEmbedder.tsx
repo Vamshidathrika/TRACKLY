@@ -79,17 +79,17 @@ export function LoomEmbedder({
       )}
 
       {/* URL Attachment Input */}
-      <form onSubmit={handleAddLoom} className="flex gap-2">
+      <form onSubmit={handleAddLoom} className="flex flex-col sm:flex-row gap-2">
         <input
           type="url"
           value={inputUrl}
           onChange={(e) => setInputUrl(e.target.value)}
           placeholder="Paste Loom share link (https://www.loom.com/share/...)"
-          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text font-mono text-[11px] focus:outline-none focus:border-brand"
+          className="flex-1 px-3 py-2 h-10 sm:h-auto rounded-lg border border-border bg-surface text-text font-mono text-[11px] focus:outline-none focus:border-brand"
         />
         <button
           type="submit"
-          className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+          className="h-10 sm:h-auto px-4 py-2 rounded-lg bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
         >
           <Plus size={14} />
           <span>Attach Video</span>
@@ -118,7 +118,7 @@ export function LoomEmbedder({
                 <button
                   type="button"
                   onClick={() => handleRemove(idx)}
-                  className="text-text-subtle hover:text-red-500 transition-colors p-0.5 rounded"
+                  className="text-text-subtle hover:text-red-500 transition-colors p-2 sm:p-0.5 rounded"
                   title="Remove video link"
                 >
                   <Trash2 size={12} />
@@ -131,7 +131,7 @@ export function LoomEmbedder({
 
       {/* Live Loom Player */}
       {activeEmbedIndex !== null && urls[activeEmbedIndex] && (
-        <div className="relative rounded-xl border border-border bg-surface overflow-hidden shadow-md flex flex-col h-80 w-full">
+        <div className="relative rounded-xl border border-border bg-surface overflow-hidden shadow-md flex flex-col aspect-video w-full">
           <div className="flex items-center justify-between px-4 py-2 bg-neutral/40 border-b border-border text-[11px]">
             <div className="flex items-center gap-2">
               <Video size={14} className="text-indigo-500" />
@@ -143,7 +143,7 @@ export function LoomEmbedder({
               href={urls[activeEmbedIndex]}
               target="_blank"
               rel="noreferrer"
-              className="p-1 rounded text-text-subtle hover:text-text hover:bg-neutral flex items-center gap-1 text-[10px] font-bold"
+              className="p-2 sm:p-1 rounded text-text-subtle hover:text-text hover:bg-neutral flex items-center gap-1 text-[10px] font-bold"
             >
               <ExternalLink size={12} /> Open Loom
             </a>

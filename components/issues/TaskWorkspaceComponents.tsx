@@ -161,7 +161,7 @@ export function SubtasksChecklist({
               )}
               <button
                 onClick={() => removeSubtask(st.id)}
-                className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-1"
+                className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-2 sm:p-1"
                 title="Delete subtask"
               >
                 <Trash2 size={13} />
@@ -180,7 +180,7 @@ export function SubtasksChecklist({
           onChange={(e) => setNewTitle(e.target.value)}
           className="flex-1 h-8 rounded border border-border bg-background px-3 text-xs outline-none focus:border-brand"
         />
-        <Button appearance="subtle" type="submit" className="h-8 text-xs font-semibold">
+        <Button appearance="subtle" type="submit" className="h-10 sm:h-8 text-xs font-semibold">
           Add
         </Button>
       </form>
@@ -306,7 +306,7 @@ export function AttachmentsDropzone({
               {(!currentUserId || file.uploaderId === currentUserId) && (
                 <button
                   onClick={() => removeAttachment(file.id)}
-                  className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 p-1 transition-opacity shrink-0"
+                  className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 p-2 sm:p-1 transition-opacity shrink-0"
                   title="Remove attachment"
                 >
                   <Trash2 size={13} />
@@ -571,7 +571,7 @@ export function ActivitySection({
     <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-xs">
       {/* Activity Tabs */}
       <div className="flex items-center justify-between border-b border-border pb-3">
-        <div className="flex gap-4 text-xs font-bold text-text-subtle">
+        <div className="flex gap-4 text-xs font-bold text-text-subtle overflow-x-auto whitespace-nowrap">
           <button
             onClick={() => setActiveTab("comments")}
             className={`pb-3 -mb-3 transition-colors flex items-center gap-1.5 ${
@@ -626,13 +626,13 @@ export function ActivitySection({
                     key={chip}
                     type="button"
                     onClick={() => handleChipClick(chip)}
-                    className="px-2 py-0.5 rounded-full bg-surface border border-border text-[11px] font-semibold text-text-subtle hover:text-brand hover:border-brand transition-colors"
+                    className="px-3 py-1.5 sm:px-2 sm:py-0.5 rounded-full bg-surface border border-border text-[11px] font-semibold text-text-subtle hover:text-brand hover:border-brand transition-colors"
                   >
                     {chip}
                   </button>
                 ))}
               </div>
-              <Button appearance="primary" type="submit" className="bg-brand text-white text-xs font-bold flex items-center gap-1.5">
+              <Button appearance="primary" type="submit" className="bg-brand text-white text-xs font-bold flex items-center gap-1.5 h-10 sm:h-8">
                 <Send size={12} /> Post Comment
               </Button>
             </div>
@@ -662,7 +662,7 @@ export function ActivitySection({
                       onDeleteComment(c.id);
                     }}
                     title="Delete comment"
-                    className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-1"
+                    className="opacity-0 group-hover:opacity-100 text-text-subtle hover:text-red-500 transition-opacity p-2 sm:p-1"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -696,7 +696,7 @@ export function ActivitySection({
       {/* Tab: Work Log */}
       {activeTab === "worklog" && (
         <div className="flex flex-col gap-3">
-          <div className="p-3 rounded-md bg-neutral/30 border border-border flex items-center justify-between text-xs font-semibold">
+          <div className="p-3 rounded-md bg-neutral/30 border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-semibold">
             <span>
               Total Logged Time:{" "}
               <strong className="text-brand font-bold">{loggedHours.toFixed(1)} hours</strong>
@@ -715,7 +715,7 @@ export function ActivitySection({
                 appearance="primary"
                 type="button"
                 onClick={onLogWork}
-                className="bg-brand text-white text-xs font-bold flex items-center gap-1.5"
+                className="bg-brand text-white text-xs font-bold flex items-center gap-1.5 h-10 sm:h-8 px-4"
               >
                 <Plus size={12} /> Log time
               </Button>
@@ -751,7 +751,7 @@ export function ActivitySection({
                         type="button"
                         onClick={() => onDeleteWorkLog(w.id)}
                         title="Delete time log"
-                        className="text-text-subtle hover:text-danger transition-colors"
+                        className="text-text-subtle hover:text-danger transition-colors p-2 sm:p-1"
                       >
                         <Trash2 size={13} />
                       </button>

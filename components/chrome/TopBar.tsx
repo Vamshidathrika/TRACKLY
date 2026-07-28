@@ -30,7 +30,7 @@ export function TopBar({
         <button
           aria-label="Toggle sidebar"
           onClick={onToggleSidebar}
-          className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-neutral text-subtle hover:text-default transition-all duration-180 active:scale-[0.96] cursor-pointer"
+          className="flex md:hidden h-8 w-8 items-center justify-center rounded-xl hover:bg-neutral text-subtle hover:text-default transition-all duration-180 active:scale-[0.96] cursor-pointer"
         >
           <Menu size={17} />
         </button>

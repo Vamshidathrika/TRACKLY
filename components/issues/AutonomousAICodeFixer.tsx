@@ -33,7 +33,7 @@ export function AutonomousAICodeFixer({
 
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl border border-brand/30 bg-brand/5 text-xs">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-brand text-white flex items-center justify-center font-bold shadow-xs">
             <Sparkles size={16} />
@@ -54,7 +54,7 @@ export function AutonomousAICodeFixer({
             type="button"
             onClick={handleGenerateFix}
             disabled={isGenerating}
-            className="px-3.5 py-1.5 rounded-lg bg-brand text-white font-extrabold text-xs hover:bg-brand-hovered transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+            className="h-10 sm:h-auto px-3.5 py-1.5 rounded-lg bg-brand text-white font-extrabold text-xs hover:bg-brand-hovered transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
           >
             {isGenerating ? (
               <>

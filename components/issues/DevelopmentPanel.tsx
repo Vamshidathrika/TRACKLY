@@ -157,15 +157,15 @@ export function DevelopmentPanel({
               <CheckCircle2 size={11} /> {connectedRepo.owner}/{connectedRepo.repoName}
             </span>
           ) : projectId ? (
-            <ConnectRepoModal
-              projectId={projectId}
-              onSuccess={loadRepoData}
-              trigger={
-                <button type="button" className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand/10 text-brand hover:bg-brand/20 transition-all flex items-center gap-1">
-                  <Plus size={10} /> Connect Repo
-                </button>
-              }
-            />
+              <ConnectRepoModal
+                projectId={projectId}
+                onSuccess={loadRepoData}
+                trigger={
+                  <button type="button" className="text-[10px] font-bold px-3 py-2 sm:px-2 sm:py-0.5 h-10 sm:h-auto rounded bg-brand/10 text-brand hover:bg-brand/20 transition-all flex items-center gap-1">
+                    <Plus size={10} /> Connect Repo
+                  </button>
+                }
+              />
           ) : (
             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand/10 text-brand shrink-0">
               {issueKey}
@@ -254,7 +254,7 @@ export function DevelopmentPanel({
               <button
                 type="button"
                 onClick={handleCopyBranchCommand}
-                className="text-[10px] font-bold text-brand hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-[10px] font-bold text-brand hover:underline flex items-center gap-0.5 cursor-pointer p-2 sm:p-0"
               >
                 {copiedBranch ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                 <span>{copiedBranch ? "Copied!" : "Copy Branch Cmd"}</span>
@@ -281,7 +281,7 @@ export function DevelopmentPanel({
               <button
                 type="button"
                 onClick={handleGenerateAiReleaseNote}
-                className="text-[10px] font-bold text-purple-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-[10px] font-bold text-purple-600 hover:underline flex items-center gap-0.5 cursor-pointer p-2 sm:p-0"
               >
                 <Sparkles size={10} className="text-amber-500" />
                 <span>AI Note</span>

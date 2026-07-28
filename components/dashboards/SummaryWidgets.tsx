@@ -171,9 +171,9 @@ export function StatusDonutWidget({
         <div className="flex flex-col gap-2.5 w-full">
           {slices.map((st) => (
             <div key={st.key} className="flex items-center justify-between text-xs font-semibold">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: st.color }} />
-                <span className="text-default">{st.label}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: st.color }} />
+                <span className="text-default truncate">{st.label}</span>
               </div>
               <div className="flex items-center gap-3 font-mono">
                 <span className="text-subtle">{st.count}</span>
@@ -213,9 +213,9 @@ export function PriorityBarWidget({
           return (
             <div key={prio} className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 font-semibold text-default">
-                  <PriorityIcon priority={prio} size={13} />
-                  {prio.charAt(0) + prio.slice(1).toLowerCase()}
+                <span className="flex items-center gap-1.5 font-semibold text-default min-w-0 truncate">
+                  <span className="shrink-0 flex items-center"><PriorityIcon priority={prio} size={13} /></span>
+                  <span className="truncate">{prio.charAt(0) + prio.slice(1).toLowerCase()}</span>
                 </span>
                 <div className="flex items-center gap-2 font-mono">
                   <span className={`font-bold ${isDanger ? "text-danger" : "text-subtle"}`}>
@@ -263,9 +263,9 @@ export function TypeDistributionWidget({
           return (
             <div key={tType} className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <TypeIcon type={tType} size={14} />
-                  <span className="font-semibold text-default capitalize">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="shrink-0 flex items-center"><TypeIcon type={tType} size={14} /></span>
+                  <span className="font-semibold text-default capitalize truncate">
                     {tType.toLowerCase()}
                   </span>
                 </div>
@@ -356,9 +356,9 @@ export function TeamWorkloadWidget({
           return (
             <div key={m.id} className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <Avatar name={m.name} src={m.avatarUrl} size={20} />
-                  <span className="font-semibold text-default">{m.name}</span>
+                  <span className="font-semibold text-default truncate">{m.name}</span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-[11px]">
                   <span className="font-bold text-brand">{m.count} items</span>

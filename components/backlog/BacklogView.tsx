@@ -454,11 +454,11 @@ export function BacklogView({
     <div className="flex flex-col gap-6 max-w-5xl relative pb-20">
       {/* Floating Apple-Style Multi-Select Bulk Actions Toolbar */}
       {selectedIssueIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full border border-border-default bg-surface-overlay backdrop-blur-xl p-2 px-5 shadow-xl animate-fade-in-up">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap sm:flex-nowrap items-center gap-3 rounded-[24px] sm:rounded-full border border-border-default bg-surface-overlay backdrop-blur-xl p-3 sm:p-2 px-4 sm:px-5 shadow-xl animate-fade-in-up w-[90%] sm:w-auto max-w-[95vw] justify-center">
           <span className="text-[12px] font-bold text-brand font-mono">
             {selectedIssueIds.length} selected
           </span>
-          <div className="h-4 w-px bg-border-default" />
+          <div className="h-4 w-px bg-border-default hidden sm:block" />
 
           {/* Bulk Status */}
           <select
@@ -640,10 +640,10 @@ export function BacklogView({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => handleOpenEditSprint(sprint)}
-                    className="h-8 px-3.5 rounded-full border border-border bg-surface text-xs font-semibold text-text-subtle hover:bg-neutral hover:text-text transition-all"
+                    className="h-10 sm:h-8 px-4 sm:px-3.5 rounded-full border border-border bg-surface text-xs font-semibold text-text-subtle hover:bg-neutral hover:text-text transition-all"
                   >
                     Edit
                   </button>
@@ -651,7 +651,7 @@ export function BacklogView({
                   {sprint.status === "FUTURE" && (
                     <button
                       onClick={() => handleStartSprint(sprint.id)}
-                      className="h-8 px-4 rounded-full bg-brand text-white text-xs font-bold hover:bg-brand-hovered transition-all flex items-center gap-1.5 shadow-xs active:scale-[0.97]"
+                      className="h-10 sm:h-8 px-5 sm:px-4 rounded-full bg-brand text-white text-xs font-bold hover:bg-brand-hovered transition-all flex items-center gap-1.5 shadow-xs active:scale-[0.97]"
                     >
                       <Play size={12} /> Start sprint
                     </button>
@@ -660,7 +660,7 @@ export function BacklogView({
                   {sprint.status === "ACTIVE" && (
                     <button
                       onClick={() => handleCompleteSprint(sprint.id)}
-                      className="h-8 px-4 rounded-full border border-emerald-500/30 bg-surface text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 transition-all flex items-center gap-1.5"
+                      className="h-10 sm:h-8 px-5 sm:px-4 rounded-full border border-emerald-500/30 bg-surface text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 transition-all flex items-center gap-1.5"
                     >
                       <CheckCircle2 size={13} className="text-emerald-500" /> Complete sprint
                     </button>
@@ -719,23 +719,23 @@ export function BacklogView({
                           <select
                             value={issue.status}
                             onChange={(e) => handleStatusChange(issue.id, e.target.value as IssueStatus)}
-                            className={`h-6 px-2 pr-5 rounded-[6px] text-[11px] font-bold border outline-none cursor-pointer appearance-none ${statusColors[issue.status]}`}
+                            className={`h-10 sm:h-6 px-3 sm:px-2 pr-6 sm:pr-5 rounded-[6px] text-[11px] font-bold border outline-none cursor-pointer appearance-none ${statusColors[issue.status]}`}
                           >
                             <option value="TO_DO">TO DO</option>
                             <option value="IN_PROGRESS">IN PROGRESS</option>
                             <option value="IN_REVIEW">IN REVIEW</option>
                             <option value="DONE">DONE</option>
                           </select>
-                          <ChevronDown size={10} className="absolute right-1.5 top-2 pointer-events-none opacity-60" />
+                          <ChevronDown size={10} className="absolute right-2 sm:right-1.5 top-3 sm:top-2 pointer-events-none opacity-60" />
                         </div>
 
                         {/* Priority */}
-                        <div className="flex items-center gap-1">
+                        <div className="hidden md:flex items-center gap-1">
                           <PriorityIcon priority={issue.priority} size={13} />
                           <select
                             value={issue.priority}
                             onChange={(e) => handlePriorityChange(issue.id, e.target.value as IssuePriority)}
-                            className="h-6 rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer"
+                            className="h-10 sm:h-6 rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer"
                           >
                             <option value="HIGHEST">Highest</option>
                             <option value="HIGH">High</option>
@@ -746,12 +746,12 @@ export function BacklogView({
                         </div>
 
                         {/* Assignee */}
-                        <div className="flex items-center gap-1">
+                        <div className="hidden md:flex items-center gap-1">
                           <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={20} />
                           <select
                             value={issue.assignee?.id ?? ""}
                             onChange={(e) => handleAssigneeChange(issue.id, e.target.value || null)}
-                            className="h-6 max-w-[100px] rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer truncate"
+                            className="h-10 sm:h-6 max-w-[100px] rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer truncate"
                           >
                             <option value="">Unassigned</option>
                             {allUsers.map((u) => (
@@ -763,13 +763,13 @@ export function BacklogView({
                         </div>
 
                         {issue.originalEstimate != null && (
-                          <span className="flex h-5 items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-bold text-brand" title={`Estimated: ${issue.originalEstimate}h`}>
+                          <span className="hidden md:flex h-5 items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-bold text-brand" title={`Estimated: ${issue.originalEstimate}h`}>
                             {issue.originalEstimate}h
                           </span>
                         )}
 
                         {issue.storyPoints != null && (
-                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
+                          <span className="hidden md:flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                             {issue.storyPoints}
                           </span>
                         )}
@@ -778,7 +778,7 @@ export function BacklogView({
                         <select
                           value={sprint.id}
                           onChange={(e) => handleMoveIssueToTarget(issue.id, e.target.value || null)}
-                          className="h-6 rounded-[6px] border border-border-default bg-surface px-1 text-[11px] text-subtle cursor-pointer"
+                          className="hidden md:block h-10 sm:h-6 rounded-[6px] border border-border-default bg-surface px-1 text-[11px] text-subtle cursor-pointer"
                         >
                           <option value={sprint.id}>{sprint.name}</option>
                           <option value="">Move to Backlog</option>
@@ -801,17 +801,17 @@ export function BacklogView({
                         if (e.key === "Enter") handleQuickCreateSubmit(sprint.id);
                         if (e.key === "Escape") setQuickInputTarget(null);
                       }}
-                      className="h-9 flex-1 rounded-[8px] border border-brand bg-surface px-3 text-[13px] text-default outline-none shadow-xs"
+                      className="h-10 sm:h-9 flex-1 rounded-[8px] border border-brand bg-surface px-3 text-[13px] text-default outline-none shadow-xs"
                     />
                     <button
                       onClick={() => handleQuickCreateSubmit(sprint.id)}
-                      className="h-9 px-3 rounded-[8px] bg-brand text-white text-[12px] font-semibold hover:bg-brand-hovered"
+                      className="h-10 sm:h-9 px-4 sm:px-3 rounded-[8px] bg-brand text-white text-[12px] font-semibold hover:bg-brand-hovered"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => setQuickInputTarget(null)}
-                      className="h-9 px-2 text-subtlest hover:text-default text-[12px]"
+                      className="h-10 sm:h-9 px-3 sm:px-2 text-subtlest hover:text-default text-[12px]"
                     >
                       Cancel
                     </button>
@@ -822,7 +822,7 @@ export function BacklogView({
                       setQuickInputTarget(sprint.id);
                       setQuickSummary("");
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-subtle hover:text-brand hover:bg-neutral rounded-[8px] transition-all mt-1 w-fit"
+                    className="flex items-center gap-1.5 px-4 py-3 sm:px-3 sm:py-1.5 text-[12px] font-semibold text-subtle hover:text-brand hover:bg-neutral rounded-[8px] transition-all mt-1 w-fit"
                   >
                     <Plus size={13} />
                     <span>Create task in {sprint.name}</span>
@@ -908,23 +908,23 @@ export function BacklogView({
                       <select
                         value={issue.status}
                         onChange={(e) => handleStatusChange(issue.id, e.target.value as IssueStatus)}
-                        className={`h-6 px-2 pr-5 rounded-[6px] text-[11px] font-bold border outline-none cursor-pointer appearance-none ${statusColors[issue.status]}`}
+                        className={`h-10 sm:h-6 px-3 sm:px-2 pr-6 sm:pr-5 rounded-[6px] text-[11px] font-bold border outline-none cursor-pointer appearance-none ${statusColors[issue.status]}`}
                       >
                         <option value="TO_DO">TO DO</option>
                         <option value="IN_PROGRESS">IN PROGRESS</option>
                         <option value="IN_REVIEW">IN REVIEW</option>
                         <option value="DONE">DONE</option>
                       </select>
-                      <ChevronDown size={10} className="absolute right-1.5 top-2 pointer-events-none opacity-60" />
+                      <ChevronDown size={10} className="absolute right-2 sm:right-1.5 top-3 sm:top-2 pointer-events-none opacity-60" />
                     </div>
 
                     {/* Priority */}
-                    <div className="flex items-center gap-1">
+                    <div className="hidden md:flex items-center gap-1">
                       <PriorityIcon priority={issue.priority} size={13} />
                       <select
                         value={issue.priority}
                         onChange={(e) => handlePriorityChange(issue.id, e.target.value as IssuePriority)}
-                        className="h-6 rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer"
+                        className="h-10 sm:h-6 rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer"
                       >
                         <option value="HIGHEST">Highest</option>
                         <option value="HIGH">High</option>
@@ -935,12 +935,12 @@ export function BacklogView({
                     </div>
 
                     {/* Assignee */}
-                    <div className="flex items-center gap-1">
+                    <div className="hidden md:flex items-center gap-1">
                       <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={20} />
                       <select
                         value={issue.assignee?.id ?? ""}
                         onChange={(e) => handleAssigneeChange(issue.id, e.target.value || null)}
-                        className="h-6 max-w-[100px] rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer truncate"
+                        className="h-10 sm:h-6 max-w-[100px] rounded-[6px] border border-transparent bg-transparent hover:border-border-default px-1 text-[11px] text-subtle cursor-pointer truncate"
                       >
                         <option value="">Unassigned</option>
                         {allUsers.map((u) => (
@@ -952,13 +952,13 @@ export function BacklogView({
                     </div>
 
                     {issue.originalEstimate != null && (
-                      <span className="flex h-5 items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-bold text-brand" title={`Estimated: ${issue.originalEstimate}h`}>
+                      <span className="hidden md:flex h-5 items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-bold text-brand" title={`Estimated: ${issue.originalEstimate}h`}>
                         {issue.originalEstimate}h
                       </span>
                     )}
 
                     {issue.storyPoints != null && (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
+                      <span className="hidden md:flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 font-mono text-[11px] font-bold text-default">
                         {issue.storyPoints}
                       </span>
                     )}
@@ -967,7 +967,7 @@ export function BacklogView({
                       <select
                         value=""
                         onChange={(e) => handleMoveIssueToTarget(issue.id, e.target.value || null)}
-                        className="h-6 rounded-[6px] border border-border-default bg-surface px-1 text-[11px] text-subtle cursor-pointer"
+                        className="hidden md:block h-10 sm:h-6 rounded-[6px] border border-border-default bg-surface px-1 text-[11px] text-subtle cursor-pointer"
                       >
                         <option value="">Backlog</option>
                         {sprints.map((s) => (
@@ -995,17 +995,17 @@ export function BacklogView({
                     if (e.key === "Enter") handleQuickCreateSubmit(null);
                     if (e.key === "Escape") setQuickInputTarget(null);
                   }}
-                  className="h-9 flex-1 rounded-[8px] border border-brand bg-surface px-3 text-[13px] text-default outline-none shadow-xs"
+                  className="h-10 sm:h-9 flex-1 rounded-[8px] border border-brand bg-surface px-3 text-[13px] text-default outline-none shadow-xs"
                 />
                 <button
                   onClick={() => handleQuickCreateSubmit(null)}
-                  className="h-9 px-3 rounded-[8px] bg-brand text-white text-[12px] font-semibold hover:bg-brand-hovered"
+                  className="h-10 sm:h-9 px-4 sm:px-3 rounded-[8px] bg-brand text-white text-[12px] font-semibold hover:bg-brand-hovered"
                 >
                   Add
                 </button>
                 <button
                   onClick={() => setQuickInputTarget(null)}
-                  className="h-9 px-2 text-subtlest hover:text-default text-[12px]"
+                  className="h-10 sm:h-9 px-3 sm:px-2 text-subtlest hover:text-default text-[12px]"
                 >
                   Cancel
                 </button>
@@ -1016,7 +1016,7 @@ export function BacklogView({
                   setQuickInputTarget("backlog");
                   setQuickSummary("");
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-subtle hover:text-brand hover:bg-neutral rounded-[8px] transition-all mt-1 w-fit"
+                className="flex items-center gap-1.5 px-4 py-3 sm:px-3 sm:py-1.5 text-[12px] font-semibold text-subtle hover:text-brand hover:bg-neutral rounded-[8px] transition-all mt-1 w-fit"
               >
                 <Plus size={13} />
                 <span>Create task in Backlog</span>
@@ -1083,7 +1083,7 @@ export function SprintModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-scale-in">
       <div className="w-full max-w-lg rounded-[16px] border border-border-default bg-surface p-6 shadow-xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-subtlest hover:text-default">
+        <button onClick={onClose} className="absolute top-2 right-2 p-4 text-subtlest hover:text-default">
           <X size={18} />
         </button>
 
@@ -1119,7 +1119,7 @@ export function SprintModal({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block font-semibold text-default mb-1">Duration</label>
               <select

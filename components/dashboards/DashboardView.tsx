@@ -220,7 +220,7 @@ export function DashboardView({
       )}
 
       {/* Workspace Dashboard Controls Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border border-border-default bg-surface shadow-2xs">
+      <div className="flex flex-col sm:flex-row flex-wrap sm:items-center justify-between gap-4 p-3.5 rounded-xl border border-border-default bg-surface shadow-2xs">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-extrabold text-default">Main Engineering Dashboard</h2>
           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
@@ -250,7 +250,7 @@ export function DashboardView({
               <button
                 key={l.id}
                 onClick={() => setLayout(l.id as LayoutFormat)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                   layout === l.id ? "bg-surface text-brand shadow-2xs" : "text-subtle hover:text-default"
                 }`}
               >
@@ -425,7 +425,7 @@ export function DashboardView({
               </h3>
               <button
                 onClick={() => setShowGadgetDrawer(false)}
-                className="p-1 rounded-lg text-subtlest hover:bg-neutral"
+                className="p-2.5 sm:p-1 rounded-lg text-subtlest hover:bg-neutral"
               >
                 <X size={16} />
               </button>
@@ -485,7 +485,7 @@ export function DashboardView({
           <div className="w-full max-w-md rounded-2xl border border-border-default bg-surface p-6 shadow-xl flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-border-default pb-3">
               <h3 className="text-sm font-bold text-default">Share Engineering Dashboard</h3>
-              <button onClick={() => setShowShareModal(false)} className="p-1 text-subtlest hover:bg-neutral">
+              <button onClick={() => setShowShareModal(false)} className="p-2.5 sm:p-1 rounded-lg text-subtlest hover:bg-neutral">
                 <X size={16} />
               </button>
             </div>

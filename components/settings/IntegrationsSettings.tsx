@@ -277,7 +277,7 @@ function ApiKeyModal({ provider, onClose, onSaved }: ApiKeyModalProps) {
               value={apiKey}
               onChange={(e) => { setApiKey(e.target.value); setStatus("idle"); }}
               placeholder={provider.apiKeyPlaceholder}
-              className="w-full h-9 rounded-lg border border-border-default bg-neutral px-3 pr-10 text-xs font-mono outline-none focus:border-brand"
+              className="w-full h-10 sm:h-9 rounded-lg border border-border-default bg-neutral px-3 pr-10 text-xs font-mono outline-none focus:border-brand"
               autoFocus
             />
             <button
@@ -303,7 +303,7 @@ function ApiKeyModal({ provider, onClose, onSaved }: ApiKeyModalProps) {
             value={webhookSecret}
             onChange={(e) => setWebhookSecret(e.target.value)}
             placeholder="whsec_..."
-            className="h-9 rounded-lg border border-border-default bg-neutral px-3 text-xs font-mono outline-none focus:border-brand"
+            className="h-10 sm:h-9 rounded-lg border border-border-default bg-neutral px-3 text-xs font-mono outline-none focus:border-brand"
           />
           <p className="text-[11px] text-subtlest">
             Used to verify inbound webhook HMAC signatures from {provider.name}.
@@ -333,11 +333,11 @@ function ApiKeyModal({ provider, onClose, onSaved }: ApiKeyModalProps) {
             <ExternalLink size={12} /> API Docs
           </a>
           <div className="flex gap-2">
-            <Button appearance="subtle" onClick={handleTest} disabled={!apiKey.trim() || isPending} className="text-xs h-8">
+            <Button appearance="subtle" onClick={handleTest} disabled={!apiKey.trim() || isPending} className="text-xs h-10 sm:h-8">
               {status === "testing" ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               <span className="ml-1">Test</span>
             </Button>
-            <Button appearance="primary" onClick={handleSave} disabled={!apiKey.trim() || isPending} className="text-xs h-8">
+            <Button appearance="primary" onClick={handleSave} disabled={!apiKey.trim() || isPending} className="text-xs h-10 sm:h-8">
               {status === "saving" ? <Loader2 size={12} className="animate-spin" /> : null}
               <span className="ml-1">Save & Connect</span>
             </Button>
@@ -421,11 +421,11 @@ function WebhookOnlyModal({ provider, siteId, onClose, onSaved }: WebhookOnlyMod
             <input
               readOnly
               value={webhookUrl}
-              className="flex-1 h-9 rounded-lg border border-border-default bg-neutral px-3 text-[11px] font-mono text-subtle outline-none"
+              className="flex-1 h-10 sm:h-9 rounded-lg border border-border-default bg-neutral px-3 text-[11px] font-mono text-subtle outline-none"
             />
             <button
               onClick={copyUrl}
-              className="h-9 w-9 flex items-center justify-center rounded-lg border border-border-default bg-neutral hover:bg-neutral/70 text-subtle transition-colors"
+              className="h-10 w-10 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg border border-border-default bg-neutral hover:bg-neutral/70 text-subtle transition-colors"
             >
               {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
             </button>
@@ -443,14 +443,14 @@ function WebhookOnlyModal({ provider, siteId, onClose, onSaved }: WebhookOnlyMod
             readOnly
             value={webhookSecret}
             placeholder="Click Generate to create a new secret"
-            className="h-9 rounded-lg border border-border-default bg-neutral px-3 text-[11px] font-mono text-subtle outline-none"
+            className="h-10 sm:h-9 rounded-lg border border-border-default bg-neutral px-3 text-[11px] font-mono text-subtle outline-none"
           />
           <p className="text-[11px] text-subtlest">Paste this secret in {provider.name}&apos;s webhook configuration to verify payloads.</p>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button appearance="subtle" onClick={onClose} className="text-xs h-8">Cancel</Button>
-          <Button appearance="primary" onClick={handleSave} disabled={isPending} className="text-xs h-8">
+          <Button appearance="subtle" onClick={onClose} className="text-xs h-10 sm:h-8">Cancel</Button>
+          <Button appearance="primary" onClick={handleSave} disabled={isPending} className="text-xs h-10 sm:h-8">
             {isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
             <span className="ml-1">Mark as Configured</span>
           </Button>
@@ -681,7 +681,7 @@ export function IntegrationsSettings({ siteId, initialConnections = [] }: Props)
             placeholder="Search integrations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 rounded-xl border border-border-default bg-surface pl-9 pr-3 text-xs outline-none focus:border-brand"
+            className="w-full h-10 sm:h-9 rounded-xl border border-border-default bg-surface pl-9 pr-3 text-xs outline-none focus:border-brand"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -689,7 +689,7 @@ export function IntegrationsSettings({ siteId, initialConnections = [] }: Props)
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+              className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
                 selectedCategory === cat.id
                   ? "bg-brand text-white border-brand"
                   : "bg-surface text-subtle border-border-default hover:bg-neutral"
@@ -752,7 +752,7 @@ export function IntegrationsSettings({ siteId, initialConnections = [] }: Props)
                     <>
                       <button
                         onClick={() => setExpandedProvider(expanded ? null : provider.id)}
-                        className="text-xs text-subtle hover:text-default flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border-default hover:bg-neutral transition-colors"
+                        className="text-xs text-subtle hover:text-default flex items-center gap-1 px-3 py-2 sm:px-2 sm:py-1.5 rounded-lg border border-border-default hover:bg-neutral transition-colors"
                       >
                         {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         Details
@@ -760,7 +760,7 @@ export function IntegrationsSettings({ siteId, initialConnections = [] }: Props)
                       <button
                         onClick={() => handleDisconnect(provider.id)}
                         disabled={isPending}
-                        className="text-xs text-danger hover:text-danger/80 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-danger/30 hover:bg-danger/5 transition-colors cursor-pointer disabled:opacity-50"
+                        className="text-xs text-danger hover:text-danger/80 flex items-center gap-1 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg border border-danger/30 hover:bg-danger/5 transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <X size={12} /> Disconnect
                       </button>
@@ -779,14 +779,14 @@ export function IntegrationsSettings({ siteId, initialConnections = [] }: Props)
                       {provider.connectType === "OAUTH" ? (
                         <button
                           onClick={() => handleConnectOAuth(provider.oauthPath!)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-bold hover:bg-brand/90 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-brand text-white text-xs font-bold hover:bg-brand/90 transition-colors cursor-pointer"
                         >
                           <Shield size={13} /> Connect with {provider.name}
                         </button>
                       ) : (
                         <button
                           onClick={() => handleOpenModal(provider)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral border border-border-default text-xs font-bold text-default hover:bg-neutral/70 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-neutral border border-border-default text-xs font-bold text-default hover:bg-neutral/70 transition-colors cursor-pointer"
                         >
                           <Key size={13} /> Configure
                         </button>

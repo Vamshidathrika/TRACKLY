@@ -36,13 +36,13 @@ export function FeatureFlagToggleCard({
           <button
             type="button"
             onClick={() => setEnabled(!enabled)}
-            className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+            className={`w-12 h-7 sm:w-9 sm:h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
               enabled ? "bg-emerald-600" : "bg-neutral-400 dark:bg-neutral-600"
             }`}
           >
             <div
-              className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                enabled ? "translate-x-4" : "translate-x-0"
+              className={`w-6 h-6 sm:w-4 sm:h-4 rounded-full bg-white transition-transform ${
+                enabled ? "translate-x-5 sm:translate-x-4" : "translate-x-0"
               }`}
             />
           </button>

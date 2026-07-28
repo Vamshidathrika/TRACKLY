@@ -33,6 +33,7 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
 }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const createTriggerRef = useRef<HTMLButtonElement>(null);
@@ -60,14 +61,18 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
   });
 
   function toggleSidebar() {
-    setCollapsed((c) => {
-      localStorage.setItem("trackly-sidebar-collapsed", c ? "0" : "1");
-      return !c;
-    });
+    if (window.innerWidth < 768) {
+      setMobileSidebarOpen((o) => !o);
+    } else {
+      setCollapsed((c) => {
+        localStorage.setItem("trackly-sidebar-collapsed", c ? "0" : "1");
+        return !c;
+      });
+    }
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
@@ -79,7 +84,20 @@ export function AppShell({ user, projects, starredProjectIds, children }: {
         onOpenHelp={() => setHelpOpen(true)}
       />
       <div className="flex min-h-0 flex-1">
-        <GlobalSidebar projects={projects} starredProjectIds={starredProjectIds} collapsed={collapsed} />
+        {/* Mobile backdrop */}
+        {mobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/20 z-30 md:hidden" 
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+        <GlobalSidebar 
+          projects={projects} 
+          starredProjectIds={starredProjectIds} 
+          collapsed={collapsed}
+          mobileOpen={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
+        />
         <main className="min-w-0 flex-1 overflow-auto">{children}</main>
       </div>
       <GlobalCreate triggerRef={createTriggerRef} />

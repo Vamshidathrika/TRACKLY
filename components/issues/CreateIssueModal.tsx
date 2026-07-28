@@ -132,7 +132,7 @@ export function CreateIssueModal({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-full max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-[16px] border border-border-default bg-surface shadow-xl outline-none max-h-[90vh] overflow-y-auto animate-scale-in">
+        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-full sm:max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-[16px] border border-border-default bg-surface shadow-xl outline-none max-h-[90vh] overflow-y-auto animate-scale-in">
 
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border-default">
@@ -142,7 +142,7 @@ export function CreateIssueModal({
             <Dialog.Close asChild>
               <button
                 aria-label="Close"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-subtle hover:bg-neutral hover:text-default transition-all"
+                className="flex h-10 w-10 sm:h-7 sm:w-7 items-center justify-center rounded-full text-subtle hover:bg-neutral hover:text-default transition-all"
               >
                 <X size={15} />
               </button>
@@ -162,7 +162,7 @@ export function CreateIssueModal({
                     key={t.value}
                     type="button"
                     onClick={() => setSelectedType(t.value)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border text-[12px] font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1 rounded-[6px] border text-[12px] font-semibold transition-all ${
                       selectedType === t.value
                         ? t.color
                         : "border-border-default text-subtle hover:bg-neutral"
@@ -222,7 +222,7 @@ export function CreateIssueModal({
             </FieldInput>
 
             {/* Assignee + Priority */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldInput>
                 <FieldLabel label="Assignee" />
                 <select name="assigneeId" defaultValue={defaultAssigneeId || ""} className={selectClass}>
@@ -244,7 +244,7 @@ export function CreateIssueModal({
             </div>
 
             {/* Due Date, Story Points & Estimated Hours */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <FieldInput>
                 <FieldLabel label="Due date" />
                 <input
@@ -292,14 +292,14 @@ export function CreateIssueModal({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="h-9 px-4 rounded-[8px] text-[13px] font-medium text-subtle hover:bg-neutral transition-all"
+                className="h-10 sm:h-9 px-4 rounded-[8px] text-[13px] font-medium text-subtle hover:bg-neutral transition-all"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={pending || projects.length === 0}
-                className="h-9 px-5 rounded-[8px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hovered active:scale-[0.97] transition-all disabled:opacity-50 shadow-sm"
+                className="h-10 sm:h-9 px-5 rounded-[8px] bg-brand text-white text-[13px] font-semibold hover:bg-brand-hovered active:scale-[0.97] transition-all disabled:opacity-50 shadow-sm"
               >
                 {pending ? "Creating…" : "Create task"}
               </button>

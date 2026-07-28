@@ -130,7 +130,7 @@ export function TimeLogModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text">
+        <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text p-2 sm:p-1">
           <X size={16} />
         </button>
 
@@ -178,7 +178,7 @@ export function TimeLogModal({
                       setTimeInput((prev) => (prev ? `${prev} ${preset}` : preset));
                       if (error) setError(null);
                     }}
-                    className="px-2 py-0.5 rounded border border-border bg-neutral/80 hover:bg-neutral text-[11px] font-mono text-text-subtle hover:text-text transition-colors"
+                    className="px-3 py-1.5 sm:px-2 sm:py-0.5 rounded border border-border bg-neutral/80 hover:bg-neutral text-[11px] font-mono text-text-subtle hover:text-text transition-colors"
                   >
                     +{preset}
                   </button>
@@ -247,14 +247,14 @@ export function TimeLogModal({
             )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <Button appearance="subtle" onClick={onClose} type="button" className="text-xs">
+              <Button appearance="subtle" onClick={onClose} type="button" className="text-xs h-10 sm:h-8">
                 Cancel
               </Button>
               <Button
                 appearance="primary"
                 type="submit"
                 disabled={isSaving}
-                className="bg-brand text-white text-xs font-bold disabled:opacity-60"
+                className="bg-brand text-white text-xs font-bold disabled:opacity-60 h-10 sm:h-8"
               >
                 {isSaving ? "Saving..." : "Save Time Log"}
               </Button>

@@ -60,7 +60,7 @@ export function ProjectsListView({
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                className={`px-4 py-2 sm:px-3 sm:py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   typeFilter === t
                     ? "bg-surface text-brand font-bold shadow-2xs"
                     : "text-subtle hover:text-default"
@@ -76,7 +76,7 @@ export function ProjectsListView({
         <div className="flex items-center gap-1 bg-neutral p-1 rounded-xl border border-border-default self-end sm:self-auto">
           <button
             onClick={() => setViewMode("table")}
-            className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               viewMode === "table" ? "bg-surface text-brand shadow-2xs" : "text-subtle hover:text-default"
             }`}
             title="Table View"
@@ -85,7 +85,7 @@ export function ProjectsListView({
           </button>
           <button
             onClick={() => setViewMode("grid")}
-            className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               viewMode === "grid" ? "bg-surface text-brand shadow-2xs" : "text-subtle hover:text-default"
             }`}
             title="Grid Cards View"
@@ -101,7 +101,7 @@ export function ProjectsListView({
         </div>
       ) : viewMode === "table" ? (
         /* TABLE VIEW */
-        <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+        <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-border-default bg-neutral/40 text-subtle font-bold">

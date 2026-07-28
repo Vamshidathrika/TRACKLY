@@ -134,7 +134,7 @@ export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 rounded border border-border bg-surface text-xs outline-none focus:border-brand"
+            className="w-full h-10 sm:h-9 pl-9 pr-3 rounded border border-border bg-surface text-xs outline-none focus:border-brand"
           />
         </div>
 
@@ -143,7 +143,7 @@ export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="h-9 rounded border border-border bg-surface px-3 text-xs outline-none focus:border-brand"
+            className="h-10 sm:h-9 rounded border border-border bg-surface px-3 text-xs outline-none focus:border-brand"
           >
             <option value="ALL">All Roles</option>
             <option value="ADMIN">Admins Only</option>
@@ -178,7 +178,7 @@ export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
                       value={member.role}
                       disabled={isPending}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as "ADMIN" | "MEMBER")}
-                      className={`h-7 rounded-md px-2 text-[11px] font-semibold border outline-none cursor-pointer transition-all ${
+                      className={`h-10 sm:h-7 rounded-md px-2 text-[11px] font-semibold border outline-none cursor-pointer transition-all ${
                         member.role === "ADMIN"
                           ? "bg-purple-50 text-purple-700 border-purple-200"
                           : "bg-blue-50 text-blue-700 border-blue-200"
@@ -192,7 +192,7 @@ export function TeamHub({ initialMembers }: { initialMembers: MemberItem[] }) {
                       disabled={isPending}
                       onClick={() => handleRemoveMember(member.id, member.name)}
                       title="Remove member from workspace"
-                      className="p-1.5 rounded-md hover:bg-red-50 text-subtle hover:text-red-600 transition-colors"
+                      className="p-2.5 sm:p-1.5 rounded-md hover:bg-red-50 text-subtle hover:text-red-600 transition-colors cursor-pointer"
                     >
                       <Trash2 size={13} />
                     </button>

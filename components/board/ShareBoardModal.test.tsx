@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const shareBoardByEmailAction = vi.fn();
 const getOrCreateShareLinkAction = vi.fn();
 const revokeShareLinkAction = vi.fn();
+const removeProjectMemberAction = vi.fn();
 vi.mock("@/app/(app)/projects/[key]/settings/actions", () => ({
   shareBoardByEmailAction: (...args: unknown[]) => shareBoardByEmailAction(...args),
   getOrCreateShareLinkAction: (...args: unknown[]) => getOrCreateShareLinkAction(...args),
   revokeShareLinkAction: (...args: unknown[]) => revokeShareLinkAction(...args),
+  removeProjectMemberAction: (...args: unknown[]) => removeProjectMemberAction(...args),
 }));
 
 import { ShareBoardModal } from "./ShareBoardModal";
@@ -98,4 +100,34 @@ describe("ShareBoardModal", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Invitation emailed/i)).not.toBeInTheDocument();
   });
+
+  it("triggers member removal when X button is clicked and confirmed", async () => {
+    removeProjectMemberAction.mockResolvedValue({ success: true });
+    const onMemberRemoved = vi.fn();
+
+    render(
+      <ShareBoardModal
+        projectName="Mobile Redesign"
+        projectKey="MOB"
+        projectId="proj-123"
+        isOpen={true}
+        availableUsers={[{ id: "user-1", name: "Alex Smith" }]}
+        onMemberRemoved={onMemberRemoved}
+      />
+    );
+
+    const removeBtn = screen.getByRole("button", { name: /Remove Alex Smith from board/i });
+    fireEvent.click(removeBtn);
+
+    expect(screen.getByText("Remove member?")).toBeInTheDocument();
+
+    const confirmBtn = screen.getByRole("button", { name: /^Remove$/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() =>
+      expect(removeProjectMemberAction).toHaveBeenCalledWith("proj-123", "user-1")
+    );
+    expect(onMemberRemoved).toHaveBeenCalledWith("user-1");
+  });
 });
+

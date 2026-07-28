@@ -172,27 +172,29 @@ body {
 
 /* ─── Apple-style Scrollbar ───────────────────────────────────────────────── */
 
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: var(--ds-bg-neutral-hovered);
-  border-radius: 10px;
-  transition: background 0.2s ease;
-}
+  ::-webkit-scrollbar-thumb {
+    background: var(--ds-bg-neutral-hovered);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-text-subtlest);
-}
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ds-text-subtlest);
+  }
 
-::-webkit-scrollbar-corner {
-  background: transparent;
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 /* ─── Interactive Feedback — Apple-style precision ────────────────────────── */
@@ -389,4 +391,23 @@ main {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ─── Mobile Sidebar Overlay ──────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .sidebar-expanded,
+  .sidebar-collapsed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+  .sidebar-expanded.sidebar-open,
+  .sidebar-collapsed.sidebar-open {
+    transform: translateX(0);
+  }
 }

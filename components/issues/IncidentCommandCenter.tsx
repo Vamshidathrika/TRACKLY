@@ -25,7 +25,7 @@ export function IncidentCommandCenter({ issueKey }: { issueKey: string }) {
   return (
     <div className="flex flex-col gap-4 p-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 shadow-xs animate-fade-in">
       {/* Opsgenie Status Header */}
-      <div className="flex items-center justify-between border-b border-rose-500/20 pb-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-rose-500/20 pb-3 gap-3">
         <div className="flex items-center gap-2">
           <div className="relative">
             <ShieldAlert className="text-rose-500" size={20} />

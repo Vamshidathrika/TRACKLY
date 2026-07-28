@@ -81,7 +81,7 @@ export function SpaceSetupStep({
               value={spaceName}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g. Acme Mobile App"
-              className="w-full rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-semibold text-text focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full h-10 sm:h-9 rounded-lg border border-border bg-surface px-3.5 text-sm font-semibold text-text focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
 
             {/* Smart Presets */}
@@ -109,7 +109,7 @@ export function SpaceSetupStep({
                 maxLength={8}
                 value={spaceKey}
                 onChange={(e) => setSpaceKey(e.target.value.toUpperCase())}
-                className="w-24 text-center font-mono font-bold uppercase rounded border border-border bg-surface py-1 text-xs text-brand focus:border-brand focus:outline-none"
+                className="w-24 h-10 sm:h-8 text-center font-mono font-bold uppercase rounded border border-border bg-surface text-xs text-brand focus:border-brand focus:outline-none"
               />
             </div>
           </div>
@@ -140,7 +140,7 @@ export function SpaceSetupStep({
                     <button
                       type="button"
                       onClick={() => handleRemoveStage(idx)}
-                      className="p-1 hover:bg-danger/10 hover:text-danger rounded text-text-subtle transition-colors"
+                      className="p-2.5 sm:p-1 hover:bg-danger/10 hover:text-danger rounded text-text-subtle transition-colors"
                       title="Remove stage"
                     >
                       <X size={14} />
@@ -158,7 +158,7 @@ export function SpaceSetupStep({
                 onChange={(e) => setNewStageInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddStage())}
                 placeholder="New stage name..."
-                className="flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-text focus:border-brand focus:outline-none"
+                className="flex-1 h-10 sm:h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text focus:border-brand focus:outline-none"
               />
               <Button
                 appearance="subtle"

@@ -57,7 +57,7 @@ export function NotificationSchemesView() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-default">Notification Scheme Event Matrix</h2>
           <p className="text-xs text-subtle">
@@ -78,7 +78,7 @@ export function NotificationSchemesView() {
       )}
 
       {/* Event Matrix Table */}
-      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-border-default bg-neutral/40 font-bold text-subtle">
@@ -98,12 +98,14 @@ export function NotificationSchemesView() {
                 </td>
                 {(["assignee", "reporter", "projectLead", "watchers"] as const).map((recipient) => (
                   <td key={recipient} className="p-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={r[recipient]}
-                      onChange={() => toggleRecipient(r.id, recipient)}
-                      className="h-4 w-4 accent-brand cursor-pointer"
-                    />
+                    <label className="flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 cursor-pointer mx-auto w-fit">
+                      <input
+                        type="checkbox"
+                        checked={r[recipient]}
+                        onChange={() => toggleRecipient(r.id, recipient)}
+                        className="h-4 w-4 accent-brand cursor-pointer"
+                      />
+                    </label>
                   </td>
                 ))}
               </tr>

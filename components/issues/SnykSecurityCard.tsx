@@ -65,7 +65,7 @@ export function SnykSecurityCard({
         </div>
 
         {/* Command Copy Box */}
-        <div className="flex items-center gap-2 pt-1 border-t border-border/60">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-border/60">
           <div className="flex-1 px-3 py-1.5 rounded bg-slate-900 text-slate-200 font-mono text-[11px] flex items-center gap-2">
             <Terminal size={13} className="text-slate-400 shrink-0" />
             <span className="truncate">{patchCmd}</span>
@@ -74,7 +74,7 @@ export function SnykSecurityCard({
           <button
             type="button"
             onClick={copyPatchCmd}
-            className="px-3 py-1.5 rounded-lg bg-neutral hover:bg-neutral/80 text-text font-bold text-[11px] border border-border flex items-center gap-1 shrink-0 cursor-pointer"
+            className="h-10 sm:h-auto px-3 py-1.5 rounded-lg bg-neutral hover:bg-neutral/80 text-text font-bold text-[11px] border border-border flex items-center justify-center sm:justify-start gap-1 shrink-0 cursor-pointer"
           >
             {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
             <span>{copied ? "Copied" : "Copy Command"}</span>

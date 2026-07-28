@@ -92,7 +92,7 @@ export function MembersList({ members: initialMembers }: { members: MemberItem[]
   return (
     <div className="mt-8 flex flex-col gap-4 max-w-4xl">
       {/* Action Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-sm font-bold text-default">Active Team Members ({members.length})</h2>
           <p className="text-xs text-subtle">Manage workspace access, administrative roles, and user directory</p>
@@ -183,7 +183,7 @@ export function MembersList({ members: initialMembers }: { members: MemberItem[]
       )}
 
       {/* Roster Table */}
-      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
+      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-border-default bg-neutral/40 font-semibold text-subtle">
@@ -215,7 +215,7 @@ export function MembersList({ members: initialMembers }: { members: MemberItem[]
                     <select
                       value={m.role}
                       onChange={(e) => handleRoleChange(m.id, e.target.value as Role)}
-                      className="h-7 rounded-lg border border-border-default bg-surface px-2 text-xs font-medium text-default outline-none focus:border-brand cursor-pointer"
+                      className="h-10 sm:h-7 rounded-lg border border-border-default bg-surface px-2 text-xs font-medium text-default outline-none focus:border-brand cursor-pointer"
                     >
                       <option value="MEMBER">Member</option>
                       <option value="ADMIN">Admin</option>
@@ -227,7 +227,7 @@ export function MembersList({ members: initialMembers }: { members: MemberItem[]
                     type="button"
                     onClick={() => handleRemove(m.user.id)}
                     disabled={loadingId === m.user.id}
-                    className="p-1.5 rounded-lg text-subtlest hover:text-danger hover:bg-danger/10 transition-all cursor-pointer"
+                    className="p-2.5 sm:p-1.5 rounded-lg text-subtlest hover:text-danger hover:bg-danger/10 transition-all cursor-pointer"
                     title="Remove member"
                   >
                     <UserMinus size={14} />

@@ -57,7 +57,7 @@ export function NotificationBell() {
       <Popover.Trigger asChild>
         <button
           aria-label="Notifications"
-          className="relative rounded-full p-1.5 hover:bg-neutral-hovered transition-colors"
+          className="relative rounded-full p-2.5 sm:p-1.5 hover:bg-neutral-hovered transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
         >
           <Bell size={18} className="text-text-subtle" />
           {unreadCount > 0 && (
@@ -72,14 +72,14 @@ export function NotificationBell() {
         <Popover.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-80 rounded-ds border border-border bg-surface shadow-lg outline-none max-h-[80vh] flex flex-col"
+          className="z-50 w-[calc(100vw-2rem)] sm:w-80 rounded-ds border border-border bg-surface shadow-lg outline-none max-h-[80vh] flex flex-col"
         >
           <div className="flex items-center justify-between p-3 border-b border-border">
             <span className="font-semibold text-sm text-text">Notifications</span>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-1 text-xs text-brand hover:underline"
+                className="flex items-center gap-1 text-xs text-brand hover:underline py-1.5"
               >
                 <CheckCheck size={14} /> Mark all read
               </button>
@@ -102,9 +102,9 @@ export function NotificationBell() {
                   }`}
                 >
                   <Avatar name={n.actor.name} src={n.actor.avatarUrl} size={28} />
-                  <div className="flex flex-col text-xs gap-0.5">
-                    <span className="font-semibold text-text">{n.title}</span>
-                    <span className="text-text-subtle">{n.message}</span>
+                  <div className="flex flex-col text-xs gap-0.5 min-w-0">
+                    <span className="font-semibold text-text line-clamp-1">{n.title}</span>
+                    <span className="text-text-subtle line-clamp-2">{n.message}</span>
                     <span className="text-[10px] text-text-subtle opacity-70 mt-0.5">
                       {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>

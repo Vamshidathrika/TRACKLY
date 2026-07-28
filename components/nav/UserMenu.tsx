@@ -11,7 +11,7 @@ export function UserMenu({ user }: { user: UserMenuProps }) {
       <DM.Trigger asChild>
         <button
           aria-label="Your profile"
-          className="flex h-8 w-8 items-center justify-center rounded-full hover:ring-2 hover:ring-brand/30 transition-all ml-0.5"
+          className="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full hover:ring-2 hover:ring-brand/30 transition-all ml-0.5"
         >
           <Avatar name={user.name} src={user.avatarUrl} size={28} />
         </button>
@@ -20,7 +20,7 @@ export function UserMenu({ user }: { user: UserMenuProps }) {
         <DM.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-[220px] rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl py-1.5 shadow-lg animate-fade-in-down"
+          className="z-50 w-[220px] max-w-[calc(100vw-2rem)] rounded-[12px] border border-border-default bg-surface-overlay backdrop-blur-xl py-1.5 shadow-lg animate-fade-in-down"
         >
           {/* Profile header */}
           <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-border-default">
@@ -35,7 +35,7 @@ export function UserMenu({ user }: { user: UserMenuProps }) {
             <DM.Item asChild>
               <a
                 href="/settings/members"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-default font-medium cursor-pointer outline-none hover:bg-neutral rounded-[6px] mx-1 transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-3 sm:py-2 text-[13px] text-default font-medium cursor-pointer outline-none hover:bg-neutral rounded-[6px] mx-1 transition-colors"
               >
                 <Settings size={14} className="text-subtle" />
                 Settings
@@ -46,7 +46,7 @@ export function UserMenu({ user }: { user: UserMenuProps }) {
           <div className="border-t border-border-default py-1">
             <DM.Item asChild>
               <button
-                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] text-danger font-medium cursor-pointer outline-none hover:bg-danger/6 rounded-[6px] mx-1 transition-colors"
+                className="flex w-full items-center gap-2.5 px-3.5 py-3 sm:py-2 text-[13px] text-danger font-medium cursor-pointer outline-none hover:bg-danger/6 rounded-[6px] mx-1 transition-colors"
                 onClick={() => { window.location.href = "/api/auth/signout"; }}
               >
                 <LogOut size={14} />

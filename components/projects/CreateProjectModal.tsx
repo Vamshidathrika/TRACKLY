@@ -124,7 +124,7 @@ export function CreateProjectModal({
               </div>
             </div>
             <Dialog.Close asChild>
-              <button aria-label="Close" className="rounded-lg p-1.5 hover:bg-neutral-hovered transition-colors">
+              <button aria-label="Close" className="rounded-lg p-2.5 hover:bg-neutral-hovered transition-colors">
                 <X size={16} className="text-text-subtle" />
               </button>
             </Dialog.Close>
@@ -224,7 +224,7 @@ export function CreateProjectModal({
                             placeholder="None"
                             value={col.wipLimit}
                             onChange={(e) => handleWipLimitChange(col.id, e.target.value)}
-                            className="w-16 h-7 rounded border border-border bg-surface px-2 text-xs font-semibold text-center outline-none focus:border-brand"
+                            className="w-16 h-10 sm:h-7 rounded border border-border bg-surface px-2 text-xs font-semibold text-center outline-none focus:border-brand"
                           />
                         </div>
                       )}
@@ -239,13 +239,13 @@ export function CreateProjectModal({
                     placeholder="+ Add custom column stage (e.g. Staging)..."
                     value={customStageName}
                     onChange={(e) => setCustomStageName(e.target.value)}
-                    className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-brand"
+                    className="flex-1 h-10 sm:h-8 rounded-lg border border-border bg-surface px-3 text-xs outline-none focus:border-brand"
                   />
                   <button
                     type="button"
                     onClick={handleAddCustomColumn}
                     disabled={!customStageName.trim()}
-                    className="h-8 px-3 rounded-lg bg-brand/10 text-brand font-semibold text-xs hover:bg-brand/20 disabled:opacity-50 transition-colors flex items-center gap-1"
+                    className="h-10 sm:h-8 px-3 rounded-lg bg-brand/10 text-brand font-semibold text-xs hover:bg-brand/20 disabled:opacity-50 transition-colors flex items-center gap-1"
                   >
                     <Plus size={13} /> Add Stage
                   </button>

@@ -332,7 +332,7 @@ export function KanbanBoard({
     <div className="flex flex-1 flex-col overflow-hidden max-w-full">
       {/* Toast Banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900 text-white px-4 py-3 text-xs font-semibold shadow-2xl animate-bounce">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 rounded-xl bg-slate-900 text-white px-4 py-3 text-xs font-semibold shadow-2xl animate-bounce">
           {toastMessage}
         </div>
       )}
@@ -456,7 +456,7 @@ export function KanbanBoard({
                         <button
                           type="button"
                           onClick={() => toggleSwimlane(lane.id)}
-                          className="flex items-center justify-between py-1 px-2 text-xs font-bold text-text hover:text-brand cursor-pointer transition-colors"
+                          className="flex items-center justify-between py-2 px-3 sm:py-1 sm:px-2 text-xs font-bold text-text hover:text-brand cursor-pointer transition-colors"
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-text-subtle font-mono">{isCollapsed ? "▶" : "▼"}</span>
@@ -547,6 +547,7 @@ export function KanbanBoard({
         <ShareBoardModal
           projectName={projectName}
           projectKey={projectKey}
+          projectId={projectId}
           availableUsers={availableUsers}
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}

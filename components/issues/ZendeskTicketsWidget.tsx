@@ -81,7 +81,7 @@ export function ZendeskTicketsWidget({
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="px-2.5 py-1 rounded-lg bg-neutral hover:bg-neutral/80 text-text font-bold text-[11px] border border-border flex items-center gap-1 cursor-pointer"
+          className="h-10 sm:h-8 px-3 sm:px-2.5 py-1 rounded-lg bg-neutral hover:bg-neutral/80 text-text font-bold text-[11px] border border-border flex items-center gap-1 cursor-pointer"
         >
           <Plus size={13} />
           <span>Link Ticket</span>
@@ -116,7 +116,7 @@ export function ZendeskTicketsWidget({
                 <button
                   type="button"
                   onClick={() => handleRemove(t.id)}
-                  className="text-text-subtle hover:text-red-500 transition-colors p-0.5 rounded"
+                  className="text-text-subtle hover:text-red-500 transition-colors p-2 sm:p-0.5 rounded"
                   title="Unlink ticket"
                 >
                   <Trash2 size={12} />
@@ -177,13 +177,13 @@ export function ZendeskTicketsWidget({
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3 py-1.5 rounded-lg border border-border font-bold text-text text-xs hover:bg-neutral"
+                  className="h-10 sm:h-auto px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg border border-border font-bold text-text text-xs hover:bg-neutral"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700"
+                  className="h-10 sm:h-auto px-4 py-2 sm:py-1.5 rounded-lg bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700"
                 >
                   Link Ticket
                 </button>
