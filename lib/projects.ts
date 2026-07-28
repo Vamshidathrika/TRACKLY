@@ -17,6 +17,7 @@ export async function createProject(input: {
   key?: string;
   type?: ProjectType;
   leadId: string;
+  columnsConfig?: { name: string; status: string; wipLimit?: number | null }[];
 }) {
   const key = (input.key ? input.key.trim() : generateProjectKey(input.name)).toUpperCase();
   const existing = await prisma.project.findFirst({
@@ -42,6 +43,40 @@ export async function createProject(input: {
       role: "ADMIN",
     },
   });
+
+  // Seed default starter issues for the new project
+  try {
+    await prisma.issue.createMany({
+      data: [
+        {
+          projectId: project.id,
+          number: 1,
+          key: `${key}-1`,
+          summary: `Set up project roadmap for ${input.name}`,
+          description: `Welcome to your new project! Customize board columns, assign tasks, and track progress.`,
+          type: "STORY",
+          status: "TO_DO",
+          priority: "HIGH",
+          storyPoints: 3,
+          reporterId: input.leadId,
+          assigneeId: input.leadId,
+        },
+        {
+          projectId: project.id,
+          number: 2,
+          key: `${key}-2`,
+          summary: `Configure custom board columns & WIP limits`,
+          description: `Audit workflow stages and column capacity limits.`,
+          type: "TASK",
+          status: "IN_PROGRESS",
+          priority: "MEDIUM",
+          storyPoints: 2,
+          reporterId: input.leadId,
+          assigneeId: input.leadId,
+        },
+      ],
+    });
+  } catch { /* best effort seeding */ }
 
   await delCache(`site:projects:${input.siteId}`);
   return project;

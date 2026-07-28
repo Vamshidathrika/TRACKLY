@@ -12,6 +12,7 @@ import { toggleStarAction } from "@/app/(app)/chrome-actions";
 import type { IssueStatus } from "@prisma/client";
 
 import { ShareBoardModal } from "./ShareBoardModal";
+import { BoardOnboardingModal } from "@/components/onboarding/BoardOnboardingModal";
 
 const IssueDetailDrawer = dynamic(() => import("./IssueDetailDrawer").then((m) => m.IssueDetailDrawer), { ssr: false });
 const SummaryView = dynamic(() => import("./SpaceViews").then((m) => m.SummaryView), { ssr: false });
@@ -568,6 +569,8 @@ export function KanbanBoard({
           availableUsers={availableUsers}
         />
       )}
+      {/* Interactive Member Onboarding Tour Modal */}
+      <BoardOnboardingModal projectName={projectName} />
     </div>
   );
 }
