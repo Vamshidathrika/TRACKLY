@@ -214,7 +214,7 @@ export function PriorityBarWidget({
             <div key={prio} className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 font-semibold text-default min-w-0 truncate">
-                  <PriorityIcon priority={prio} size={13} className="shrink-0" />
+                  <span className="shrink-0 flex items-center"><PriorityIcon priority={prio} size={13} /></span>
                   <span className="truncate">{prio.charAt(0) + prio.slice(1).toLowerCase()}</span>
                 </span>
                 <div className="flex items-center gap-2 font-mono">
@@ -264,7 +264,7 @@ export function TypeDistributionWidget({
             <div key={tType} className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <TypeIcon type={tType} size={14} className="shrink-0" />
+                  <span className="shrink-0 flex items-center"><TypeIcon type={tType} size={14} /></span>
                   <span className="font-semibold text-default capitalize truncate">
                     {tType.toLowerCase()}
                   </span>
