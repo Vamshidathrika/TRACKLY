@@ -105,7 +105,7 @@ export function TimeLogModal({
     currentEstimate > 0 ? Math.min(100, Math.round((totalLogged / currentEstimate) * 100)) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl relative">
         <button onClick={onClose} className="absolute top-4 right-4 text-text-subtle hover:text-text">
           <X size={16} />

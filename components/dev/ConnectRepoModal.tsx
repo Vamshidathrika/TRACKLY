@@ -68,7 +68,7 @@ export function ConnectRepoModal({
       )}
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md rounded-[20px] border border-border bg-surface p-6 shadow-2xl flex flex-col gap-4 relative">
             <button
               onClick={() => setIsOpen(false)}
