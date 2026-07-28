@@ -195,6 +195,7 @@ export function IssueDetailDrawer({
   // Superpower State: Engagement & Voting
   const [watchersCount, setWatchersCount] = useState(0);
   const [isWatching, setIsWatching] = useState(false);
+  const [viewsCount, setViewsCount] = useState<number>((issue as any)?.viewsCount ?? 1);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   // Superpower State: Subtasks & AI Decomposer
@@ -359,6 +360,7 @@ export function IssueDetailDrawer({
         setLoggedHours(detail.loggedHours);
         setWatchersCount(detail.watchers.length);
         setIsWatching(detail.isWatching);
+        if (typeof detail.viewsCount === "number") setViewsCount(detail.viewsCount);
         setReleaseId(detail.releaseId || "");
       })
       .finally(() => {
@@ -931,16 +933,13 @@ export function IssueDetailDrawer({
 
             {/* Quick Action Controls & Team Presence */}
             <div className="flex items-center gap-2">
-              {/* Active Team Member Presence Stack */}
-              <div className="hidden sm:flex items-center -space-x-2 mr-1" title="Teammates currently viewing this task">
-                {activePresenceUsers.map((u, i) => (
-                  <div key={u.id || i} className="relative group">
-                    <span className="ring-2 ring-emerald-500 rounded-full inline-block">
-                      <Avatar name={u.name} src={u.avatarUrl} size={22} />
-                    </span>
-                    <span className="absolute bottom-0 right-0 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-1 ring-surface" />
-                  </div>
-                ))}
+              {/* Real View Counter Badge */}
+              <div
+                title={`${viewsCount} total view${viewsCount === 1 ? "" : "s"} on this ticket`}
+                className="flex items-center gap-1.5 text-xs font-medium text-text-subtle bg-surface-hover/80 px-2 py-1 rounded-lg border border-border/50"
+              >
+                <Eye size={14} className="text-text-subtle/70" />
+                <span>{viewsCount} {viewsCount === 1 ? "view" : "views"}</span>
               </div>
 
               {/* AI Executive Summary Button */}

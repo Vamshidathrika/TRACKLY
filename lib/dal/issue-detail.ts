@@ -67,6 +67,14 @@ export const getIssueDetail = cache(async (userId: string, issueId: string) => {
   const access = await checkProjectAccess(userId, issue.projectId);
   if (!access) return null;
 
+  // Increment real view count in database
+  const updatedIssue = await prisma.issue.update({
+    where: { id: issueId },
+    data: { viewsCount: { increment: 1 } },
+    select: { viewsCount: true },
+  }).catch(() => null);
+
+  const viewsCount = updatedIssue?.viewsCount ?? ((issue.viewsCount || 0) + 1);
   const loggedHours = issue.workLogs.reduce((sum, w) => sum + Number(w.hours ?? 0), 0);
 
   return {
@@ -80,6 +88,7 @@ export const getIssueDetail = cache(async (userId: string, issueId: string) => {
     storyPoints: issue.storyPoints,
     originalEstimate: issue.originalEstimate,
     labels: issue.labels,
+    viewsCount,
     startDate: issue.startDate,
     dueDate: issue.dueDate,
     createdAt: issue.createdAt,
