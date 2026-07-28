@@ -10,19 +10,40 @@ export function parseTimeToHours(input: string): number {
 
   const daysMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*d/i);
   const hoursMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*h/i);
-  const minsMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*m/i);
+  const minsMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*m(?!s)/i);
+  const secsMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*s/i);
 
   let total = 0;
   if (daysMatch) total += parseFloat(daysMatch[1]) * 8;
   if (hoursMatch) total += parseFloat(hoursMatch[1]);
   if (minsMatch) total += parseFloat(minsMatch[1]) / 60;
+  if (secsMatch) total += parseFloat(secsMatch[1]) / 3600;
 
-  if (!daysMatch && !hoursMatch && !minsMatch) {
+  if (!daysMatch && !hoursMatch && !minsMatch && !secsMatch) {
     const val = parseFloat(trimmed);
     if (!isNaN(val)) total = val;
   }
 
-  return Math.round(total * 100) / 100;
+  return Math.round(total * 10000) / 10000;
+}
+
+export function formatHoursToReadable(totalHours: number): string {
+  if (totalHours <= 0) return "0h";
+
+  const totalSeconds = Math.round(totalHours * 3600);
+  const days = Math.floor(totalSeconds / (8 * 3600));
+  const remSecsAfterDays = totalSeconds % (8 * 3600);
+  const hours = Math.floor(remSecsAfterDays / 3600);
+  const minutes = Math.floor((remSecsAfterDays % 3600) / 60);
+  const seconds = remSecsAfterDays % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0) parts.push(`${seconds}s`);
+
+  return parts.length > 0 ? parts.join(" ") : "0h";
 }
 
 export function TimeLogModal({
@@ -74,7 +95,7 @@ export function TimeLogModal({
     if (isSaving) return;
 
     if (parsedHours <= 0) {
-      setError("Enter a valid duration, e.g. 2h 30m, 1d or 45m.");
+      setError("Enter a valid duration, e.g. 1h 30m 45s, 2h, 45m, or 30s.");
       return;
     }
 
@@ -104,6 +125,8 @@ export function TimeLogModal({
   const progressPercent =
     currentEstimate > 0 ? Math.min(100, Math.round((totalLogged / currentEstimate) * 100)) : 0;
 
+  const quickPresets = ["15m", "30m", "1h", "2h 30m", "45s"];
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl relative">
@@ -121,12 +144,16 @@ export function TimeLogModal({
           <div className="py-6 text-center flex flex-col items-center gap-2">
             <CheckCircle2 size={28} className="text-emerald-500" />
             <h4 className="text-sm font-bold text-text">Time Logged Successfully!</h4>
-            <p className="text-xs text-text-subtle">Updated total logged time: {totalLogged.toFixed(1)}h</p>
+            <p className="text-xs text-text-subtle">
+              Updated total logged time: {formatHoursToReadable(totalLogged)} ({totalLogged.toFixed(2)}h)
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-xs">
             <div>
-              <label className="block font-bold text-text mb-1">Time Spent * (e.g. 2h 30m, 1d, 45m)</label>
+              <label className="block font-bold text-text mb-1">
+                Time Spent * <span className="font-normal text-text-subtle text-[11px]">(e.g. 1h 30m 45s, 2h, 45m, 30s)</span>
+              </label>
               <input
                 autoFocus
                 required
@@ -136,11 +163,35 @@ export function TimeLogModal({
                   setTimeInput(e.target.value);
                   if (error) setError(null);
                 }}
-                placeholder="2h 30m"
+                placeholder="e.g. 1h 30m 45s or 45m"
                 className="w-full h-9 rounded border border-border bg-surface px-3 outline-none focus:border-brand font-mono text-sm"
               />
+
+              {/* Quick preset chips */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <span className="text-[10px] text-text-subtle font-semibold">Quick add:</span>
+                {quickPresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setTimeInput((prev) => (prev ? `${prev} ${preset}` : preset));
+                      if (error) setError(null);
+                    }}
+                    className="px-2 py-0.5 rounded border border-border bg-neutral/80 hover:bg-neutral text-[11px] font-mono text-text-subtle hover:text-text transition-colors"
+                  >
+                    +{preset}
+                  </button>
+                ))}
+              </div>
+
               {timeInput && parsedHours > 0 && (
-                <p className="mt-1 text-[11px] text-text-subtle">Parsed as {parsedHours}h</p>
+                <div className="mt-2 p-2 rounded bg-brand/5 border border-brand/20 flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-brand">Duration parsed:</span>
+                  <span className="font-mono font-bold text-text">
+                    {formatHoursToReadable(parsedHours)} ({parsedHours.toFixed(3)} hrs)
+                  </span>
+                </div>
               )}
             </div>
 
@@ -181,8 +232,8 @@ export function TimeLogModal({
             {/* Time Tracking Progress Indicator */}
             <div className="p-3 rounded-md bg-neutral border border-border flex flex-col gap-1.5">
               <div className="flex justify-between text-[11px] font-semibold text-text-subtle">
-                <span>Logged: {totalLogged.toFixed(1)}h</span>
-                <span>Estimated: {currentEstimate > 0 ? `${currentEstimate.toFixed(1)}h` : "Not set"}</span>
+                <span>Logged: {formatHoursToReadable(totalLogged)} ({totalLogged.toFixed(1)}h)</span>
+                <span>Estimated: {currentEstimate > 0 ? `${formatHoursToReadable(currentEstimate)} (${currentEstimate.toFixed(1)}h)` : "Not set"}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-border/60 overflow-hidden">
                 <div style={{ width: `${progressPercent}%` }} className="h-full bg-brand transition-all" />

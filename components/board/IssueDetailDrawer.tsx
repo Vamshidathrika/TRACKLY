@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { TimeLogModal } from "@/components/issues/TimeLogModal";
+import { TimeLogModal, formatHoursToReadable } from "@/components/issues/TimeLogModal";
 import {
   updateIssueFieldAction,
   deleteIssueAction,
@@ -1534,12 +1534,12 @@ export function IssueDetailDrawer({
                     <div className="p-3 rounded-md bg-neutral/30 border border-border flex items-center justify-between text-xs font-semibold">
                       <span>
                         Total Logged Time:{" "}
-                        <strong className="text-brand font-bold">{loggedHours.toFixed(1)} hours</strong>
+                        <strong className="text-brand font-bold">{formatHoursToReadable(loggedHours)} ({loggedHours.toFixed(1)}h)</strong>
                       </span>
                       <span>
                         Original Estimate:{" "}
                         <strong className="text-text font-bold">
-                          {estimatedHours > 0 ? `${estimatedHours.toFixed(1)} hours` : "Not set"}
+                          {estimatedHours > 0 ? `${formatHoursToReadable(estimatedHours)} (${estimatedHours.toFixed(1)}h)` : "Not set"}
                         </strong>
                       </span>
                     </div>
@@ -1569,7 +1569,7 @@ export function IssueDetailDrawer({
                               </div>
                             </div>
                             <div className="text-right">
-                              <span className="font-mono font-bold text-brand">{Number(w.hours).toFixed(1)}h</span>
+                              <span className="font-mono font-bold text-brand">{formatHoursToReadable(Number(w.hours))}</span>
                               <p className="text-[10px] text-text-subtle">
                                 {typeof w.startedAt === "string" ? w.startedAt.split("T")[0] : "Logged"}
                               </p>
