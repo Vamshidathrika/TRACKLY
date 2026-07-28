@@ -6,7 +6,6 @@ import { IssueCard, type BoardIssue, type BoardUserOption } from "./IssueCard";
 import { quickCreateIssueAction } from "@/app/(app)/projects/[key]/backlog/actions";
 import type { IssueStatus } from "@prisma/client";
 
-import { VirtualList } from "@/components/ui/VirtualList";
 
 const columnTitles: Record<IssueStatus, string> = {
   TO_DO: "TO DO",
@@ -163,25 +162,20 @@ function BoardColumnComponent({
             Drop tasks here
           </div>
         ) : (
-          <VirtualList
-            items={issues}
-            estimateSize={() => 110}
-            renderItem={(issue) => {
-              const canEditStatus = isAdmin || issue.assignee?.id === currentUserId;
-              return (
-                <div key={issue.id} className="pb-2.5">
-                  <IssueCard
-                    issue={issue}
-                    onStatusChange={onStatusChange}
-                    onAssigneeChange={onAssigneeChange}
-                    onSelectIssue={onSelectIssue}
-                    availableUsers={availableUsers}
-                    canEditStatus={canEditStatus}
-                  />
-                </div>
-              );
-            }}
-          />
+          issues.map((issue) => {
+            const canEditStatus = isAdmin || issue.assignee?.id === currentUserId;
+            return (
+              <IssueCard
+                key={issue.id}
+                issue={issue}
+                onStatusChange={onStatusChange}
+                onAssigneeChange={onAssigneeChange}
+                onSelectIssue={onSelectIssue}
+                availableUsers={availableUsers}
+                canEditStatus={canEditStatus}
+              />
+            );
+          })
         )}
       </div>
 
