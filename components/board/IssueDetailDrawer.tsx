@@ -47,14 +47,65 @@ import {
   deleteIssueAction,
   logWorkAction,
   postCommentAction,
+  createSubtaskAction,
+  toggleSubtaskAction,
+  deleteSubtaskAction,
+  uploadAttachmentAction,
+  deleteAttachmentAction,
+  linkIssueAction,
+  unlinkIssueAction,
+  toggleWatcherAction,
 } from "@/app/(app)/projects/[key]/issues/actions";
+import { getIssueDetailAction } from "@/app/(app)/projects/[key]/issues/detail-actions";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
-import type { IssueStatus, IssuePriority, IssueType } from "@prisma/client";
+import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
 import {
   ISSUE_TYPES as issueTypes,
   PRIORITY_CONFIG as priorityIcons,
   ISSUE_STATUSES as statuses,
 } from "@/lib/issues-config";
+
+type LinkedIssueRow = {
+  id: string;
+  relation: string;
+  key: string;
+  summary: string;
+  status: IssueStatus;
+};
+
+/**
+ * Flattens both link directions into one list the UI can render.
+ *
+ * A row is dropped when its counterpart issue is absent rather than being
+ * given a placeholder key — an invented IS_BLOCKED_BY row disables the
+ * "Mark Complete" transition on a blocker that does not exist.
+ */
+function mapLinks(
+  linksOut: { id: string; relation: string; targetIssue?: { key: string; summary: string; status: IssueStatus } | null }[] | undefined,
+  linksIn: { id: string; relation: string; sourceIssue?: { key: string; summary: string; status: IssueStatus } | null }[] | undefined
+): LinkedIssueRow[] {
+  const out = (linksOut ?? []).flatMap((l) =>
+    l.targetIssue
+      ? [{ id: l.id, relation: l.relation, key: l.targetIssue.key, summary: l.targetIssue.summary, status: l.targetIssue.status }]
+      : []
+  );
+  // An inbound BLOCKS link reads as "is blocked by" from this issue's side;
+  // every other relation is symmetric and keeps its own name.
+  const incoming = (linksIn ?? []).flatMap((l) =>
+    l.sourceIssue
+      ? [
+          {
+            id: l.id,
+            relation: l.relation === "BLOCKS" ? "IS_BLOCKED_BY" : l.relation,
+            key: l.sourceIssue.key,
+            summary: l.sourceIssue.summary,
+            status: l.sourceIssue.status,
+          },
+        ]
+      : []
+  );
+  return [...out, ...incoming];
+}
 
 function toDateInput(date: Date | string | null | undefined): string {
   if (!date) return "";
@@ -139,17 +190,15 @@ export function IssueDetailDrawer({
   ]);
 
   // Superpower State: Engagement & Voting
-  const [upvotes, setUpvotes] = useState(0);
-  const [isVoted, setIsVoted] = useState(false);
   const [watchersCount, setWatchersCount] = useState(0);
   const [isWatching, setIsWatching] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   // Superpower State: Subtasks & AI Decomposer
   const [subtasks, setSubtasks] = useState<
     { id: string; key: string; summary: string; status: IssueStatus }[]
   >([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
-  const [isGeneratingAiSubtasks, setIsGeneratingAiSubtasks] = useState(false);
 
   // Superpower State: Developer Context (PRs & Commits)
   const [pullRequests, setPullRequests] = useState<
@@ -172,6 +221,7 @@ export function IssueDetailDrawer({
     { id: string; filename: string; url: string; sizeBytes: number; mimeType: string }[]
   >([]);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Activity Section
   const [activeTab, setActiveTab] = useState<"comments" | "history" | "worklog" | "development">("comments");
@@ -238,60 +288,19 @@ export function IssueDetailDrawer({
       setIsEditingDescription(false);
       setCommentInput("");
 
-      setUpvotes(issue.upvotes ?? 3);
-      setIsVoted(issue.isVoted ?? false);
-      setWatchersCount(issue.watchers?.length ?? 2);
+      setWatchersCount(issue.watchers?.length ?? 0);
       setIsWatching(issue.isWatching ?? false);
+      setIsLoadingDetail(false);
 
-      // Subtasks
-      let initialSts = issue.subtasks || [
-        { id: "st-1", key: `${issue.key}-1`, summary: "API schema definition & validations", status: "DONE" },
-        { id: "st-2", key: `${issue.key}-2`, summary: "UI component unit tests & storybook", status: "IN_PROGRESS" },
-      ];
-      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-        const savedSts = localStorage.getItem(`trackly_subtasks_${issue.id}`);
-        if (savedSts) {
-          try { initialSts = JSON.parse(savedSts); } catch {}
-        }
-      }
-      setSubtasks(initialSts);
-
-      // Dev Context
-      setPullRequests(
-        issue.devContext?.pullRequests || [
-          { number: 42, title: `feat(${issue.projectKey.toLowerCase()}): implement core pipeline`, status: "MERGED", url: "#" },
-        ]
-      );
-      setCommits(
-        issue.devContext?.commits || [
-          { hash: "8f3a12b", message: `fix: handle edge case in ${issue.key}`, url: "#" },
-        ]
-      );
-
-      // Linked issues
-      const outLinks = (issue.linksOut || []).map((l) => ({
-        id: l.id,
-        relation: l.relation || "BLOCKS",
-        key: l.targetIssue?.key || "TRACK-14",
-        summary: l.targetIssue?.summary || "Target dependency task",
-        status: l.targetIssue?.status || "IN_PROGRESS",
-      }));
-      const inLinks = (issue.linksIn || []).map((l) => ({
-        id: l.id,
-        relation: "IS_BLOCKED_BY",
-        key: l.sourceIssue?.key || "TRACK-04",
-        summary: l.sourceIssue?.summary || "Upstream blocker issue",
-        status: l.sourceIssue?.status || "TO_DO",
-      }));
-      setLinkedIssues(
-        outLinks.length + inLinks.length > 0
-          ? [...outLinks, ...inLinks]
-          : [
-              { id: "lk-1", relation: "IS_BLOCKED_BY", key: "TRACK-04", summary: "Backend API authentication endpoint", status: "IN_PROGRESS" as IssueStatus },
-            ]
-      );
-
-      // Attachments
+      // The board query is a thin card projection — it carries no subtasks,
+      // attachments, links, comments or history. Seed from whatever the card
+      // happened to include, then let the detail fetch below replace it.
+      // Nothing here may fall back to invented data: a placeholder
+      // IS_BLOCKED_BY link blocks a real transition on a nonexistent issue.
+      setSubtasks(issue.subtasks || []);
+      setPullRequests(issue.devContext?.pullRequests || []);
+      setCommits(issue.devContext?.commits || []);
+      setLinkedIssues(mapLinks(issue.linksOut, issue.linksIn));
       setAttachments(issue.attachments || []);
 
       const logs = issue.workLogs || [];
@@ -302,12 +311,45 @@ export function IssueDetailDrawer({
       setLoggedHours(totalLogged);
 
       if (issue.id && !issue.id.startsWith("demo-")) {
+        setIsLoadingDetail(true);
         getIssueDevelopmentDataAction(issue.id).then((res) => {
           if (res) setDevData(res);
         });
+      } else {
+        setIsLoadingDetail(false);
       }
     }
   }, [issue]);
+
+  // Detail fetch, mirroring how Jira loads a board card's full issue only when
+  // the detail view opens. Guarded against a stale response overwriting a
+  // newer selection when the user clicks through cards quickly.
+  useEffect(() => {
+    if (!issue?.id || issue.id.startsWith("demo-")) return;
+    let cancelled = false;
+    const requestedId = issue.id;
+
+    getIssueDetailAction(requestedId)
+      .then((detail) => {
+        if (cancelled || !detail || detail.id !== requestedId) return;
+        setSubtasks(detail.subtasks);
+        setAttachments(detail.attachments);
+        setLinkedIssues(mapLinks(detail.linksOut, detail.linksIn));
+        setCommentsList(detail.comments);
+        setHistoryList(detail.history);
+        setWorkLogsList(detail.workLogs);
+        setLoggedHours(detail.loggedHours);
+        setWatchersCount(detail.watchers.length);
+        setIsWatching(detail.isWatching);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDetail(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [issue?.id]);
 
   if (!issue) return null;
 
@@ -488,23 +530,6 @@ export function IssueDetailDrawer({
     });
   };
 
-  // Superpower Action: AI Subtask Auto-Decomposer
-  const handleAiAutoDecomposeSubtasks = () => {
-    setIsGeneratingAiSubtasks(true);
-    showToast("✨ AI Copilot is decomposing task into subtasks...");
-
-    setTimeout(() => {
-      const generatedSts = [
-        { id: `st-${Date.now()}-1`, key: `${issue.key}-1`, summary: "Define API endpoints & Zod validation schema", status: "DONE" as IssueStatus },
-        { id: `st-${Date.now()}-2`, key: `${issue.key}-2`, summary: "Implement frontend component state & micro-interactions", status: "IN_PROGRESS" as IssueStatus },
-        { id: `st-${Date.now()}-3`, key: `${issue.key}-3`, summary: "Write automated Vitest & Playwright e2e test cases", status: "TO_DO" as IssueStatus },
-        { id: `st-${Date.now()}-4`, key: `${issue.key}-4`, summary: "Verify cross-browser responsive accessibility", status: "TO_DO" as IssueStatus },
-      ];
-      saveSubtasks(generatedSts);
-      setIsGeneratingAiSubtasks(false);
-      showToast("✨ AI successfully decomposed task into 4 subtasks!");
-    }, 1200);
-  };
 
   // Superpower Action: AI Acceptance Criteria Generator
   const handleAiGenerateAcceptanceCriteria = () => {
@@ -526,75 +551,103 @@ export function IssueDetailDrawer({
     const items = e.clipboardData?.items;
     if (!items) return;
 
+    const pasted: File[] = [];
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
         const file = items[i].getAsFile();
         if (file) {
-          const newAtt = {
-            id: `att-paste-${Date.now()}`,
-            filename: file.name || `Pasted_Screenshot_${Date.now()}.png`,
-            url: URL.createObjectURL(file),
-            sizeBytes: file.size,
-            mimeType: file.type,
-          };
-          setAttachments((prev) => [...prev, newAtt]);
-          showToast("📋 Attached pasted screenshot from clipboard!");
+          // Clipboard images arrive as "image.png" or unnamed; give each one a
+          // distinct name so the blob store doesn't collide them.
+          const ext = (file.type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
+          pasted.push(new File([file], `pasted-${Date.now()}-${i}.${ext}`, { type: file.type }));
         }
       }
     }
+    if (pasted.length > 0) uploadFiles(pasted);
   };
 
-  const saveSubtasks = (next: { id: string; key: string; summary: string; status: IssueStatus }[]) => {
-    setSubtasks(next);
-    if (typeof window !== "undefined" && typeof localStorage !== "undefined" && issue?.id) {
-      localStorage.setItem(`trackly_subtasks_${issue.id}`, JSON.stringify(next));
-    }
+  /**
+   * Re-reads the issue from the server after a mutation.
+   *
+   * Subtasks, links and attachments are all server-allocated (keys, blob URLs,
+   * link ids), so the drawer cannot construct the resulting row itself — it has
+   * to ask. Optimistic UI is applied by each caller first and reconciled here.
+   */
+  const refreshDetail = async () => {
+    if (!issue?.id || issue.id.startsWith("demo-")) return;
+    const detail = await getIssueDetailAction(issue.id);
+    if (!detail || detail.id !== issue.id) return;
+    setSubtasks(detail.subtasks);
+    setAttachments(detail.attachments);
+    setLinkedIssues(mapLinks(detail.linksOut, detail.linksIn));
+    setWatchersCount(detail.watchers.length);
+    setIsWatching(detail.isWatching);
   };
 
   // Subtask handlers
   const handleToggleSubtask = (stId: string) => {
-    const next = subtasks.map((st) =>
-      st.id === stId ? { ...st, status: (st.status === "DONE" ? "IN_PROGRESS" : "DONE") as IssueStatus } : st
+    const previous = subtasks;
+    setSubtasks((prev) =>
+      prev.map((st) =>
+        st.id === stId ? { ...st, status: (st.status === "DONE" ? "TO_DO" : "DONE") as IssueStatus } : st
+      )
     );
-    saveSubtasks(next);
+    startTransition(async () => {
+      const res = await toggleSubtaskAction(stId);
+      if (res?.error) {
+        setSubtasks(previous);
+        showToast(`Could not update subtask: ${res.error}`);
+        return;
+      }
+      await refreshDetail();
+    });
+  };
+
+  const handleDeleteSubtask = (stId: string) => {
+    const previous = subtasks;
+    setSubtasks((prev) => prev.filter((st) => st.id !== stId));
+    startTransition(async () => {
+      const res = await deleteSubtaskAction(stId);
+      if (res?.error) {
+        setSubtasks(previous);
+        showToast(`Could not delete subtask: ${res.error}`);
+        return;
+      }
+      await refreshDetail();
+    });
   };
 
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubtaskTitle.trim()) return;
-    const newSt = {
-      id: `st-${Date.now()}`,
-      key: `${issue.key}-${subtasks.length + 1}`,
-      summary: newSubtaskTitle.trim(),
-      status: "TO_DO" as IssueStatus,
-    };
-    const next = [...subtasks, newSt];
-    saveSubtasks(next);
+    const title = newSubtaskTitle.trim();
+    if (!title) return;
     setNewSubtaskTitle("");
-    showToast("Subtask added & saved");
-  };
-
-  // Upvote / Watch Handlers
-  const handleToggleVote = () => {
-    if (isVoted) {
-      setIsVoted(false);
-      setUpvotes((v) => Math.max(0, v - 1));
-    } else {
-      setIsVoted(true);
-      setUpvotes((v) => v + 1);
-      showToast("Upvoted task");
-    }
+    startTransition(async () => {
+      const res = await createSubtaskAction(issue.id, title);
+      if (res?.error) {
+        setNewSubtaskTitle(title);
+        showToast(`Could not add subtask: ${res.error}`);
+        return;
+      }
+      await refreshDetail();
+      showToast("Subtask created");
+    });
   };
 
   const handleToggleWatch = () => {
-    if (isWatching) {
-      setIsWatching(false);
-      setWatchersCount((w) => Math.max(0, w - 1));
-    } else {
-      setIsWatching(true);
-      setWatchersCount((w) => w + 1);
-      showToast("Watching task updates");
-    }
+    const wasWatching = isWatching;
+    setIsWatching(!wasWatching);
+    setWatchersCount((w) => (wasWatching ? Math.max(0, w - 1) : w + 1));
+    startTransition(async () => {
+      const res = await toggleWatcherAction(issue.id);
+      if (res?.error) {
+        setIsWatching(wasWatching);
+        setWatchersCount((w) => (wasWatching ? w + 1 : Math.max(0, w - 1)));
+        showToast(`Could not update watchers: ${res.error}`);
+        return;
+      }
+      showToast(res?.isWatching ? "Watching this issue" : "Stopped watching");
+    });
   };
 
   // Git / Link / Attachment Add Handlers
@@ -613,33 +666,74 @@ export function IssueDetailDrawer({
 
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!linkKeyInput.trim()) return;
-    setLinkedIssues((prev) => [
-      ...prev,
-      {
-        id: `lk-${Date.now()}`,
-        relation: linkRelationInput,
-        key: linkKeyInput.trim().toUpperCase(),
-        summary: "Linked issue dependency",
-        status: "TO_DO",
-      },
-    ]);
+    const targetKey = linkKeyInput.trim().toUpperCase();
+    if (!targetKey) return;
     setLinkKeyInput("");
     setShowAddLinkModal(false);
-    showToast("Task link created");
+    startTransition(async () => {
+      // The server resolves the key, rejects unknown or cross-tenant targets,
+      // and owns the link id — so the row is only rendered after it confirms.
+      const res = await linkIssueAction(issue.id, targetKey, linkRelationInput as LinkRelation);
+      if (res?.error) {
+        showToast(`Could not link ${targetKey}: ${res.error}`);
+        return;
+      }
+      await refreshDetail();
+      showToast(`Linked ${targetKey}`);
+    });
+  };
+
+  const handleRemoveLink = (linkId: string) => {
+    const previous = linkedIssues;
+    setLinkedIssues((prev) => prev.filter((lk) => lk.id !== linkId));
+    startTransition(async () => {
+      const res = await unlinkIssueAction(linkId);
+      if (res?.error) {
+        setLinkedIssues(previous);
+        showToast(`Could not remove link: ${res.error}`);
+        return;
+      }
+      await refreshDetail();
+    });
+  };
+
+  const uploadFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    const formData = new FormData();
+    files.forEach((f) => formData.append("files", f));
+    setIsUploading(true);
+    startTransition(async () => {
+      try {
+        const res = await uploadAttachmentAction(issue.id, formData);
+        if (res?.error) {
+          showToast(`Upload failed: ${res.error}`);
+          return;
+        }
+        await refreshDetail();
+        showToast(`Attached ${files.length} file${files.length > 1 ? "s" : ""}`);
+      } finally {
+        setIsUploading(false);
+      }
+    });
   };
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const newAtts = Array.from(files).map((f, idx) => ({
-      id: `att-${Date.now()}-${idx}`,
-      filename: f.name,
-      url: URL.createObjectURL(f),
-      sizeBytes: f.size,
-      mimeType: f.type || "application/octet-stream",
-    }));
-    setAttachments((prev) => [...prev, ...newAtts]);
-    showToast(`Uploaded ${files.length} attachment(s)`);
+    uploadFiles(Array.from(files));
+  };
+
+  const handleDeleteAttachment = (attachmentId: string) => {
+    const previous = attachments;
+    setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    startTransition(async () => {
+      const res = await deleteAttachmentAction(attachmentId);
+      if (res?.error) {
+        setAttachments(previous);
+        showToast(`Could not delete attachment: ${res.error}`);
+        return;
+      }
+      await refreshDetail();
+    });
   };
 
   const handleDelete = () => {
@@ -806,20 +900,6 @@ export function IssueDetailDrawer({
               >
                 <Sparkles size={14} />
                 <span className="hidden md:inline">AI Recap</span>
-              </button>
-
-              {/* Upvote Button */}
-              <button
-                onClick={handleToggleVote}
-                title="Upvote task"
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                  isVoted
-                    ? "bg-brand text-white border-brand shadow-xs"
-                    : "bg-surface border-border text-text-subtle hover:text-text hover:bg-neutral"
-                }`}
-              >
-                <ThumbsUp size={13} className={isVoted ? "fill-white" : ""} />
-                <span>{upvotes}</span>
               </button>
 
               {/* Watcher Button */}
@@ -1029,17 +1109,6 @@ export function IssueDetailDrawer({
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* AI Subtask Auto-Decomposer Button */}
-                    <button
-                      type="button"
-                      onClick={handleAiAutoDecomposeSubtasks}
-                      disabled={isGeneratingAiSubtasks}
-                      className="text-[11px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      <Sparkles size={12} className={isGeneratingAiSubtasks ? "animate-spin" : ""} />
-                      <span>✨ Auto-subtasks</span>
-                    </button>
-
                     {subtasks.length > 0 && (
                       <span className="text-xs font-bold font-mono text-brand">
                         {subtaskProgressPercent}%
