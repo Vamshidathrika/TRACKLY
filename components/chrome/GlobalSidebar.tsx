@@ -207,6 +207,34 @@ export function GlobalSidebar({
           {projects.slice(0, 8).map((p) => (
             <ProjectItem key={p.id} proj={p} collapsed={collapsed} />
           ))}
+          {/* With no boards this section used to render its heading and nothing
+              else, which looks like a broken sidebar rather than an empty one.
+              A new signup lands here, as does anyone whose only membership is an
+              auto-provisioned personal workspace. */}
+          {projects.length === 0 && !collapsed && (
+            <div className="px-3 py-2 flex flex-col gap-1.5">
+              <p className="text-[11px] text-subtle leading-relaxed">
+                No boards yet. Boards you create or are invited to appear here.
+              </p>
+              <Link
+                href="/projects"
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand hover:underline"
+              >
+                <Plus size={12} className="shrink-0" />
+                Create a board
+              </Link>
+            </div>
+          )}
+          {projects.length === 0 && collapsed && (
+            <Link
+              href="/projects"
+              title="Create a board"
+              aria-label="Create a board"
+              className="flex items-center justify-center rounded-xl px-3 py-1.5 text-subtle hover:bg-neutral/60 transition-all"
+            >
+              <Plus size={14} className="shrink-0" />
+            </Link>
+          )}
           {projects.length > 8 && (
             <Link
               href="/projects"

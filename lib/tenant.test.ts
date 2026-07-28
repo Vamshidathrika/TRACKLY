@@ -16,9 +16,12 @@ vi.mock("./auth", () => ({
 import { prisma } from "./prisma";
 import { checkProjectAccess } from "./tenant";
 
+import { delCachePrefix } from "./redis";
+
 describe("checkProjectAccess DAL guard", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await delCachePrefix("user:");
   });
 
   it("grants WORKSPACE_ADMIN access when user is workspace ADMIN", async () => {

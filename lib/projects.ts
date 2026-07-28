@@ -331,12 +331,16 @@ export async function removeProjectMember(projectId: string, userId: string) {
  * strictly within the user's workspace memberships. No global fallback.
  */
 export const resolveProjectByKey = cache(async (userId: string, siteId: string, rawKey: string) => {
+  const upperKey = rawKey.toUpperCase();
+  const cacheKey = `user:resolve-project:${userId}:${siteId}:${upperKey}`;
+  const cached = await getCache<any>(cacheKey);
+  if (cached) return cached;
+
   const userMemberships = await prisma.membership.findMany({
     where: { userId },
     select: { siteId: true },
   });
   const siteIds = Array.from(new Set(userMemberships.map((m) => m.siteId).concat(siteId)));
-  const upperKey = rawKey.toUpperCase();
 
   const project = await prisma.project.findFirst({
     where: {
@@ -352,6 +356,9 @@ export const resolveProjectByKey = cache(async (userId: string, siteId: string, 
     },
   });
 
+  if (project) {
+    await setCache(cacheKey, project, 120);
+  }
   return project;
 });
 

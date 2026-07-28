@@ -6,6 +6,8 @@ import { IssueCard, type BoardIssue, type BoardUserOption } from "./IssueCard";
 import { quickCreateIssueAction } from "@/app/(app)/projects/[key]/backlog/actions";
 import type { IssueStatus } from "@prisma/client";
 
+import { VirtualList } from "@/components/ui/VirtualList";
+
 const columnTitles: Record<IssueStatus, string> = {
   TO_DO: "TO DO",
   IN_PROGRESS: "IN PROGRESS",
@@ -155,26 +157,31 @@ function BoardColumnComponent({
       </div>
 
       {/* Issues list */}
-      <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-0.5">
+      <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-0.5 min-h-[120px]">
         {issues.length === 0 ? (
           <div className="rounded-[10px] border border-dashed border-border-default p-4 text-center text-[12px] text-subtlest italic">
             Drop tasks here
           </div>
         ) : (
-          issues.map((issue) => {
-            const canEditStatus = isAdmin || issue.assignee?.id === currentUserId;
-            return (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                onStatusChange={onStatusChange}
-                onAssigneeChange={onAssigneeChange}
-                onSelectIssue={onSelectIssue}
-                availableUsers={availableUsers}
-                canEditStatus={canEditStatus}
-              />
-            );
-          })
+          <VirtualList
+            items={issues}
+            estimateSize={() => 110}
+            renderItem={(issue) => {
+              const canEditStatus = isAdmin || issue.assignee?.id === currentUserId;
+              return (
+                <div key={issue.id} className="pb-2.5">
+                  <IssueCard
+                    issue={issue}
+                    onStatusChange={onStatusChange}
+                    onAssigneeChange={onAssigneeChange}
+                    onSelectIssue={onSelectIssue}
+                    availableUsers={availableUsers}
+                    canEditStatus={canEditStatus}
+                  />
+                </div>
+              );
+            }}
+          />
         )}
       </div>
 

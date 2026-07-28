@@ -28,12 +28,14 @@ export default async function ProjectLayout({
     return <BoardNotFound projectKey={key.toUpperCase()} isAdmin={role === "ADMIN"} />;
   }
 
-  const access = await checkProjectAccess(userId, project.id, project.siteId);
+  const [access, star] = await Promise.all([
+    checkProjectAccess(userId, project.id, project.siteId),
+    getCachedStar(userId, project.id),
+  ]);
+
   if (!access) {
     return <BoardNotFound projectKey={key.toUpperCase()} isAdmin={role === "ADMIN"} />;
   }
-
-  const star = await getCachedStar(userId, project.id);
 
   return (
     <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden">

@@ -90,6 +90,13 @@ function IssueCardComponent({
     e.dataTransfer.effectAllowed = "move";
   };
 
+  const handleMouseEnter = () => {
+    const projKey = issue.key ? issue.key.split("-")[0] : "";
+    if (projKey) {
+      router.prefetch(`/projects/${projKey}/issues/${issue.key}`);
+    }
+  };
+
   return (
     <>
       <TimeLogModal
@@ -111,6 +118,7 @@ function IssueCardComponent({
       <div
         draggable={canEditStatus}
         onDragStart={handleDragStart}
+        onMouseEnter={handleMouseEnter}
         onClick={(e) => {
           // Don't trigger slide drawer if clicking dropdowns or buttons inside
           const target = e.target as HTMLElement;

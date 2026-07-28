@@ -36,6 +36,10 @@ export type ProjectContext = {
  */
 export const requireMembership = cache(async (): Promise<TenantContext> => {
   const user = await getAuthUser();
+  const { getCache, setCache } = await import("./redis");
+  const cacheKey = `user:membership:${user.id}`;
+  const cached = await getCache<TenantContext>(cacheKey);
+  if (cached) return cached;
 
   let membership = await prisma.membership.findFirst({
     where: { userId: user.id },
@@ -59,12 +63,15 @@ export const requireMembership = cache(async (): Promise<TenantContext> => {
     await delCache(`user:chrome:${user.id}`);
   }
 
-  return {
+  const result: TenantContext = {
     userId: user.id,
     siteId: membership.siteId,
     role: membership.role,
     siteName: membership.site.name,
   };
+
+  await setCache(cacheKey, result, 60);
+  return result;
 });
 
 /**
@@ -92,12 +99,20 @@ export const requireAdmin = cache(async (): Promise<TenantContext> => {
  */
 export const checkProjectAccess = cache(
   async (userId: string, projectId: string, _siteId?: string): Promise<ProjectContext | null> => {
+    const { getCache, setCache } = await import("./redis");
+    const cacheKey = `user:project-access:${userId}:${projectId}`;
+    const cached = await getCache<ProjectContext | null>(cacheKey);
+    if (cached !== null && cached !== undefined) return cached;
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: { id: true, key: true, name: true, siteId: true, leadId: true },
     });
 
-    if (!project) return null;
+    if (!project) {
+      await setCache(cacheKey, null, 60);
+      return null;
+    }
 
     const targetSiteId = project.siteId;
 
@@ -106,46 +121,48 @@ export const checkProjectAccess = cache(
       where: { userId_siteId: { userId, siteId: targetSiteId } },
     });
 
-    if (!membership) return null;
+    if (!membership) {
+      await setCache(cacheKey, null, 60);
+      return null;
+    }
+
+    let result: ProjectContext | null = null;
 
     // Workspace ADMINs have full access to all projects in their workspace
     if (membership.role === "ADMIN") {
-      return {
+      result = {
         projectId: project.id,
         projectKey: project.key,
         projectName: project.name,
         siteId: project.siteId,
         projectRole: "WORKSPACE_ADMIN",
       };
-    }
-
-    // Project Lead has ADMIN role on project
-    if (project.leadId === userId) {
-      return {
+    } else if (project.leadId === userId) {
+      result = {
         projectId: project.id,
         projectKey: project.key,
         projectName: project.name,
         siteId: project.siteId,
         projectRole: "ADMIN",
       };
+    } else {
+      const projectMember = await prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId, userId } },
+      });
+
+      if (projectMember) {
+        result = {
+          projectId: project.id,
+          projectKey: project.key,
+          projectName: project.name,
+          siteId: project.siteId,
+          projectRole: projectMember.role,
+        };
+      }
     }
 
-    // Check for explicit ProjectMember membership
-    const projectMember = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId, userId } },
-    });
-
-    if (!projectMember) {
-      return null;
-    }
-
-    return {
-      projectId: project.id,
-      projectKey: project.key,
-      projectName: project.name,
-      siteId: project.siteId,
-      projectRole: projectMember.role,
-    };
+    await setCache(cacheKey, result, 60);
+    return result;
   }
 );
 
