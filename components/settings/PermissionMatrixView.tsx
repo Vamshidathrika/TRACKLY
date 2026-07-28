@@ -1,109 +1,251 @@
-"use client";
+import { Fragment } from "react";
+import { ShieldCheck, Check, Minus, Info } from "lucide-react";
 
-import { useState } from "react";
-import { ShieldCheck, Check, Lock, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+/**
+ * Read-only reference of the permissions the server actually enforces.
+ *
+ * This screen used to render editable checkboxes with a "Save Scheme Matrix"
+ * button that wrote to localStorage. Nothing was persisted server-side and
+ * nothing was enforced from it — an admin could untick "Delete Projects" for
+ * members, see "Saved successfully", and change nothing. On the one screen an
+ * evaluator would open to judge whether the product has RBAC, that is worse
+ * than having no screen at all.
+ *
+ * Trackly does not yet have configurable permission schemes (Jira's
+ * company-managed model). Roles are fixed, so this documents them truthfully.
+ * If schemes are added later, this becomes a real editor backed by a table read
+ * by lib/tenant.ts — not by browser storage.
+ */
+
+type Allowed = "yes" | "no" | "conditional";
 
 type PermissionRow = {
   id: string;
   category: "PROJECT" | "ISSUE" | "ADMIN";
   capability: string;
   description: string;
-  admin: boolean;
-  member: boolean;
-  viewer: boolean;
-  guest: boolean;
+  workspaceAdmin: Allowed;
+  boardAdmin: Allowed;
+  member: Allowed;
+  enforcedBy: string;
 };
 
-export function PermissionMatrixView() {
-  const [permissions, setPermissions] = useState<PermissionRow[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("trackly_permission_matrix");
-      if (saved) {
-        try { return JSON.parse(saved); } catch {}
-      }
-    }
-    return [
-      { id: "p1", category: "PROJECT", capability: "Browse Projects", description: "View workspace project boards and backlogs", admin: true, member: true, viewer: true, guest: true },
-      { id: "p2", category: "PROJECT", capability: "Create Projects", description: "Create new project boards and select template presets", admin: true, member: true, viewer: false, guest: false },
-      { id: "p3", category: "PROJECT", capability: "Delete Projects", description: "Permanently delete projects and purge issue history", admin: true, member: false, viewer: false, guest: false },
-      { id: "i1", category: "ISSUE", capability: "Create Issues", description: "File new tasks, bugs, stories, and epics", admin: true, member: true, viewer: false, guest: false },
-      { id: "i2", category: "ISSUE", capability: "Transition Issues", description: "Drag cards across board status columns", admin: true, member: true, viewer: false, guest: false },
-      { id: "i3", category: "ISSUE", capability: "Delete Issues", description: "Delete tasks or remove attachments", admin: true, member: false, viewer: false, guest: false },
-      { id: "i4", category: "ISSUE", capability: "Add Comments & Retros", description: "Post comments, upvote retro cards, and synthesize action items", admin: true, member: true, viewer: true, guest: false },
-      { id: "a1", category: "ADMIN", capability: "Manage Workspace Members", description: "Invite members, change roles, or deactivate access", admin: true, member: false, viewer: false, guest: false },
-      { id: "a2", category: "ADMIN", capability: "Generate API Tokens (PAT)", description: "Create personal access tokens for CI/CD runners", admin: true, member: true, viewer: false, guest: false },
-      { id: "a3", category: "ADMIN", capability: "Export Workspace Backup", description: "Download full workspace JSON data snapshots", admin: true, member: false, viewer: false, guest: false },
-    ];
-  });
+const PERMISSIONS: PermissionRow[] = [
+  {
+    id: "p1",
+    category: "PROJECT",
+    capability: "Browse boards",
+    description: "Workspace admins see every board. Members see only boards they belong to.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "conditional",
+    enforcedBy: "checkProjectAccess",
+  },
+  {
+    id: "p2",
+    category: "PROJECT",
+    capability: "Create boards",
+    description: "Any workspace member can create a board and becomes its admin.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "yes",
+    enforcedBy: "requireMembership",
+  },
+  {
+    id: "p3",
+    category: "PROJECT",
+    capability: "Rename or re-key a board",
+    description: "Re-keying rewrites every issue key and link for that board.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "no",
+    enforcedBy: "checkProjectAdmin",
+  },
+  {
+    id: "p4",
+    category: "PROJECT",
+    capability: "Delete a board",
+    description: "Permanently deletes the board and cascades to its issues.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "no",
+    enforcedBy: "deleteProject",
+  },
+  {
+    id: "p5",
+    category: "PROJECT",
+    capability: "Share a board / manage its members",
+    description: "Issues a single-use invite, or adds and removes board members.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "no",
+    enforcedBy: "checkProjectAdmin",
+  },
+  {
+    id: "i1",
+    category: "ISSUE",
+    capability: "Create issues",
+    description: "Requires access to the target board.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "conditional",
+    enforcedBy: "checkProjectAccess",
+  },
+  {
+    id: "i2",
+    category: "ISSUE",
+    capability: "Change issue status",
+    description: "Only the assignee or a workspace admin may transition an issue.",
+    workspaceAdmin: "yes",
+    boardAdmin: "conditional",
+    member: "conditional",
+    enforcedBy: "canUserChangeStatus",
+  },
+  {
+    id: "i3",
+    category: "ISSUE",
+    capability: "Edit or delete issues",
+    description: "Requires access to the board that owns the issue.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "conditional",
+    enforcedBy: "checkProjectAccess",
+  },
+  {
+    id: "i4",
+    category: "ISSUE",
+    capability: "Comment, log work, attach files",
+    description: "Requires board access. Attachments and work logs are deletable only by their author.",
+    workspaceAdmin: "yes",
+    boardAdmin: "yes",
+    member: "conditional",
+    enforcedBy: "checkProjectAccess",
+  },
+  {
+    id: "a1",
+    category: "ADMIN",
+    capability: "Invite members / change workspace roles",
+    description: "Workspace admins only. The last admin cannot be demoted.",
+    workspaceAdmin: "yes",
+    boardAdmin: "no",
+    member: "no",
+    enforcedBy: "requireAdmin",
+  },
+  {
+    id: "a2",
+    category: "ADMIN",
+    capability: "Connect integrations and repositories",
+    description: "Repository actions additionally require board admin on the target board.",
+    workspaceAdmin: "yes",
+    boardAdmin: "conditional",
+    member: "no",
+    enforcedBy: "checkProjectAdmin",
+  },
+];
 
-  const [savedSuccess, setSavedSuccess] = useState(false);
+const CATEGORY_LABEL: Record<PermissionRow["category"], string> = {
+  PROJECT: "Boards",
+  ISSUE: "Issues",
+  ADMIN: "Administration",
+};
 
-  const togglePerm = (id: string, role: "admin" | "member" | "viewer" | "guest") => {
-    setPermissions((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [role]: !item[role] } : item))
+function Cell({ value }: { value: Allowed }) {
+  if (value === "yes") {
+    return (
+      <span className="inline-flex items-center justify-center" title="Allowed">
+        <Check size={15} className="text-emerald-600" aria-hidden />
+        <span className="sr-only">Allowed</span>
+      </span>
     );
-  };
+  }
+  if (value === "conditional") {
+    return (
+      <span
+        className="text-[10px] font-bold text-amber-600 uppercase tracking-wide"
+        title="Allowed only for the boards this person belongs to, or only for their own items"
+      >
+        Scoped
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center justify-center" title="Not allowed">
+      <Minus size={15} className="text-text-subtle/50" aria-hidden />
+      <span className="sr-only">Not allowed</span>
+    </span>
+  );
+}
 
-  const handleSave = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("trackly_permission_matrix", JSON.stringify(permissions));
-    }
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
-  };
+export function PermissionMatrixView() {
+  const categories: PermissionRow["category"][] = ["PROJECT", "ISSUE", "ADMIN"];
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-default">Workspace Permission Matrix & Role Schemes</h2>
-          <p className="text-xs text-subtle">Configure granular capability permissions for Admin, Member, Viewer, and Guest roles</p>
-        </div>
-        <Button appearance="primary" onClick={handleSave} className="flex items-center gap-1.5 text-xs">
-          <ShieldCheck size={15} />
-          Save Scheme Matrix
-        </Button>
+      <div>
+        <h2 className="text-base font-bold text-text flex items-center gap-2">
+          <ShieldCheck size={17} className="text-brand" />
+          Roles and permissions
+        </h2>
+        <p className="text-xs text-text-subtle mt-0.5">
+          What each role can do in this workspace. These rules are enforced on the server.
+        </p>
       </div>
 
-      {savedSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 font-bold text-xs flex items-center gap-2">
-          <CheckCircle2 size={16} /> Workspace permission matrix saved successfully!
-        </div>
-      )}
+      <div className="rounded-xl border border-border bg-brand/5 p-3.5 flex items-start gap-2.5">
+        <Info size={15} className="text-brand shrink-0 mt-0.5" aria-hidden />
+        <p className="text-xs text-text-subtle leading-relaxed">
+          Roles are fixed and not yet configurable. Change who holds a role in{" "}
+          <span className="font-semibold text-text">Settings &rsaquo; Members</span> for the
+          workspace, or from a board&apos;s own settings for board roles.{" "}
+          <span className="font-semibold text-amber-600">Scoped</span> means the permission
+          applies only to boards that person belongs to, or only to items they created.
+        </p>
+      </div>
 
-      {/* Matrix Table */}
-      <div className="rounded-xl border border-border-default bg-surface overflow-hidden shadow-2xs">
-        <table className="w-full text-left text-xs">
+      <div className="rounded-xl border border-border bg-surface overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[640px]">
           <thead>
-            <tr className="border-b border-border-default bg-neutral/40 font-bold text-subtle">
-              <th className="p-3">Capability & Description</th>
-              <th className="p-3 text-center">Admin</th>
-              <th className="p-3 text-center">Member</th>
-              <th className="p-3 text-center">Viewer</th>
-              <th className="p-3 text-center">Guest</th>
+            <tr className="bg-neutral/40 border-b border-border">
+              <th scope="col" className="py-2.5 px-4 text-[11px] font-extrabold text-text-subtle uppercase tracking-wider">
+                Capability
+              </th>
+              <th scope="col" className="py-2.5 px-3 text-[11px] font-extrabold text-text-subtle uppercase tracking-wider text-center">
+                Workspace admin
+              </th>
+              <th scope="col" className="py-2.5 px-3 text-[11px] font-extrabold text-text-subtle uppercase tracking-wider text-center">
+                Board admin
+              </th>
+              <th scope="col" className="py-2.5 px-3 text-[11px] font-extrabold text-text-subtle uppercase tracking-wider text-center">
+                Member
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-default">
-            {permissions.map((row) => (
-              <tr key={row.id} className="hover:bg-neutral/30 transition-colors">
-                <td className="p-3">
-                  <div className="font-bold text-default">{row.capability}</div>
-                  <div className="text-subtle text-[11px]">{row.description}</div>
-                </td>
-                {(["admin", "member", "viewer", "guest"] as const).map((role) => (
-                  <td key={role} className="p-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={row[role]}
-                      onChange={() => togglePerm(row.id, role)}
-                      disabled={role === "admin" && row.capability.includes("Manage Workspace")}
-                      className="h-4 w-4 accent-brand cursor-pointer disabled:opacity-50"
-                    />
+          <tbody>
+            {categories.map((category) => (
+              <Fragment key={category}>
+                <tr className="bg-neutral/20 border-b border-border">
+                  <td colSpan={4} className="py-1.5 px-4 text-[10px] font-extrabold text-text-subtle uppercase tracking-wider">
+                    {CATEGORY_LABEL[category]}
                   </td>
+                </tr>
+                {PERMISSIONS.filter((p) => p.category === category).map((p) => (
+                  <tr key={p.id} className="border-b border-border/60 last:border-0">
+                    <td className="py-2.5 px-4">
+                      <div className="text-xs font-bold text-text">{p.capability}</div>
+                      <div className="text-[11px] text-text-subtle mt-0.5">{p.description}</div>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Cell value={p.workspaceAdmin} />
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Cell value={p.boardAdmin} />
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Cell value={p.member} />
+                    </td>
+                  </tr>
                 ))}
-              </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>

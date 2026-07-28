@@ -1827,31 +1827,59 @@ export function IssueDetailDrawer({
                     Open Panel →
                   </button>
                 </div>
-                <div
-                  onClick={() => setActiveTab("development")}
-                  className="p-3 rounded-xl border border-border bg-neutral/20 hover:bg-neutral/40 transition-all cursor-pointer flex flex-col gap-2"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-text flex items-center gap-1.5 truncate">
-                      <GitPullRequest size={13} className="text-purple-600 shrink-0" /> 1 Pull Request
-                    </span>
-                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono bg-purple-500/10 text-purple-600 shrink-0">
-                      #42 MERGED
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-text-subtle">
-                    <span className="flex items-center gap-1 font-mono truncate">
-                      <GitBranch size={11} className="text-brand shrink-0" /> 1 Branch
-                    </span>
-                    <span className="text-[10px] font-mono text-emerald-600 font-bold shrink-0">● Vercel Ready</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[10px] text-purple-600 font-extrabold">
-                    <span className="flex items-center gap-1">
-                      <Sparkles size={11} className="text-amber-500" /> 8 Superpowers Available
-                    </span>
-                    <span>View All →</span>
-                  </div>
-                </div>
+                {/* Counts come from getIssueDevelopmentDataAction. This card used
+                    to hardcode "1 Pull Request / #42 MERGED / 1 Branch / Vercel
+                    Ready / 8 Superpowers" on every issue in every workspace. */}
+                {(() => {
+                  const prs = devData.pullRequests ?? [];
+                  const branches = devData.branches ?? [];
+                  const commits = devData.commits ?? [];
+
+                  if (prs.length === 0 && branches.length === 0 && commits.length === 0) {
+                    return (
+                      <div className="p-3 rounded-xl border border-dashed border-border bg-neutral/10 text-[11px] text-text-subtle">
+                        No linked branches, commits or pull requests yet. Reference this issue key
+                        in a branch name or commit message to link work here.
+                      </div>
+                    );
+                  }
+
+                  const latestPr = prs[0] as { number?: number; status?: string } | undefined;
+
+                  return (
+                    <div
+                      onClick={() => setActiveTab("development")}
+                      className="p-3 rounded-xl border border-border bg-neutral/20 hover:bg-neutral/40 transition-all cursor-pointer flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-text flex items-center gap-1.5 truncate">
+                          <GitPullRequest size={13} className="text-purple-600 shrink-0" />
+                          {prs.length} Pull Request{prs.length === 1 ? "" : "s"}
+                        </span>
+                        {latestPr?.number != null && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded font-mono bg-purple-500/10 text-purple-600 shrink-0">
+                            #{latestPr.number} {latestPr.status ?? ""}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-text-subtle">
+                        <span className="flex items-center gap-1 font-mono truncate">
+                          <GitBranch size={11} className="text-brand shrink-0" />
+                          {branches.length} Branch{branches.length === 1 ? "" : "es"}
+                        </span>
+                        <span className="text-[10px] font-mono text-text-subtle shrink-0">
+                          {commits.length} commit{commits.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[10px] text-purple-600 font-extrabold">
+                        <span className="flex items-center gap-1">
+                          <Sparkles size={11} className="text-amber-500" /> Development
+                        </span>
+                        <span>View All →</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
