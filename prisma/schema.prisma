@@ -95,10 +95,10 @@ model User {
 }
 
 model Site {
-  id               String             @id @default(cuid())
+  id               String            @id @default(cuid())
   name             String
-  slug             String             @unique
-  createdAt        DateTime           @default(now())
+  slug             String            @unique
+  createdAt        DateTime          @default(now())
   memberships      Membership[]
   invites          Invite[]
   projects         Project[]
@@ -155,6 +155,7 @@ model Project {
   lead            User             @relation("ProjectLead", fields: [leadId], references: [id])
   issues          Issue[]
   sprints         Sprint[]
+  releases        Release[]
   automationRules AutomationRule[]
   customFields    CustomField[]
   stars           Star[]
@@ -194,49 +195,74 @@ model Sprint {
   @@index([projectId, status])
 }
 
+enum ReleaseStatus {
+  UNRELEASED
+  RELEASED
+  ARCHIVED
+}
+
+model Release {
+  id            String        @id @default(cuid())
+  projectId     String
+  name          String
+  description   String?
+  status        ReleaseStatus @default(UNRELEASED)
+  releaseDate   DateTime?
+  notesMarkdown String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues        Issue[]
+
+  @@index([projectId])
+}
+
 model Issue {
-  id          String        @id @default(cuid())
-  projectId   String
-  sprintId    String?
-  number      Int
-  key         String
-  summary     String
-  description String?
-  type        IssueType     @default(STORY)
-  status      IssueStatus   @default(TO_DO)
-  priority    IssuePriority @default(MEDIUM)
-  storyPoints Float?
+  id               String         @id @default(cuid())
+  projectId        String
+  sprintId         String?
+  releaseId        String?
+  number           Int
+  key              String
+  summary          String
+  description      String?
+  type             IssueType      @default(STORY)
+  status           IssueStatus    @default(TO_DO)
+  priority         IssuePriority  @default(MEDIUM)
+  storyPoints      Float?
   originalEstimate Float?
-  rank        Float         @default(0)
-  reporterId  String
-  assigneeId  String?
-  parentId    String?
-  labels      String[]      @default([])
-  startDate   DateTime?
-  dueDate     DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sprint      Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
-  reporter    User          @relation("ReportedIssues", fields: [reporterId], references: [id])
-  assignee    User?         @relation("AssignedIssues", fields: [assigneeId], references: [id])
-  parent      Issue?        @relation("IssueHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  subtasks    Issue[]       @relation("IssueHierarchy")
-  comments    Comment[]
-  history     IssueHistory[]
-  watchers    Watcher[]
-  workLogs    WorkLog[]
-  attachments Attachment[]
-  linksOut    IssueLink[]   @relation("LinkSource")
-  linksIn     IssueLink[]   @relation("LinkTarget")
-  gitCommits  GitCommit[]
-  pullRequests PullRequest[]
-  gitBranches GitBranch[]
+  rank             Float          @default(0)
+  reporterId       String
+  assigneeId       String?
+  parentId         String?
+  labels           String[]       @default([])
+  startDate        DateTime?
+  dueDate          DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint           Sprint?        @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  release          Release?       @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  reporter         User           @relation("ReportedIssues", fields: [reporterId], references: [id])
+  assignee         User?          @relation("AssignedIssues", fields: [assigneeId], references: [id])
+  parent           Issue?         @relation("IssueHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subtasks         Issue[]        @relation("IssueHierarchy")
+  comments         Comment[]
+  history          IssueHistory[]
+  watchers         Watcher[]
+  workLogs         WorkLog[]
+  attachments      Attachment[]
+  linksOut         IssueLink[]    @relation("LinkSource")
+  linksIn          IssueLink[]    @relation("LinkTarget")
+  gitCommits       GitCommit[]
+  pullRequests     PullRequest[]
+  gitBranches      GitBranch[]
 
   @@unique([projectId, number])
   @@unique([projectId, key])
   @@index([projectId, status, rank])
   @@index([projectId, sprintId, rank])
+  @@index([projectId, releaseId])
   @@index([projectId, assigneeId])
   @@index([projectId, reporterId])
   @@index([parentId])
@@ -292,13 +318,13 @@ enum LinkRelation {
 }
 
 model IssueLink {
-  id           String       @id @default(cuid())
+  id            String       @id @default(cuid())
   sourceIssueId String
   targetIssueId String
-  relation     LinkRelation
-  createdAt    DateTime     @default(now())
-  sourceIssue  Issue        @relation("LinkSource", fields: [sourceIssueId], references: [id], onDelete: Cascade)
-  targetIssue  Issue        @relation("LinkTarget", fields: [targetIssueId], references: [id], onDelete: Cascade)
+  relation      LinkRelation
+  createdAt     DateTime     @default(now())
+  sourceIssue   Issue        @relation("LinkSource", fields: [sourceIssueId], references: [id], onDelete: Cascade)
+  targetIssue   Issue        @relation("LinkTarget", fields: [targetIssueId], references: [id], onDelete: Cascade)
 
   @@unique([sourceIssueId, targetIssueId, relation])
   @@index([sourceIssueId])
@@ -476,7 +502,7 @@ model PullRequest {
   repositoryId String
   prNumber     Int
   title        String
-  status       String        // OPEN, MERGED, CLOSED
+  status       String // OPEN, MERGED, CLOSED
   authorName   String
   authorAvatar String?
   issueId      String?
@@ -512,7 +538,7 @@ model GitBranch {
 model GitWebhookLog {
   id             String   @id @default(cuid())
   siteId         String
-  event          String   // push, pull_request, create, delete
+  event          String // push, pull_request, create, delete
   action         String?
   repositoryName String?
   senderName     String?
@@ -526,15 +552,15 @@ model GitWebhookLog {
 model SiteIntegration {
   id            String    @id @default(cuid())
   siteId        String
-  provider      String    // GITHUB | GITLAB | SLACK | SENTRY | DATADOG | VERCEL | ZENDESK | DISCORD | INTERCOM | FIGMA | LOOM | MIRO | ZAPIER | BITBUCKET
+  provider      String // GITHUB | GITLAB | SLACK | SENTRY | DATADOG | VERCEL | ZENDESK | DISCORD | INTERCOM | FIGMA | LOOM | MIRO | ZAPIER | BITBUCKET
   status        String    @default("DISCONNECTED") // CONNECTED | DISCONNECTED | ERROR
-  accessToken   String?   // Encrypted OAuth token or API key
+  accessToken   String? // Encrypted OAuth token or API key
   refreshToken  String?
-  accountName   String?   // GitHub org / Slack workspace / Sentry org slug
+  accountName   String? // GitHub org / Slack workspace / Sentry org slug
   accountAvatar String?
-  webhookSecret String?   // HMAC signing secret for inbound webhook verification
-  webhookUrl    String?   // Outbound webhook URL (Slack, Discord)
-  metadata      String?   // JSON: channelId, teamId, externalProjectId, etc.
+  webhookSecret String? // HMAC signing secret for inbound webhook verification
+  webhookUrl    String? // Outbound webhook URL (Slack, Discord)
+  metadata      String? // JSON: channelId, teamId, externalProjectId, etc.
   connectedAt   DateTime?
   expiresAt     DateTime?
   createdAt     DateTime  @default(now())
