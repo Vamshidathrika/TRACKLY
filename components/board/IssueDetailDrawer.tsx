@@ -1531,25 +1531,32 @@ export function IssueDetailDrawer({
                 {/* Tab 3: Work Log */}
                 {activeTab === "worklog" && (
                   <div className="flex flex-col gap-3">
-                    <div className="p-3 rounded-md bg-neutral/30 border border-border flex items-center justify-between text-xs font-semibold">
-                      <span>
-                        Total Logged Time:{" "}
-                        <strong className="text-brand font-bold">{formatHoursToReadable(loggedHours)} ({loggedHours.toFixed(1)}h)</strong>
-                      </span>
-                      <span>
-                        Original Estimate:{" "}
-                        <strong className="text-text font-bold">
-                          {estimatedHours > 0 ? `${formatHoursToReadable(estimatedHours)} (${estimatedHours.toFixed(1)}h)` : "Not set"}
-                        </strong>
-                      </span>
-                    </div>
+                    <div className="p-3 rounded-xl bg-neutral/30 border border-border flex items-center justify-between text-xs font-semibold flex-wrap gap-3">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <span>
+                          Total Logged:{" "}
+                          <strong className="text-brand font-bold">{formatHoursToReadable(loggedHours)} ({loggedHours.toFixed(1)}h)</strong>
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-text-subtle font-medium">Estimated (h):</span>
+                          <input
+                            type="number"
+                            value={estimateHours}
+                            onChange={(e) => setEstimateHours(e.target.value === "" ? "" : Number(e.target.value))}
+                            onBlur={handleEstimateBlur}
+                            placeholder="None"
+                            min={0}
+                            step={0.5}
+                            className="h-7 w-20 px-2 text-right text-xs font-mono font-bold rounded border border-border bg-surface text-text outline-none focus:border-brand"
+                          />
+                        </div>
+                      </div>
 
-                    <div>
                       <Button
                         appearance="primary"
                         type="button"
                         onClick={() => setShowTimeModal(true)}
-                        className="bg-brand text-white text-xs font-bold flex items-center gap-1.5"
+                        className="bg-brand text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
                       >
                         <Plus size={12} /> Log work
                       </Button>
@@ -1764,45 +1771,51 @@ export function IssueDetailDrawer({
                 />
               </div>
 
-              {/* Estimated Time (hours) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider">Estimated Time (hours)</label>
-                <input
-                  type="number"
-                  value={estimateHours}
-                  onChange={(e) => setEstimateHours(e.target.value === "" ? "" : Number(e.target.value))}
-                  onBlur={handleEstimateBlur}
-                  placeholder="None"
-                  min={0}
-                  step={0.5}
-                  className="h-9 px-3 text-xs font-mono font-bold rounded-lg border border-border bg-surface text-text outline-none focus:border-brand"
-                />
-              </div>
-
-              {/* Time Tracking Progress Indicator */}
-              <div className="pt-2 border-t border-border/50 flex flex-col gap-1.5">
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-text-subtle font-medium flex items-center gap-1">
-                    <Clock size={12} /> Time Logged
-                  </span>
-                  <span className="font-bold text-text">
-                    {loggedHours.toFixed(1)}h / {estimatedHours.toFixed(1)}h
-                  </span>
+              {/* Unified Time Tracking & Log Work Box */}
+              <div className="flex flex-col gap-2 p-3 rounded-xl bg-surface border border-border shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-text-subtle uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock size={13} className="text-brand" /> Time Tracking
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTimeModal(true)}
+                    className="text-xs font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    + Log work
+                  </button>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-neutral overflow-hidden">
-                  <div
-                    style={{
-                      width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
-                    }}
-                    className="h-full bg-brand transition-all"
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+                  <span className="text-xs font-semibold text-text-subtle">Estimated (hours):</span>
+                  <input
+                    type="number"
+                    value={estimateHours}
+                    onChange={(e) => setEstimateHours(e.target.value === "" ? "" : Number(e.target.value))}
+                    onBlur={handleEstimateBlur}
+                    placeholder="None"
+                    min={0}
+                    step={0.5}
+                    className="h-8 w-24 px-2 text-right text-xs font-mono font-bold rounded-lg border border-border bg-neutral/30 text-text outline-none focus:border-brand"
                   />
                 </div>
-                <button
-                  onClick={() => setShowTimeModal(true)}
-                  className="text-right text-[11px] font-bold text-brand hover:underline cursor-pointer pt-0.5"
-                >
-                  + Log work
-                </button>
+
+                <div className="pt-1 flex flex-col gap-1.5">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-text-subtle font-medium">Logged:</span>
+                    <span className="font-bold text-text font-mono">
+                      {formatHoursToReadable(loggedHours)} / {estimatedHours > 0 ? formatHoursToReadable(estimatedHours) : "Not set"}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
+                    <div
+                      style={{
+                        width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
+                      }}
+                      className="h-full bg-brand transition-all"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Start Date */}
