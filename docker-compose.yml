@@ -1,10 +1,13 @@
 services:
-  cockroach:
+  # Single-node CockroachDB for local development. Matches the production
+  # engine (CockroachDB Cloud) so behaviour and the Prisma datasource
+  # provider are identical between dev and prod.
+  db:
     image: cockroachdb/cockroach:v23.2.0
     command: start-single-node --insecure
     ports:
-      - "26257:26257"
-      - "8080:8080"
+      - "26257:26257" # SQL
+      - "8080:8080" # DB console (http://localhost:8080)
     volumes:
       - crdbdata:/cockroach/cockroach-data
 volumes:
