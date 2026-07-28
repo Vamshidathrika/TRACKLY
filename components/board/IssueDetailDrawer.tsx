@@ -185,6 +185,7 @@ export function IssueDetailDrawer({
   const [dueDate, setDueDate] = useState<string>("");
   const [labels, setLabels] = useState<string[]>([]);
   const [labelDraft, setLabelDraft] = useState<string>("");
+  const lastIssueIdRef = useRef<string | null>(null);
 
   // Superpower State: Active Presence & Collaboration
   const activePresenceUsers = useMemo<BoardUserOption[]>(() => {
@@ -272,6 +273,9 @@ export function IssueDetailDrawer({
   // Sync issue prop to state
   useEffect(() => {
     if (issue) {
+      const isNewIssue = lastIssueIdRef.current !== issue.id;
+      lastIssueIdRef.current = issue.id;
+
       setSummary(issue.summary);
       setDescription(issue.description || "");
       setPoints(typeof issue.storyPoints === "number" && issue.storyPoints > 0 ? issue.storyPoints : (issue.storyPoints === 0 ? 0 : ""));
@@ -287,34 +291,37 @@ export function IssueDetailDrawer({
       setStartDate(toDateInput(issue.startDate));
       setDueDate(toDateInput(issue.dueDate));
       setLabels(issue.labels || []);
-      setIsEditingSummary(false);
-      setIsEditingDescription(false);
-      setCommentInput("");
 
-      setWatchersCount(issue.watchers?.length ?? 0);
-      setIsWatching(issue.isWatching ?? false);
-      setIsLoadingDetail(false);
+      if (isNewIssue) {
+        setIsEditingSummary(false);
+        setIsEditingDescription(false);
+        setCommentInput("");
 
-      // The board query is a thin card projection — it carries no subtasks,
-      // attachments, links, comments or history. Seed from whatever the card
-      // happened to include, then let the detail fetch below replace it.
-      // Nothing here may fall back to invented data: a placeholder
-      // IS_BLOCKED_BY link blocks a real transition on a nonexistent issue.
-      setSubtasks(issue.subtasks || []);
-      setPullRequests(issue.devContext?.pullRequests || []);
-      setCommits(issue.devContext?.commits || []);
-      setLinkedIssues(mapLinks(issue.linksOut, issue.linksIn));
-      setAttachments(issue.attachments || []);
+        setWatchersCount(issue.watchers?.length ?? 0);
+        setIsWatching(issue.isWatching ?? false);
+        setIsLoadingDetail(false);
 
-      const logs = issue.workLogs || [];
-      setWorkLogsList(logs);
-      setCommentsList(issue.comments || []);
-      setHistoryList(issue.history || []);
-      const totalLogged = issue.loggedHours ?? logs.reduce((sum: number, w: any) => sum + Number(w.hours || 0), 0);
-      setLoggedHours(totalLogged);
+        setSubtasks(issue.subtasks || []);
+        setPullRequests(issue.devContext?.pullRequests || []);
+        setCommits(issue.devContext?.commits || []);
+        setLinkedIssues(mapLinks(issue.linksOut, issue.linksIn));
+        setAttachments(issue.attachments || []);
+
+        const logs = issue.workLogs || [];
+        setWorkLogsList(logs);
+        setCommentsList(issue.comments || []);
+        setHistoryList(issue.history || []);
+        const totalLogged = issue.loggedHours ?? logs.reduce((sum: number, w: any) => sum + Number(w.hours || 0), 0);
+        setLoggedHours(totalLogged);
+      } else {
+        if (issue.workLogs && issue.workLogs.length > 0) setWorkLogsList(issue.workLogs);
+        if (issue.comments && issue.comments.length > 0) setCommentsList(issue.comments);
+        if (issue.history && issue.history.length > 0) setHistoryList(issue.history);
+        if (typeof issue.loggedHours === "number") setLoggedHours(issue.loggedHours);
+      }
 
       if (issue.id && !issue.id.startsWith("demo-")) {
-        setIsLoadingDetail(true);
+        if (isNewIssue) setIsLoadingDetail(true);
         getIssueDevelopmentDataAction(issue.id).then((res) => {
           if (res) {
             setDevData(res);
@@ -843,6 +850,17 @@ export function IssueDetailDrawer({
             setLoggedHours(newLogged);
             if (res.log) {
               setWorkLogsList((prev) => [res.log, ...prev]);
+              setHistoryList((prev) => [
+                {
+                  id: `history-${Date.now()}`,
+                  field: "worklog",
+                  oldValue: null,
+                  newValue: `${hours}h${desc?.trim() ? ` (${desc.trim()})` : ""}`,
+                  createdAt: new Date().toISOString(),
+                  author: res.log.author,
+                },
+                ...prev,
+              ]);
             }
             onUpdateIssue({ ...issue, loggedHours: newLogged });
             return null;

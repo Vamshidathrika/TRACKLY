@@ -264,6 +264,15 @@ export async function logWorkAction(
       include: { author: { select: { id: true, name: true, avatarUrl: true } } },
     });
 
+    await prisma.issueHistory.create({
+      data: {
+        issueId,
+        authorId: user.id,
+        field: "worklog",
+        newValue: `${hours}h${description.trim() ? ` (${description.trim()})` : ""}`,
+      },
+    });
+
     revalidatePath(`/projects/${issue.project.key}/issues/${issue.key}`);
     revalidatePath("/projects");
 
