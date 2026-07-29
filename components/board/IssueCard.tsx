@@ -167,15 +167,33 @@ function IssueCardComponent({
             e.stopPropagation();
             setShowTimeModal(true);
           }}
-          className="flex items-center gap-1.5 cursor-pointer text-[10px] text-text-subtle hover:text-brand transition-colors pt-1"
+          className="flex flex-col gap-1 cursor-pointer pt-1 group/timebar"
           title="Click to log time spent"
         >
-          <Clock size={11} />
-          <span>{loggedHours > 0 ? `${loggedHours.toFixed(1)}h logged` : "Log time"}</span>
-          <div className="flex-1 h-1.5 rounded-full bg-neutral overflow-hidden ml-1">
+          {/* Label row: clock + logged on left, estimated on right */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 text-[10px] text-text-subtle group-hover/timebar:text-brand transition-colors">
+              <Clock size={10} />
+              <span>{loggedHours > 0 ? `${loggedHours.toFixed(1)}h logged` : "Log time"}</span>
+            </div>
+            {estimatedHours > 0 && (
+              <span className="text-[9px] font-normal text-stone-400 dark:text-stone-500 tabular-nums">
+                {estimatedHours}h est.
+              </span>
+            )}
+          </div>
+          {/* Progress track */}
+          <div className="h-[3px] w-full rounded-full bg-neutral overflow-hidden">
             <div
-              style={{ width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%` }}
-              className="h-full bg-brand"
+              style={{
+                width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
+                transition: "width 0.4s ease",
+              }}
+              className={`h-full rounded-full ${
+                estimatedHours > 0 && loggedHours >= estimatedHours
+                  ? "bg-red-400"
+                  : "bg-brand"
+              }`}
             />
           </div>
         </div>
