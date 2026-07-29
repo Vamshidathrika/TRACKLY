@@ -13,9 +13,17 @@ export async function POST(req: Request) {
     const event = req.headers.get("x-github-event");
     const signature = req.headers.get("x-hub-signature-256") || "";
 
-    // 1. HMAC Signature Verification
+    // 1. HMAC Signature Verification — hard-fail if secret is not configured.
+    // An unset secret means anyone on the internet can forge payloads, so we
+    // refuse to process rather than silently accepting unsigned requests.
     const secret = process.env.GITHUB_WEBHOOK_SECRET;
-    if (secret && !verifyGithubWebhookSignature(signature, rawBody, secret)) {
+    if (!secret) {
+      return NextResponse.json(
+        { error: "Webhook not configured — GITHUB_WEBHOOK_SECRET is not set" },
+        { status: 503 }
+      );
+    }
+    if (!verifyGithubWebhookSignature(signature, rawBody, secret)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 

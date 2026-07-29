@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export function NavigationProgress() {
@@ -9,14 +9,32 @@ export function NavigationProgress() {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Reset loading state when pathname or searchParams change
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearIntervals = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (resetTimeoutRef.current) {
+      clearTimeout(resetTimeoutRef.current);
+      resetTimeoutRef.current = null;
+    }
+  };
+
+  // Complete and hide progress bar when navigation finishes (pathname/searchParams change)
   useEffect(() => {
-    setIsLoading(false);
+    clearIntervals();
+
+    // Fill to 100% then reset and hide
     setProgress(100);
-    const timeout = setTimeout(() => {
+    resetTimeoutRef.current = setTimeout(() => {
+      setIsLoading(false);
       setProgress(0);
-    }, 200);
-    return () => clearTimeout(timeout);
+    }, 300);
+
+    return () => clearIntervals();
   }, [pathname, searchParams]);
 
   // Intercept link clicks for instant visual feedback
@@ -26,28 +44,45 @@ export function NavigationProgress() {
       if (!target) return;
 
       const href = target.getAttribute("href");
-      if (!href || href.startsWith("#") || href.startsWith("javascript:") || target.target === "_blank") {
+      if (
+        !href ||
+        href.startsWith("#") ||
+        href.startsWith("javascript:") ||
+        target.target === "_blank"
+      ) {
         return;
       }
 
-      // If it's navigating to a different path
-      const currentUrl = new URL(window.location.href);
-      const targetUrl = new URL(href, window.location.href);
+      try {
+        const currentUrl = new URL(window.location.href);
+        const targetUrl = new URL(href, window.location.href);
 
-      if (currentUrl.href !== targetUrl.href) {
-        setIsLoading(true);
-        setProgress(30);
+        if (
+          currentUrl.origin === targetUrl.origin &&
+          currentUrl.href !== targetUrl.href
+        ) {
+          clearIntervals();
+          setIsLoading(true);
+          setProgress(20);
 
-        const interval = setInterval(() => {
-          setProgress((prev) => (prev >= 85 ? prev : prev + 10));
-        }, 150);
-
-        setTimeout(() => clearInterval(interval), 3000);
+          intervalRef.current = setInterval(() => {
+            setProgress((prev) => {
+              if (prev >= 90) return prev;
+              const diff = 90 - prev;
+              return prev + Math.max(1, Math.floor(diff * 0.15));
+            });
+          }, 100);
+        }
+      } catch {
+        // Ignore invalid URLs
       }
     };
 
     document.addEventListener("click", handleAnchorClick);
-    return () => document.removeEventListener("click", handleAnchorClick);
+    return () => {
+      document.removeEventListener("click", handleAnchorClick);
+      clearIntervals();
+    };
   }, []);
 
   if (!isLoading && progress === 0) return null;
@@ -67,3 +102,4 @@ export function NavigationProgress() {
     </div>
   );
 }
+
