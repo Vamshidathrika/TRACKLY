@@ -10,7 +10,7 @@ vi.mock("./prisma", () => ({
     customField: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     automationRule: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     sprint: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
-    issue: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    issue: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }), updateMany: vi.fn().mockResolvedValue({ count: 0 }), createMany: vi.fn().mockResolvedValue({ count: 2 }) },
     invite: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     gitRepository: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
   },
@@ -42,6 +42,22 @@ describe("projects lib", () => {
     expect(res).toEqual({ id: "p1", key: "DEMO", name: "Demo" });
     expect(prisma.project.create).toHaveBeenCalledWith({
       data: { siteId: "s1", name: "Demo", key: "DEMO", type: "SCRUM", leadId: "u1" },
+    });
+  });
+
+  it("advances issueCounter past the seeded starter issues", async () => {
+    // Seeding writes issue numbers 1 and 2 directly. Leaving issueCounter at 0
+    // makes the first real task allocate number 1 and collide with a seed row,
+    // which is unrecoverable inside createIssue's transaction.
+    (prisma.project.findFirst as any).mockResolvedValue(null);
+    (prisma.project.create as any).mockResolvedValue({ id: "p1", key: "DEMO", name: "Demo" });
+
+    await createProject({ siteId: "s1", name: "Demo", key: "DEMO", type: "KANBAN", leadId: "u1" });
+
+    const seeded = (prisma.issue.createMany as any).mock.calls[0][0].data;
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: { id: "p1" },
+      data: { issueCounter: seeded.length },
     });
   });
 

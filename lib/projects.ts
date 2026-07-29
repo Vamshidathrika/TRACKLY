@@ -3,6 +3,10 @@ import { prisma } from "./prisma";
 import type { ProjectType } from "@prisma/client";
 import { getCache, setCache, delCache } from "./redis";
 
+// Number of starter issues seeded into every new project by createProject.
+// issueCounter must be advanced past these or the first real task collides.
+const SEEDED_ISSUE_COUNT = 2;
+
 export function generateProjectKey(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length >= 2) {
@@ -75,6 +79,15 @@ export async function createProject(input: {
           assigneeId: input.leadId,
         },
       ],
+    });
+    // Seeding writes issue numbers directly, so the counter has to be moved
+    // past them. Leaving it at 0 makes createIssue allocate number 1 for the
+    // first real task, which collides with the seed rows — and it cannot
+    // recover, because its retry runs inside a transaction whose rollback
+    // undoes the very increment meant to advance past the collision.
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { issueCounter: SEEDED_ISSUE_COUNT },
     });
   } catch { /* best effort seeding */ }
 

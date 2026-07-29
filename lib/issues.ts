@@ -35,19 +35,36 @@ export async function createIssue(input: {
   dueDate?: Date;
   labels?: string[];
 }) {
-  // The counter is bumped by atomic increment (below), but other write paths
-  // create issues without advancing it, so it can sit behind MAX(number).
-  // Retry past that drift instead of surfacing the unique violation — each
-  // attempt increments again, so the counter self-heals and concurrent
-  // creates still never land on the same number.
+  // Other write paths create issues without advancing issueCounter, so it can
+  // sit behind MAX(number) and the allocated number collides.
+  //
+  // The retry must bump the counter OUTSIDE the transaction. Incrementing
+  // inside it is self-defeating: the P2002 aborts the transaction and rolls
+  // the increment back with it, so every attempt re-picks the same number and
+  // the loop can never escape.
   for (let attempt = 0; ; attempt++) {
     try {
       return await createIssueOnce(input);
     } catch (e: any) {
-      if (e?.code === "P2002" && attempt < 5) continue;
-      throw e;
+      if (e?.code !== "P2002" || attempt >= 5) throw e;
+      await advanceCounterPastExistingIssues(input.projectId);
     }
   }
+}
+
+/**
+ * Pushes issueCounter past the highest issue number actually present, in its
+ * own committed statement so a later transaction rollback cannot undo it.
+ */
+async function advanceCounterPastExistingIssues(projectId: string) {
+  const highest = await prisma.issue.aggregate({
+    where: { projectId },
+    _max: { number: true },
+  });
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { issueCounter: highest._max.number ?? 0 },
+  });
 }
 
 async function createIssueOnce(input: {

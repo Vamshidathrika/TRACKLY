@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./prisma", () => ({
   prisma: {
     project: { findUnique: vi.fn(), update: vi.fn() },
-    issue: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
+    issue: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), findUnique: vi.fn(), delete: vi.fn(), aggregate: vi.fn() },
     comment: { create: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
     issueHistory: { create: vi.fn() },
     $transaction: vi.fn(),
@@ -14,6 +14,55 @@ import { createIssue, addComment, deleteIssue, deleteComment } from "./issues";
 
 describe("issues lib", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("recovers when issueCounter has drifted behind the real issue numbers", async () => {
+    // A project seeded with issues 1 and 2 but issueCounter still 0. The
+    // in-transaction increment cannot fix this on its own: the P2002 rolls the
+    // increment back, so every attempt re-picks the same number. The counter
+    // has to be repaired outside the transaction between attempts.
+    let issueCounter = 0;
+    const taken = new Set([1, 2]);
+
+    (prisma.issue.aggregate as any).mockImplementation(async () => ({ _max: { number: 2 } }));
+    (prisma.project.update as any).mockImplementation(async ({ data }: any) => {
+      issueCounter = data.issueCounter;
+      return { id: "p1", issueCounter };
+    });
+
+    (prisma.$transaction as any).mockImplementation(async (fn: any) => {
+      const snapshot = issueCounter;
+      try {
+        return await fn({
+          project: {
+            findUnique: vi.fn().mockResolvedValue({ id: "p1", key: "TRK" }),
+            update: vi.fn().mockImplementation(async () => {
+              issueCounter += 1;
+              return { issueCounter };
+            }),
+          },
+          issue: {
+            create: vi.fn().mockImplementation(async ({ data }: any) => {
+              if (taken.has(data.number)) {
+                const err: any = new Error("Unique constraint failed");
+                err.code = "P2002";
+                throw err;
+              }
+              return { id: "i3", key: data.key, number: data.number };
+            }),
+          },
+          issueHistory: { create: vi.fn().mockResolvedValue({ id: "h1" }) },
+        });
+      } catch (e) {
+        issueCounter = snapshot; // transaction rollback reverts the increment
+        throw e;
+      }
+    });
+
+    const issue = await createIssue({ projectId: "p1", summary: "First real task", reporterId: "u1" });
+
+    expect(issue.number).toBe(3);
+    expect(issue.key).toBe("TRK-3");
+  });
 
   it("creates issue with auto-increment key TRK-1", async () => {
     (prisma.$transaction as any).mockImplementation(async (fn: any) =>
