@@ -428,7 +428,9 @@ export function EpicProgressWidget({ epics }: { epics: EpicProgressItem[] }) {
                 <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
                   <div
                     style={{ width: `${pct}%` }}
-                    className="h-full rounded-full bg-purple transition-all"
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      pct < 34 ? "bg-rose-500" : pct < 100 ? "bg-amber-500" : "bg-emerald-500"
+                    }`}
                   />
                 </div>
               </div>

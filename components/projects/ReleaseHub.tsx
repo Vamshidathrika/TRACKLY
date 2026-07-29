@@ -219,7 +219,7 @@ export function ReleaseHub({
                   <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
                     <div
                       className={`h-full transition-all duration-500 ${
-                        rel.status === "RELEASED" ? "bg-success" : "bg-brand"
+                        pct < 34 ? "bg-rose-500" : pct < 100 ? "bg-amber-500" : "bg-emerald-500"
                       }`}
                       style={{ width: `${pct}%` }}
                     />

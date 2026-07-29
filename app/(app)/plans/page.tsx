@@ -320,7 +320,9 @@ export default async function PlansPage() {
                   <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
                     <div
                       style={{ width: `${completionPct}%` }}
-                      className="h-full rounded-full bg-brand transition-all duration-700"
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        completionPct < 34 ? "bg-rose-500" : completionPct < 100 ? "bg-amber-500" : "bg-emerald-500"
+                      }`}
                     />
                   </div>
                 </div>

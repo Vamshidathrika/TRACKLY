@@ -433,14 +433,19 @@ export function IssueSidebar({
               {formatHoursToReadable(loggedHours)} / {estimatedHours > 0 ? formatHoursToReadable(estimatedHours) : "Not set"}
             </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
-            <div
-              style={{
-                width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
-              }}
-              className="h-full bg-brand transition-all"
-            />
-          </div>
+          {(() => {
+            const pct = estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0;
+            const barColor =
+              pct < 34 ? "bg-rose-500" : pct < 100 ? "bg-amber-500" : "bg-emerald-500";
+            return (
+              <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
+                <div
+                  style={{ width: `${pct}%` }}
+                  className={`h-full transition-all duration-500 ${barColor}`}
+                />
+              </div>
+            );
+          })()}
         </div>
       </div>
 

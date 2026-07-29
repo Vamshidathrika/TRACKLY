@@ -24,35 +24,58 @@ export function IssueWorkLogsSection({
 }: IssueWorkLogsSectionProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="p-3 rounded-xl bg-neutral/30 border border-border flex flex-col sm:flex-row items-center sm:justify-between text-xs font-semibold flex-wrap gap-3">
-        <div className="flex items-center gap-4 flex-wrap">
-          <span>
-            Total Logged:{" "}
-            <strong className="text-brand font-bold">{formatHoursToReadable(loggedHours)} ({loggedHours.toFixed(1)}h)</strong>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-text-subtle font-medium">Estimated (h):</span>
-            <input
-              type="number"
-              value={estimateHours}
-              onChange={(e) => onEstimateChange(e.target.value === "" ? "" : Number(e.target.value))}
-              onBlur={onEstimateBlur}
-              placeholder="None"
-              min={0}
-              step={0.5}
-              className="h-10 sm:h-7 w-20 px-2 text-right text-xs font-mono font-bold rounded border border-border bg-surface text-text outline-none focus:border-brand"
-            />
+      <div className="p-3 rounded-xl bg-neutral/30 border border-border flex flex-col gap-2.5">
+        <div className="flex flex-col sm:flex-row items-center sm:justify-between text-xs font-semibold flex-wrap gap-3">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span>
+              Total Logged:{" "}
+              <strong className="text-brand font-bold">{formatHoursToReadable(loggedHours)} ({loggedHours.toFixed(1)}h)</strong>
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-subtle font-medium">Estimated (h):</span>
+              <input
+                type="number"
+                value={estimateHours}
+                onChange={(e) => onEstimateChange(e.target.value === "" ? "" : Number(e.target.value))}
+                onBlur={onEstimateBlur}
+                placeholder="None"
+                min={0}
+                step={0.5}
+                className="h-10 sm:h-7 w-20 px-2 text-right text-xs font-mono font-bold rounded border border-border bg-surface text-text outline-none focus:border-brand"
+              />
+            </div>
           </div>
+
+          <Button
+            appearance="primary"
+            type="button"
+            onClick={onLogWorkClick}
+            className="bg-brand text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+          >
+            <Plus size={12} /> Log work
+          </Button>
         </div>
 
-        <Button
-          appearance="primary"
-          type="button"
-          onClick={onLogWorkClick}
-          className="bg-brand text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
-        >
-          <Plus size={12} /> Log work
-        </Button>
+        {Number(estimateHours) > 0 && (
+          <div className="flex flex-col gap-1 pt-1 border-t border-border/40">
+            {(() => {
+              const estNum = Number(estimateHours);
+              const pct = estNum > 0 ? Math.min(100, Math.round((loggedHours / estNum) * 100)) : 0;
+              const barColor = pct < 34 ? "bg-rose-500" : pct < 100 ? "bg-amber-500" : "bg-emerald-500";
+              return (
+                <>
+                  <div className="flex justify-between text-[10px] text-text-subtle font-medium">
+                    <span>Worklog Progress ({pct}%)</span>
+                    <span>{formatHoursToReadable(loggedHours)} of {formatHoursToReadable(estNum)}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
+                    <div style={{ width: `${pct}%` }} className={`h-full transition-all duration-500 ${barColor}`} />
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 divide-y divide-border/40">

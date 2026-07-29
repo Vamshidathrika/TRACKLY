@@ -236,7 +236,16 @@ export function TimeLogModal({
                 <span>Estimated: {currentEstimate > 0 ? `${formatHoursToReadable(currentEstimate)} (${currentEstimate.toFixed(1)}h)` : "Not set"}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-border/60 overflow-hidden">
-                <div style={{ width: `${progressPercent}%` }} className="h-full bg-brand transition-all" />
+                <div
+                  style={{ width: `${progressPercent}%` }}
+                  className={`h-full transition-all duration-500 ${
+                    progressPercent < 34
+                      ? "bg-rose-500"
+                      : progressPercent < 100
+                      ? "bg-amber-500"
+                      : "bg-emerald-500"
+                  }`}
+                />
               </div>
             </div>
 
