@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "./prisma";
 import type { Role } from "@prisma/client";
 import { grantProjectAccess, grantAllProjectAccess } from "./tenant";
+import { invalidateUserAccess } from "./access-cache";
 
 export async function createInvite(input: {
   siteId: string;
@@ -108,6 +109,9 @@ export async function acceptInvite(token: string, userId: string) {
   // 3. Invalidate caches
   const { delCache } = await import("./redis");
   await delCache(`user:chrome:${userId}`);
+  // The membership row just changed; the tenant guards cache it, and a stale
+  // entry from before acceptance would deny the user their new workspace.
+  await invalidateUserAccess(userId).catch(() => {});
 
   // Determine redirect target
   const projectKey = invite.project?.key ?? (

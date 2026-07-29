@@ -17,11 +17,12 @@ vi.mock("./auth", () => ({
 import { prisma } from "./prisma";
 import { checkProjectAccess, requireMembership } from "./tenant";
 import { setCache, delCachePrefix } from "./redis";
+import { invalidateUserAccess } from "./access-cache";
 
 describe("checkProjectAccess DAL guard", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await delCachePrefix("user:");
+    await delCachePrefix("access:");
   });
 
   it("grants WORKSPACE_ADMIN access when user is workspace ADMIN", async () => {
@@ -169,12 +170,11 @@ describe("checkProjectAccess DAL guard", () => {
 describe("requireMembership caching", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await delCachePrefix("user:");
+    await delCachePrefix("access:");
   });
 
   it("serves from cache without touching the database", async () => {
-    await setCache("user:membership:user-1", {
-      userId: "user-1",
+    await setCache("access:membership:user-1", {
       siteId: "s1",
       role: "ADMIN",
       siteName: "Acme",
@@ -203,11 +203,11 @@ describe("requireMembership caching", () => {
 describe("checkProjectAccess caching", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await delCachePrefix("user:");
+    await delCachePrefix("access:");
   });
 
   it("serves a cached grant without touching the database", async () => {
-    await setCache("user:project-access:user-1:p1", {
+    await setCache("access:project:user-1:p1", {
       projectId: "p1",
       projectKey: "TRK",
       projectName: "Trackly",
@@ -222,7 +222,7 @@ describe("checkProjectAccess caching", () => {
   });
 
   it("serves a cached denial as null without touching the database", async () => {
-    await setCache("user:project-access:user-1:p1", { denied: true }, 60);
+    await setCache("access:project:user-1:p1", { denied: true }, 60);
 
     const access = await checkProjectAccess("user-1", "p1");
 
@@ -236,5 +236,61 @@ describe("checkProjectAccess caching", () => {
     const access = await checkProjectAccess("user-1", "p1");
 
     expect(access).toBeNull();
+  });
+});
+
+describe("access revocation takes effect immediately", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await delCachePrefix("access:");
+  });
+
+  // The guards previously cached under `user:*` while invalidateUserAccess
+  // deleted `access:*`. Nothing was ever actually invalidated, so a revoked
+  // role kept working until the TTL expired. These assert the namespaces now
+  // match — a cached grant must be gone the moment access is revoked.
+
+  it("drops a cached project grant when the user's access is invalidated", async () => {
+    await setCache("access:project:user-1:p1", {
+      projectId: "p1",
+      projectKey: "TRK",
+      projectName: "Trackly",
+      siteId: "s1",
+      projectRole: "WORKSPACE_ADMIN",
+    }, 300);
+
+    // Cached grant is live.
+    expect(await checkProjectAccess("user-1", "p1")).not.toBeNull();
+    expect(prisma.project.findUnique).not.toHaveBeenCalled();
+
+    await invalidateUserAccess("user-1");
+
+    // Revoked: the project no longer resolves, so access must be denied rather
+    // than served from the stale cache entry.
+    (prisma.project.findUnique as any).mockResolvedValue(null);
+    expect(await checkProjectAccess("user-1", "p1")).toBeNull();
+    expect(prisma.project.findUnique).toHaveBeenCalled();
+  });
+
+  it("drops a cached membership when the user's access is invalidated", async () => {
+    await setCache("access:membership:user-1", {
+      siteId: "s1",
+      role: "ADMIN",
+      siteName: "Acme",
+    }, 300);
+
+    expect((await requireMembership()).role).toBe("ADMIN");
+    expect(prisma.membership.findFirst).not.toHaveBeenCalled();
+
+    await invalidateUserAccess("user-1");
+
+    // Demoted to MEMBER in the database — the next call must reflect that.
+    (prisma.membership.findFirst as any).mockResolvedValue({
+      siteId: "s1",
+      role: "MEMBER",
+      site: { name: "Acme" },
+    });
+    expect((await requireMembership()).role).toBe("MEMBER");
+    expect(prisma.membership.findFirst).toHaveBeenCalled();
   });
 });

@@ -41,6 +41,7 @@ export async function deleteCustomField(fieldId: string) {
 }
 
 import { delCache } from "./redis";
+import { invalidateUserAccess } from "./access-cache";
 
 export async function updateMemberRole(membershipId: string, role: Role) {
   const updated = await prisma.membership.update({
@@ -54,6 +55,9 @@ export async function updateMemberRole(membershipId: string, role: Role) {
   // until the TTL expires. removeWorkspaceMember already does this.
   await delCache(`user:chrome:${updated.userId}`).catch(() => {});
   await delCache(`site:projects:${updated.siteId}`).catch(() => {});
+  // The tenant guards cache the role itself. Without this, a demoted ADMIN
+  // keeps admin-level access until the cache TTL expires.
+  await invalidateUserAccess(updated.userId).catch(() => {});
 
   return updated;
 }
@@ -104,6 +108,7 @@ export async function removeWorkspaceMember(siteId: string, userId: string) {
   // 5. Cache invalidation
   await delCache(`site:projects:${siteId}`).catch(() => {});
   await delCache(`user:chrome:${userId}`).catch(() => {});
+  await invalidateUserAccess(userId).catch(() => {});
 
   return res;
 }

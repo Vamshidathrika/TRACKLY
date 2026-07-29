@@ -8,6 +8,13 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import { getAuthUser } from "./auth";
+import {
+  getCachedMembership,
+  setCachedMembership,
+  getCachedProjectAccess,
+  setCachedProjectAccess,
+  invalidateUserAccess,
+} from "./access-cache";
 import type { Role, ProjectRole } from "@prisma/client";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -37,10 +44,8 @@ export type ProjectContext = {
 export const requireMembership = cache(async (): Promise<TenantContext> => {
   const user = await getAuthUser();
 
-  const { getCache, setCache } = await import("./redis");
-  const cacheKey = `user:membership:${user.id}`;
-  const cached = await getCache<TenantContext>(cacheKey);
-  if (cached) return cached;
+  const cached = await getCachedMembership(user.id);
+  if (cached) return { userId: user.id, ...cached };
 
   let membership = await prisma.membership.findFirst({
     where: { userId: user.id },
@@ -71,7 +76,11 @@ export const requireMembership = cache(async (): Promise<TenantContext> => {
     siteName: membership.site.name,
   };
 
-  await setCache(cacheKey, result, 60);
+  await setCachedMembership(user.id, {
+    siteId: result.siteId,
+    role: result.role,
+    siteName: result.siteName,
+  });
   return result;
 });
 
@@ -100,9 +109,7 @@ export const requireAdmin = cache(async (): Promise<TenantContext> => {
  */
 export const checkProjectAccess = cache(
   async (userId: string, projectId: string, _siteId?: string): Promise<ProjectContext | null> => {
-    const { getCache, setCache } = await import("./redis");
-    const cacheKey = `user:project-access:${userId}:${projectId}`;
-    const cached = await getCache<ProjectContext | { denied: true } | null>(cacheKey);
+    const cached = await getCachedProjectAccess(userId, projectId);
     if (cached) {
       return "denied" in cached ? null : cached;
     }
@@ -113,7 +120,7 @@ export const checkProjectAccess = cache(
     });
 
     if (!project) {
-      await setCache(cacheKey, { denied: true }, 60);
+      await setCachedProjectAccess(userId, projectId, { denied: true });
       return null;
     }
 
@@ -125,7 +132,7 @@ export const checkProjectAccess = cache(
     });
 
     if (!membership) {
-      await setCache(cacheKey, { denied: true }, 60);
+      await setCachedProjectAccess(userId, projectId, { denied: true });
       return null;
     }
 
@@ -164,7 +171,7 @@ export const checkProjectAccess = cache(
       }
     }
 
-    await setCache(cacheKey, result ?? { denied: true }, 60);
+    await setCachedProjectAccess(userId, projectId, result ?? { denied: true });
     return result;
   }
 );
@@ -210,20 +217,24 @@ export async function grantProjectAccess(
   userId: string,
   role: ProjectRole = "MEMBER"
 ) {
-  return prisma.projectMember.upsert({
+  const member = await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId, userId } },
     create: { projectId, userId, role },
     update: { role },
   });
+  await invalidateUserAccess(userId).catch(() => {});
+  return member;
 }
 
 /**
  * Revoke a user's access to a specific project.
  */
 export async function revokeProjectAccess(projectId: string, userId: string) {
-  return prisma.projectMember.deleteMany({
+  const removed = await prisma.projectMember.deleteMany({
     where: { projectId, userId },
   });
+  await invalidateUserAccess(userId).catch(() => {});
+  return removed;
 }
 
 /**
@@ -242,6 +253,8 @@ export async function grantAllProjectAccess(siteId: string, userId: string, role
     data: projects.map((p) => ({ projectId: p.id, userId, role })),
     skipDuplicates: true,
   });
+
+  await invalidateUserAccess(userId).catch(() => {});
 }
 
 /**

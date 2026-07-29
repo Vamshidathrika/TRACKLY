@@ -2,6 +2,7 @@ import { cache } from "react";
 import { prisma } from "./prisma";
 import type { ProjectType } from "@prisma/client";
 import { getCache, setCache, delCache } from "./redis";
+import { invalidateUserAccess } from "./access-cache";
 
 // Number of starter issues seeded into every new project by createProject.
 // issueCounter must be advanced past these or the first real task collides.
@@ -203,6 +204,12 @@ export async function updateProject(
       create: { projectId, userId: data.leadId, role: "ADMIN" },
       update: { role: "ADMIN" },
     });
+    // Project lead confers ADMIN on the board, so a reassignment changes what
+    // BOTH the incoming and the outgoing lead may do.
+    await invalidateUserAccess(data.leadId).catch(() => {});
+    if (existing.leadId && existing.leadId !== data.leadId) {
+      await invalidateUserAccess(existing.leadId).catch(() => {});
+    }
   }
 
   await delCache(`site:projects:${siteId}`);
@@ -292,7 +299,7 @@ export async function addProjectMember(input: {
   userId: string;
   role?: "ADMIN" | "MEMBER" | "VIEWER";
 }) {
-  return prisma.projectMember.create({
+  const member = await prisma.projectMember.create({
     data: {
       projectId: input.projectId,
       userId: input.userId,
@@ -302,6 +309,8 @@ export async function addProjectMember(input: {
       user: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
   });
+  await invalidateUserAccess(input.userId).catch(() => {});
+  return member;
 }
 
 export async function updateProjectMemberRole(
@@ -309,10 +318,12 @@ export async function updateProjectMemberRole(
   userId: string,
   role: "ADMIN" | "MEMBER" | "VIEWER"
 ) {
-  return prisma.projectMember.update({
+  const updated = await prisma.projectMember.update({
     where: { projectId_userId: { projectId, userId } },
     data: { role },
   });
+  await invalidateUserAccess(userId).catch(() => {});
+  return updated;
 }
 
 export async function removeProjectMember(projectId: string, userId: string) {
@@ -335,6 +346,9 @@ export async function removeProjectMember(projectId: string, userId: string) {
     await delCache(`site:project:${project.siteId}:${project.key}`).catch(() => {});
     await delCache(`user:chrome:${userId}`).catch(() => {});
   }
+
+  // Revocation must take effect immediately, not when the cached grant expires.
+  await invalidateUserAccess(userId).catch(() => {});
 
   return res;
 }
