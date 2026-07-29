@@ -93,8 +93,8 @@ export function analyzeRootCause(payload: CrashPayload): RootCauseAnalysis {
  * Bug Superpower 3: Autonomous AI Patch Generator
  * Synthesizes code diff patches and automated regression tests.
  */
-export function generateAutoPatch(analysis: RootCauseAnalysis): AutoPatchResult {
-  const branchName = `rovo-bugfix/${Date.now()}`;
+export function generateAutoPatch(analysis: RootCauseAnalysis, repoOwner?: string, repoName?: string): AutoPatchResult {
+  const branchName = `rovo-bugfix/${analysis.targetFile.replace(/[^a-zA-Z0-9]/g, "-")}-${Date.now()}`;
   const patchDiff = `
 --- a/${analysis.targetFile}
 +++ b/${analysis.targetFile}
@@ -113,11 +113,14 @@ test("Regression Immunity Test for ${analysis.targetFile}:${analysis.lineNumber}
 });
   `.trim();
 
+  const owner = repoOwner || "Vamshidathrika";
+  const name = repoName || "TRACKLY";
+
   return {
     branchName,
     patchDiff,
     unitTestCode,
     confidenceScore: 0.94,
-    prUrl: `https://github.com/trackly/core/pull/${Math.floor(Math.random() * 1000 + 100)}`,
+    prUrl: `https://github.com/${owner}/${name}/pull/new/${branchName}`,
   };
 }
