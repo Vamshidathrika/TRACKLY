@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Clock, User } from "lucide-react";
 import { TimeLogModal } from "@/components/issues/TimeLogModal";
 import { logWorkAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { calculateIssueSLA } from "@/lib/sla";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
 export type BoardUserOption = {
@@ -204,6 +205,12 @@ function IssueCardComponent({
           <div className="flex items-center gap-2">
             <TypeIcon type={issue.type} size={14} />
             <PriorityIcon priority={issue.priority} size={14} />
+            {/* SLA Badge for HIGH / HIGHEST Priority tasks */}
+            {(issue.priority === "HIGHEST" || issue.priority === "HIGH") && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono border ${calculateIssueSLA(issue.priority, issue.createdAt || new Date(), issue.status).badgeClass}`}>
+                {calculateIssueSLA(issue.priority, issue.createdAt || new Date(), issue.status).badgeLabel}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 relative">
