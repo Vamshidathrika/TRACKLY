@@ -12,6 +12,8 @@ export type ProvisionInput = {
   template: "KANBAN" | "SCRUM";
   stages: string[];
   inviteEmails?: string[];
+  restrictedDomain?: boolean;
+  allowedDomain?: string;
 };
 
 export async function provisionWorkspaceAction(input: ProvisionInput) {
@@ -37,6 +39,8 @@ export async function provisionWorkspaceAction(input: ProvisionInput) {
       data: {
         name: `${user.name || "User"}'s Workspace`,
         slug,
+        allowedDomain: input.allowedDomain || null,
+        restrictedDomain: input.restrictedDomain ?? false,
         memberships: {
           create: {
             userId,
@@ -46,6 +50,14 @@ export async function provisionWorkspaceAction(input: ProvisionInput) {
       },
     });
     siteId = newSite.id;
+  } else if (input.allowedDomain || input.restrictedDomain !== undefined) {
+    await prisma.site.update({
+      where: { id: siteId },
+      data: {
+        allowedDomain: input.allowedDomain || undefined,
+        restrictedDomain: input.restrictedDomain ?? undefined,
+      },
+    });
   }
 
   // Ensure unique project key for site

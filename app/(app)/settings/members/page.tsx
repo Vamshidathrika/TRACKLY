@@ -1,24 +1,35 @@
 import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/tenant";
+import { getPendingInvites } from "@/lib/invites";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import { InviteForm } from "./InviteForm";
 import { MembersList } from "@/components/settings/MembersList";
+import { PendingInvitesList } from "@/components/settings/PendingInvitesList";
+import { DomainSettingsCard } from "@/components/settings/DomainSettingsCard";
 
 export default async function MembersPage() {
   const { siteId, siteName } = await requireMembership();
 
-  // MembersList is a client component, so every field selected here is serialized
-  // into the RSC payload and readable in the browser. `include: { user: true }`
-  // shipped User.passwordHash — the bcrypt hash of every colleague's password —
-  // to any workspace member who opened this page. Select explicitly, never spread.
-  const members = await prisma.membership.findMany({
-    where: { siteId },
-    include: {
-      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const [members, pendingInvites, projects, site] = await Promise.all([
+    prisma.membership.findMany({
+      where: { siteId },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    getPendingInvites(siteId),
+    prisma.project.findMany({
+      where: { siteId },
+      select: { id: true, name: true, key: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.site.findUnique({
+      where: { id: siteId },
+      select: { allowedDomain: true, restrictedDomain: true },
+    }),
+  ]);
 
   return (
     <main className="flex-1 px-10 py-6 overflow-y-auto">
@@ -29,9 +40,17 @@ export default async function MembersPage() {
       </div>
 
       <SettingsNav />
-      <InviteForm />
+      <DomainSettingsCard
+        siteId={siteId}
+        initialRestrictedDomain={site?.restrictedDomain ?? false}
+        initialAllowedDomain={site?.allowedDomain ?? null}
+      />
+      <InviteForm projects={projects} />
+      <PendingInvitesList invites={pendingInvites} />
       <MembersList members={members} />
     </main>
   );
 }
+
+
 

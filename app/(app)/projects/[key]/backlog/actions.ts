@@ -157,6 +157,9 @@ export async function quickCreateIssueAction(input: {
   type?: IssueType;
 }) {
   const user = await getAuthUser();
+  const access = await checkProjectAccess(user.id, input.projectId);
+  if (!access) return { error: "You don't have access to this project" };
+
   if (!input.summary.trim()) return { error: "Summary required" };
 
   try {
@@ -197,6 +200,15 @@ export async function bulkUpdateIssuesAction(
   if (issueIds.length === 0) return { success: true };
 
   try {
+    const issues = await prisma.issue.findMany({
+      where: { id: { in: issueIds } },
+      select: { projectId: true },
+    });
+    for (const issue of issues) {
+      const access = await checkProjectAccess(user.id, issue.projectId);
+      if (!access) return { error: "You don't have access to one or more selected issues" };
+    }
+
     await prisma.issue.updateMany({
       where: { id: { in: issueIds } },
       data: data as any,
@@ -210,10 +222,19 @@ export async function bulkUpdateIssuesAction(
 }
 
 export async function bulkDeleteIssuesAction(issueIds: string[]) {
-  await getAuthUser();
+  const user = await getAuthUser();
   if (issueIds.length === 0) return { success: true };
 
   try {
+    const issues = await prisma.issue.findMany({
+      where: { id: { in: issueIds } },
+      select: { projectId: true },
+    });
+    for (const issue of issues) {
+      const access = await checkProjectAccess(user.id, issue.projectId);
+      if (!access) return { error: "You don't have access to one or more selected issues" };
+    }
+
     await prisma.issue.deleteMany({
       where: { id: { in: issueIds } },
     });

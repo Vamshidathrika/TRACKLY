@@ -60,6 +60,22 @@ export async function revokeShareLink(inviteId: string) {
   });
 }
 
+export async function getPendingInvites(siteId: string) {
+  return prisma.invite.findMany({
+    where: {
+      siteId,
+      acceptedAt: null,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    include: {
+      project: { select: { id: true, name: true, key: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+
 export async function acceptInvite(token: string, userId: string) {
   const invite = await prisma.invite.findUnique({
     where: { token },

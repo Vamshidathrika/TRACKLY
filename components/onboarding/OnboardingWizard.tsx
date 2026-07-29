@@ -36,6 +36,8 @@ export function OnboardingWizard({
   const [spaceName, setSpaceName] = useState("Acme Rocket Launch");
   const [spaceKey, setSpaceKey] = useState("ROCKET");
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
+  const [restrictedDomain, setRestrictedDomain] = useState(false);
+  const [allowedDomain, setAllowedDomain] = useState("");
 
   const handleStep1RoleComplete = (_role: RoleType, recommendedTmpl: string) => {
     setRole(_role);
@@ -65,8 +67,10 @@ export function OnboardingWizard({
     setStep(4);
   };
 
-  const handleStep4InviteComplete = (emails: string[]) => {
-    setInviteEmails(emails);
+  const handleStep4InviteComplete = (data: { emails: string[]; restrictedDomain: boolean; allowedDomain: string }) => {
+    setInviteEmails(data.emails);
+    setRestrictedDomain(data.restrictedDomain);
+    setAllowedDomain(data.allowedDomain);
     setStep(5); // Go to Provisioning loader
   };
 
@@ -79,6 +83,8 @@ export function OnboardingWizard({
           template: template === "SCRUM" ? "SCRUM" : "KANBAN",
           stages,
           inviteEmails,
+          restrictedDomain,
+          allowedDomain,
         });
 
         if (res?.projectKey) {
@@ -162,6 +168,7 @@ export function OnboardingWizard({
         {step === 4 && (
           <InviteTeammatesStep
             projectName={spaceName}
+            userEmail={userEmail}
             onComplete={handleStep4InviteComplete}
             onBack={() => setStep(3)}
           />

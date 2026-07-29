@@ -12,36 +12,107 @@ import { sendInviteEmail } from "@/lib/email";
 const schema = z.object({ email: z.string().email("Enter a valid email") });
 
 export async function inviteMemberAction(
-  _prev: { error?: string; link?: string; emailSent?: boolean; recipient?: string },
+  _prev: { error?: string; link?: string; emailSent?: boolean; recipient?: string; results?: Array<{ email: string; link: string; emailSent: boolean }> },
   formData: FormData
 ) {
   const user = await getAuthUser();
   const { siteId, siteName } = await requireAdmin();
 
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const site = await prisma.site.findUnique({
+    where: { id: siteId },
+    select: { restrictedDomain: true, allowedDomain: true },
+  });
 
-  const projectId = formData.get("projectId") as string | null;
-  const invite = await createInvite({ siteId, email: parsed.data.email, role: "MEMBER", projectId: projectId || undefined });
+  const emailRaw = (formData.get("email") as string || "").trim();
+  if (!emailRaw) return { error: "Please enter at least one valid email address." };
+
+  const roleRaw = (formData.get("role") as string) || "MEMBER";
+  const role: Role = roleRaw === "ADMIN" ? "ADMIN" : "MEMBER";
+
+  const projectId = (formData.get("projectId") as string) || undefined;
+  let projectName: string | undefined = undefined;
+
+  if (projectId) {
+    const proj = await prisma.project.findFirst({ where: { id: projectId, siteId }, select: { name: true } });
+    projectName = proj?.name;
+  }
+
+  // Parse comma, space, or newline separated emails
+  const emails = Array.from(
+    new Set(
+      emailRaw
+        .split(/[\s,;\n]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.length > 0)
+    )
+  );
+
+  const emailSchema = z.string().email();
+  const validEmails = emails.filter((e) => emailSchema.safeParse(e).success);
+
+  if (validEmails.length === 0) {
+    return { error: "No valid email addresses provided." };
+  }
+
+  // Enforce company domain restriction policy
+  if (site?.restrictedDomain && site?.allowedDomain) {
+    const allowed = site.allowedDomain.toLowerCase().trim();
+    const disallowedEmails = validEmails.filter((email) => {
+      const domain = email.split("@")[1]?.toLowerCase();
+      return domain !== allowed;
+    });
+
+    if (disallowedEmails.length > 0) {
+      return {
+        error: `Security policy restricts invitations to @${allowed} company emails only. Invalid address(es): ${disallowedEmails.join(", ")}`,
+      };
+    }
+  }
 
   const baseUrl = process.env.AUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-  const fullInviteUrl = `${baseUrl}/invite/${invite.token}`;
 
-  const emailRes = await sendInviteEmail(parsed.data.email, fullInviteUrl, user.name ?? user.email, siteName ?? "Trackly");
+  const results: Array<{ email: string; link: string; emailSent: boolean }> = [];
+
+  for (const email of validEmails) {
+    const invite = await createInvite({ siteId, email, role, projectId });
+    const fullInviteUrl = `${baseUrl}/invite/${invite.token}`;
+
+    const emailRes = await sendInviteEmail(
+      email,
+      fullInviteUrl,
+      user.name ?? user.email,
+      siteName ?? "Trackly",
+      { role, projectName }
+    );
+
+    results.push({
+      email,
+      link: fullInviteUrl,
+      emailSent: emailRes.sent,
+    });
+  }
 
   revalidatePath("/settings/members");
+  revalidatePath("/teams");
+
+  if (results.length === 1) {
+    return {
+      link: results[0].link,
+      emailSent: results[0].emailSent,
+      recipient: results[0].email,
+      results,
+    };
+  }
+
   return {
-    link: fullInviteUrl,
-    emailSent: emailRes.sent,
-    recipient: parsed.data.email,
+    results,
+    recipient: `${results.length} members`,
+    emailSent: results.every((r) => r.emailSent),
   };
 }
 
 export async function updateMemberRoleAction(membershipId: string, role: Role) {
   try {
-    // membershipId comes from the client. Without these checks any authenticated
-    // user could pass their own membership id with "ADMIN" and self-promote, or
-    // pass a foreign id and rewrite roles in a workspace they do not belong to.
     const { siteId, userId } = await requireAdmin();
 
     const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
@@ -109,8 +180,6 @@ export async function removeMemberAction(targetUserId: string) {
 export async function revokeInviteAction(inviteId: string) {
   try {
     const { siteId } = await requireAdmin();
-    // Scope the delete to the admin's own workspace — being an admin somewhere
-    // must not grant the ability to revoke another tenant's invites by id.
     const res = await prisma.invite.deleteMany({ where: { id: inviteId, siteId } });
     if (res.count === 0) return { error: "Invite not found" };
     revalidatePath("/settings/members");
@@ -126,18 +195,54 @@ export async function resendInviteAction(inviteId: string) {
   try {
     const user = await getAuthUser();
     const { siteName, siteId } = await requireAdmin();
-    const invite = await prisma.invite.findFirst({ where: { id: inviteId, siteId } });
+    const invite = await prisma.invite.findFirst({
+      where: { id: inviteId, siteId },
+      include: { project: { select: { name: true } } },
+    });
     if (!invite) return { error: "Invite not found" };
     if (!invite.email) return { error: "This is a share link, not an email invite — nothing to resend." };
 
     const baseUrl = process.env.AUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const fullInviteUrl = `${baseUrl}/invite/${invite.token}`;
 
-    const emailRes = await sendInviteEmail(invite.email, fullInviteUrl, user.name ?? user.email, siteName ?? "Trackly");
+    const emailRes = await sendInviteEmail(
+      invite.email,
+      fullInviteUrl,
+      user.name ?? user.email,
+      siteName ?? "Trackly",
+      {
+        role: invite.role,
+        projectName: invite.project?.name,
+      }
+    );
     return { success: true, emailSent: emailRes.sent, link: fullInviteUrl };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     throw e;
   }
 }
+
+export async function updateDomainSettingsAction(restrictedDomain: boolean, allowedDomain: string) {
+  try {
+    const { siteId } = await requireAdmin();
+    const cleanDomain = allowedDomain.trim().toLowerCase().replace(/^@/, "");
+
+    await prisma.site.update({
+      where: { id: siteId },
+      data: {
+        restrictedDomain,
+        allowedDomain: cleanDomain || null,
+      },
+    });
+
+    revalidatePath("/settings/members");
+    revalidatePath("/teams");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+
 
