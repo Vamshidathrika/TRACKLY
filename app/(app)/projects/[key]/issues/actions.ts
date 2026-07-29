@@ -363,6 +363,14 @@ export async function createSubtaskAction(parentIssueId: string, title: string) 
             assigneeId: parent.assigneeId,
           },
         });
+        // Allocating from MAX(number) bypasses issueCounter, so the counter is
+        // left behind. createIssue allocates from the counter, and would then
+        // pick a number this subtask already took — recoverable, but only by
+        // burning a failed transaction first. Keep the counter in step instead.
+        await prisma.project.updateMany({
+          where: { id: parent.projectId, issueCounter: { lt: number } },
+          data: { issueCounter: number },
+        });
         break;
       } catch (e: any) {
         // P2002 = unique constraint violation; anything else is a real failure.
