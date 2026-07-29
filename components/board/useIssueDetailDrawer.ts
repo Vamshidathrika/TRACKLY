@@ -192,13 +192,13 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
       setSummary(issue.summary);
       setDescription(issue.description || "");
       setPoints(typeof issue.storyPoints === "number" && issue.storyPoints > 0 ? issue.storyPoints : (issue.storyPoints === 0 ? 0 : ""));
-      setEstimateHours(
-        typeof issue.estimatedHours === "number" && issue.estimatedHours > 0
-          ? issue.estimatedHours
-          : typeof issue.originalEstimate === "number" && issue.originalEstimate > 0
-          ? issue.originalEstimate
-          : ""
-      );
+      // The Prisma field is `originalEstimate`; the detail payload also maps it.
+      // Check all possible field names to be resilient across card vs detail payload shapes.
+      const rawEstimate =
+        (typeof issue.estimatedHours === "number" && issue.estimatedHours > 0 ? issue.estimatedHours : null) ??
+        (typeof issue.originalEstimate === "number" && issue.originalEstimate > 0 ? issue.originalEstimate : null) ??
+        (typeof issue.estimate === "number" && issue.estimate > 0 ? issue.estimate : null);
+      setEstimateHours(rawEstimate !== null ? rawEstimate : "");
       setReporterId(issue.reporterId || issue.reporter?.id || "");
       setReleaseId(issue.releaseId || "");
       setStartDate(toDateInput(issue.startDate));
@@ -259,6 +259,9 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
     if (!issue?.id || issue.id.startsWith("demo-")) return;
     let cancelled = false;
     const requestedId = issue.id;
+    // Show loading state immediately so the UI can display a skeleton
+    // for work logs and other detail-only data instead of stale empty state.
+    setIsLoadingDetail(true);
 
     getIssueDetailAction(requestedId)
       .then((detail) => {
@@ -274,6 +277,16 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
         setIsWatching(detail.isWatching);
         if (typeof detail.viewsCount === "number") setViewsCount(detail.viewsCount);
         setReleaseId(detail.releaseId || "");
+        // Sync estimate from authoritative DB payload — the board card projection
+        // omits originalEstimate, so the progress bar stays at 0% until this runs.
+        const detailEstimate =
+          (typeof (detail as any).estimatedHours === "number" && (detail as any).estimatedHours > 0
+            ? (detail as any).estimatedHours
+            : null) ??
+          (typeof detail.originalEstimate === "number" && detail.originalEstimate > 0
+            ? detail.originalEstimate
+            : null);
+        if (detailEstimate !== null) setEstimateHours(detailEstimate);
       })
       .finally(() => {
         if (!cancelled) setIsLoadingDetail(false);

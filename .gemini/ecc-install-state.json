@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "ecc.install.v1",
+  "installedAt": "2026-07-29T03:13:04.630Z",
+  "target": {
+    "id": "gemini-project",
+    "target": "gemini",
+    "kind": "project",
+    "root": "/Users/nani/Downloads/trackly/.gemini",
+    "installStatePath": "/Users/nani/Downloads/trackly/.gemini/ecc-install-state.json"
+  },
+  "request": {
+    "profile": "full",
+    "modules": [],
+    "includeComponents": [],
+    "excludeComponents": [],
+    "legacyLanguages": [],
+    "legacyMode": false
+  },
+  "resolution": {
+    "selectedModules": [
+      "platform-configs",
+      "skill-unified-memory",
+      "ito-compute"
+    ],
+    "skippedModules": [
+      "rules-core",
+      "agents-core",
+      "commands-core",
+      "hooks-runtime",
+      "framework-language",
+      "database",
+      "workflow-quality",
+      "optimization-workflows",
+      "security",
+      "research-apis",
+      "business-content",
+      "operator-workflows",
+      "prediction-market-skills",
+      "social-distribution",
+      "media-generation",
+      "orchestration",
+      "swift-apple",
+      "agentic-patterns",
+      "devops-infra",
+      "machine-learning",
+      "supply-chain-domain",
+      "document-processing"
+    ]
+  },
+  "source": {
+    "repoVersion": "2.1.0",
+    "repoCommit": "591ab5cbd3f2f65860ea91c226e410b1502c8e2e",
+    "manifestVersion": 1
+  },
+  "operations": [
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/private/tmp/ecc/.gemini/GEMINI.md",
+      "sourceRelativePath": ".gemini/GEMINI.md",
+      "destinationPath": "/Users/nani/Downloads/trackly/.gemini/GEMINI.md",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/private/tmp/ecc/mcp-configs/mcp-servers.json",
+      "sourceRelativePath": "mcp-configs/mcp-servers.json",
+      "destinationPath": "/Users/nani/Downloads/trackly/.gemini/mcp-configs/mcp-servers.json",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/private/tmp/ecc/scripts/auto-update.js",
+      "sourceRelativePath": "scripts/auto-update.js",
+      "destinationPath": "/Users/nani/Downloads/trackly/.gemini/scripts/auto-update.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "platform-configs",
+      "sourcePath": "/private/tmp/ecc/scripts/setup-package-manager.js",
+      "sourceRelativePath": "scripts/setup-package-manager.js",
+      "destinationPath": "/Users/nani/Downloads/trackly/.gemini/scripts/setup-package-manager.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-unified-memory",
+      "sourcePath": "/private/tmp/ecc/skills/unified-memory/SKILL.md",
+      "sourceRelativePath": "skills/unified-memory/SKILL.md",
+      "destinationPath": "/Users/nani/Downloads/trackly/.gemini/skills/unified-memory/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "ito-compute",
+      "sourcePath": "/private/tmp/ecc/skills/ito-compute/SKILL.md",
+      "sourceRelativePath": "skills/ito-compute/SKILL.md",
+      "destinationPath": "/Users/nani/Downloads/trackly/.gemini/skills/ito-compute/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    }
+  ]
+}

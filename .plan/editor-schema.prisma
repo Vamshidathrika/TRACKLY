@@ -1,0 +1,135 @@
+// Rich text editor — proposed schema changes
+//
+// PROPOSAL ONLY. Nothing here has been applied. `prisma/schema.prisma` was
+// off-limits for this task, so this file records the exact edits the owner of
+// that file should make.
+//
+// Companion: .plan/editor-deps.md
+//
+// Shape of the change: two nullable Json columns. Nothing is dropped, nothing
+// is renamed, nothing changes type. Additive only, so it is safe to apply
+// ahead of any code and safe to leave applied if the code is rolled back.
+//
+// ---------------------------------------------------------------------------
+// WHY Json AND NOT A `descriptionFormat` DISCRIMINATOR
+// ---------------------------------------------------------------------------
+// Nullness is the discriminator, so no extra column is needed:
+//
+//   descriptionJson IS NULL      -> legacy row, `description` is plain text,
+//                                   render it escaped with newlines preserved
+//   descriptionJson IS NOT NULL  -> rich row, render the doc through the
+//                                   allowlist walker; `description` is now a
+//                                   server-derived plaintext MIRROR of the doc
+//
+// The existing String columns keep their meaning for every consumer that reads
+// them today (JQL `~`, search, notification excerpts, Slack/Teams payloads,
+// automation): they are always plain text, before and after. That is the whole
+// back-compat story and it needs no backfill.
+//
+// ---------------------------------------------------------------------------
+// COCKROACHDB NOTE
+// ---------------------------------------------------------------------------
+// Prisma maps `Json` to JSONB on both PostgreSQL and CockroachDB. Adding a
+// nullable JSONB column is a metadata-only change on both — no table rewrite,
+// no lock held over the data. Safe to `prisma db push` against a live DB.
+//
+// Do NOT add a GIN index on these columns. Nothing queries inside the document;
+// all searching goes through the plaintext mirror. A GIN index on JSONB would
+// cost write throughput for zero read benefit.
+
+
+// ---------------------------------------------------------------------------
+// 1. model Issue — add ONE line
+// ---------------------------------------------------------------------------
+// In prisma/schema.prisma, immediately after the existing
+//     description      String?
+// line (currently line 242), add:
+
+  descriptionJson  Json?          // ProseMirror/TipTap doc. NULL => `description` is legacy plain text.
+                                  // When set, `description` is the derived plaintext mirror.
+
+
+// ---------------------------------------------------------------------------
+// 2. model Comment — add ONE line
+// ---------------------------------------------------------------------------
+// In prisma/schema.prisma, immediately after the existing
+//     body      String
+// line (currently line 290), add:
+
+  bodyJson  Json?    // ProseMirror/TipTap doc. NULL => `body` is legacy plain text.
+                     // When set, `body` is the derived plaintext mirror.
+
+
+// ---------------------------------------------------------------------------
+// FOR REFERENCE: the two models after the change
+// ---------------------------------------------------------------------------
+//
+// model Issue {
+//   id               String         @id @default(cuid())
+//   projectId        String
+//   sprintId         String?
+//   releaseId        String?
+//   number           Int
+//   key              String
+//   summary          String
+//   description      String?
+//   descriptionJson  Json?          // <-- ADDED
+//   type             IssueType      @default(STORY)
+//   ... unchanged ...
+// }
+//
+// model Comment {
+//   id        String   @id @default(cuid())
+//   issueId   String
+//   authorId  String
+//   body      String
+//   bodyJson  Json?    // <-- ADDED
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+//   author    User     @relation(fields: [authorId], references: [id])
+//
+//   @@index([issueId, createdAt])
+//   @@index([authorId])
+// }
+
+
+// ---------------------------------------------------------------------------
+// SELECT/INCLUDE SITES THAT MUST BE UPDATED
+// ---------------------------------------------------------------------------
+// Anywhere that uses an explicit `select` rather than a full-row fetch has to
+// opt the new columns in, or the UI silently stays in legacy plaintext mode.
+// Grep before applying:
+//
+//   grep -rn "description: true" lib/ app/
+//   grep -rn "body: true"        lib/ app/
+//
+// `getIssueByKey` in lib/issues.ts is the one that feeds the issue detail page.
+
+
+// ---------------------------------------------------------------------------
+// DELIBERATELY NOT INCLUDED
+// ---------------------------------------------------------------------------
+// The repo's own V2-3a spec
+// (docs/superpowers/specs/2026-07-21-trackly-v2-3a-editor-comments-worklog-design.md)
+// also proposes CommentMention, CommentReaction, CommentEdit, Worklog and
+// Site.hoursPerDay. Those belong to comments-v2 and time-tracking, not to the
+// editor, and none of them is needed for rich text to work. They are omitted
+// here on purpose so this proposal stays reviewable as one change.
+//
+// One connection worth flagging: once `bodyJson` exists,
+// `extractMentionUserIds(bodyJson)` (components/editor/text.ts) gives exact
+// user ids at write time, which is what a future CommentMention table would
+// store. Until that table exists, mentions still notify via the existing
+// name-regex path reading the plaintext mirror — see .plan/editor-deps.md,
+// "Server-side wiring still required".
+
+
+// ---------------------------------------------------------------------------
+// APPLYING
+// ---------------------------------------------------------------------------
+//   npm run db:push       # additive, no data loss
+//   npx prisma generate   # runs automatically via postinstall/build
+//
+// No `prisma migrate` step is needed for a dev database. For production, an
+// `ADD COLUMN ... JSONB NULL` migration is the equivalent and is non-blocking.

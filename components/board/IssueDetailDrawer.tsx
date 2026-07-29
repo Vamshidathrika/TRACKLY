@@ -332,6 +332,7 @@ export function IssueDetailDrawer({
                     loggedHours={state.loggedHours}
                     estimateHours={state.estimateHours}
                     workLogsList={state.workLogsList}
+                    isLoading={state.isLoadingDetail}
                     onEstimateChange={state.setEstimateHours}
                     onEstimateBlur={state.handleEstimateBlur}
                     onLogWorkClick={() => state.setShowTimeModal(true)}

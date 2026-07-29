@@ -1,0 +1,113 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PROPOSED schema additions for the Jira importer.
+//
+// NOT APPLIED. prisma/schema.prisma is owned by another agent right now, so
+// these blocks live here for review. The importer in lib/import/** works
+// WITHOUT them (see "Why the importer does not need these" below) and lights
+// them up automatically once they exist — lib/import/job-store.ts feature-
+// detects `prisma.importJob` at runtime and no-ops when it is absent.
+//
+// Paste into prisma/schema.prisma, then `npm run db:push`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// Why the importer does not need these
+// ------------------------------------
+// Idempotency today is derived from an EXISTING unique constraint rather than a
+// new mapping table:
+//
+//   Jira "ACME-42"  ->  Trackly Issue { number: 42, key: "<PKEY>-42" }
+//                       matched via @@unique([projectId, number])
+//
+// That is deterministic, needs no new column, and makes re-runs an upsert.
+// Its two weaknesses are what these models fix:
+//   1. Two different Jira projects imported into ONE Trackly project would
+//      collide on `number`. The importer refuses that case today.
+//   2. There is no durable record of a run — the report is returned to the
+//      caller and lost on page refresh.
+
+
+/// One import run. Written at the start of a run and updated when it finishes,
+/// so an interrupted import is visible as status = RUNNING rather than
+/// silently vanishing. `report` holds the full serialized ImportReport
+/// (lib/import/types.ts) — summary counts, unmapped values, per-row errors.
+model ImportJob {
+  id           String       @id @default(cuid())
+  siteId       String
+  /// User who started the run. Also the fallback reporter for Jira issues
+  /// whose reporter could not be resolved.
+  startedById  String
+  /// "JIRA_JSON" | "JIRA_CSV" — which parser produced the rows.
+  source       String
+  /// Original upload filename, for the run history UI.
+  filename     String?
+  /// true when the run was a dry run; dry runs are recorded so a reviewer can
+  /// compare "what it said it would do" against "what it did".
+  dryRun       Boolean      @default(false)
+  /// PENDING | RUNNING | SUCCEEDED | PARTIAL | FAILED.
+  /// PARTIAL means some rows imported and some errored — the common case, and
+  /// the reason this is a String rather than a two-value boolean.
+  status       String       @default("PENDING")
+  totalRows    Int          @default(0)
+  createdCount Int          @default(0)
+  updatedCount Int          @default(0)
+  skippedCount Int          @default(0)
+  errorCount   Int          @default(0)
+  /// Serialized ImportReport. Json (not String) so the run-history UI can
+  /// query into unmapped statuses without parsing every blob.
+  report       Json?
+  startedAt    DateTime     @default(now())
+  finishedAt   DateTime?
+  rows         ImportRow[]
+
+  @@index([siteId, startedAt])
+}
+
+/// One source row of one run. This is the per-row error report made durable,
+/// and — via (externalKey -> issueId) — the true external-ID map that removes
+/// the "number derived from the Jira key" constraint described above.
+model ImportRow {
+  id          String    @id @default(cuid())
+  jobId       String
+  /// 1-based index of the row in the source file, so an operator can open the
+  /// CSV/JSON at the offending line.
+  rowNumber   Int
+  /// The Jira issue key, e.g. "ACME-42". Unique per job: re-importing the same
+  /// file twice inside one job is a bug, and this catches it.
+  externalKey String
+  /// Trackly Issue.id once the row lands. Null for skipped/errored rows.
+  issueId     String?
+  /// CREATED | UPDATED | SKIPPED | ERROR
+  outcome     String
+  /// Human-readable failure reason. Null on success. Never truncated to a
+  /// boolean — "row 412 failed" without a reason is not an error report.
+  message     String?
+  createdAt   DateTime  @default(now())
+  job         ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, externalKey])
+  @@index([jobId, outcome])
+  @@index([issueId])
+}
+
+
+// Also add to `model Site`:
+//   importJobs ImportJob[]
+//
+// Optional but recommended, and independent of the two models above — this is
+// the single field that would let the importer drop the number-derivation
+// trick entirely:
+//
+//   model Issue {
+//     ...
+//     /// Origin key from an external tracker, e.g. "jira:ACME-42". Set only by
+//     /// the importer. Lets re-runs match by provenance instead of by a
+//     /// number parsed out of the source key.
+//     externalKey String?
+//
+//     @@unique([projectId, externalKey])
+//   }
+//
+// Today that provenance is stored as a reserved label on the issue
+// (`jira:ACME-42`, see lib/import/mapping.ts RESERVED_LABEL_PREFIXES), which
+// works but pollutes the label picker.

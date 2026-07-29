@@ -1,4 +1,4 @@
-import { Clock, Plus } from "lucide-react";
+import { Clock, Plus, Loader2 } from "lucide-react";
 import { formatHoursToReadable } from "@/components/issues/TimeLogModal";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
@@ -7,6 +7,7 @@ interface IssueWorkLogsSectionProps {
   loggedHours: number;
   estimateHours: number | string;
   workLogsList: any[];
+  isLoading?: boolean;
   onEstimateChange: (val: number | string) => void;
   onEstimateBlur: () => void;
   onLogWorkClick: () => void;
@@ -16,6 +17,7 @@ export function IssueWorkLogsSection({
   loggedHours,
   estimateHours,
   workLogsList,
+  isLoading = false,
   onEstimateChange,
   onEstimateBlur,
   onLogWorkClick,
@@ -54,7 +56,12 @@ export function IssueWorkLogsSection({
       </div>
 
       <div className="flex flex-col gap-2 divide-y divide-border/40">
-        {workLogsList.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-4 text-xs text-text-subtle animate-pulse">
+            <Loader2 size={14} className="animate-spin text-brand" />
+            <span>Loading work logs…</span>
+          </div>
+        ) : workLogsList.length === 0 ? (
           <p className="text-xs text-text-subtle italic py-2">No work logged yet.</p>
         ) : (
           workLogsList.map((w) => (
