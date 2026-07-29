@@ -300,7 +300,16 @@ export function SummaryView({ issues, projectName }: { issues: BoardIssue[]; pro
 
 // 2. Timeline / Gantt View Component
 export function TimelineView({ issues }: { issues: BoardIssue[] }) {
-  const dates = ["Jul 1", "Jul 8", "Jul 15", "Jul 22", "Jul 29", "Aug 5", "Aug 12"];
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Generate 6 weekly intervals starting from start of month
+  const weeks = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(currentMonthStart.getTime() + i * 7 * 24 * 3600 * 1000);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  });
+
+  const monthRangeLabel = `${new Date(currentMonthStart).toLocaleDateString(undefined, { month: "long", year: "numeric" })}`;
 
   return (
     <div className="flex flex-col gap-4 py-4 animate-in fade-in duration-200">
@@ -308,15 +317,15 @@ export function TimelineView({ issues }: { issues: BoardIssue[] }) {
         <h3 className="text-sm font-bold text-text flex items-center gap-2">
           <BarChart2 size={16} className="text-brand" /> Project Timeline & Gantt Schedule
         </h3>
-        <span className="text-xs text-text-subtle">July 2026 - August 2026</span>
+        <span className="text-xs text-text-subtle font-mono">{monthRangeLabel}</span>
       </div>
 
       <div className="rounded-lg border border-border bg-surface shadow-xs overflow-x-auto">
         {/* Timeline Header */}
         <div className="flex border-b border-border bg-neutral/50 min-w-[700px]">
           <div className="w-64 p-3 text-xs font-bold text-text border-r border-border">Work Item</div>
-          <div className="flex-1 grid grid-cols-7 text-center py-3 text-xs font-semibold text-text-subtle">
-            {dates.map((d) => (
+          <div className="flex-1 grid grid-cols-6 text-center py-3 text-xs font-semibold text-text-subtle">
+            {weeks.map((d) => (
               <div key={d} className="border-r border-border/40 last:border-0">{d}</div>
             ))}
           </div>
@@ -324,33 +333,46 @@ export function TimelineView({ issues }: { issues: BoardIssue[] }) {
 
         {/* Timeline Rows */}
         <div className="divide-y divide-border/60 min-w-[700px]">
-          {issues.map((issue, idx) => {
-            const startCol = (idx % 4) + 1;
-            const spanCols = Math.min(3, 7 - startCol);
-            return (
-              <div key={issue.id} className="flex items-center hover:bg-neutral/30 transition-colors">
-                <div className="w-64 p-3 border-r border-border truncate flex items-center gap-2">
-                  <span className="font-mono text-xs text-text-subtle font-semibold">{issue.key}</span>
-                  <span className="text-xs font-medium text-text truncate">{issue.summary}</span>
-                </div>
-                <div className="flex-1 grid grid-cols-7 py-2 px-2 items-center relative">
-                  <div
-                    style={{ gridColumn: `${startCol} / span ${spanCols}` }}
-                    className={`h-7 rounded-md px-2.5 flex items-center justify-between text-xs font-semibold text-white shadow-xs transition-all ${
-                      issue.status === "DONE"
-                        ? "bg-emerald-500"
-                        : issue.status === "IN_PROGRESS"
-                        ? "bg-brand"
-                        : "bg-amber-500"
-                    }`}
-                  >
-                    <span className="truncate">{issue.summary}</span>
-                    <span className="text-[10px] opacity-90">{issue.status.replace("_", " ")}</span>
+          {issues.length === 0 ? (
+            <div className="p-8 text-center text-xs text-subtle italic">No issues in this view.</div>
+          ) : (
+            issues.map((issue, idx) => {
+              // Calculate start column based on createdAt or due date
+              const created = issue.createdAt ? new Date(issue.createdAt) : now;
+              const due = issue.dueDate ? new Date(issue.dueDate) : new Date(created.getTime() + 14 * 24 * 3600 * 1000);
+
+              const daysFromStart = Math.max(0, Math.floor((created.getTime() - currentMonthStart.getTime()) / (24 * 3600 * 1000)));
+              const startCol = Math.min(6, Math.max(1, Math.floor(daysFromStart / 7) + 1));
+              const durationDays = Math.max(7, Math.floor((due.getTime() - created.getTime()) / (24 * 3600 * 1000)));
+              const spanCols = Math.min(6 - startCol + 1, Math.max(1, Math.ceil(durationDays / 7)));
+
+              return (
+                <div key={issue.id} className="flex items-center hover:bg-neutral/30 transition-colors">
+                  <div className="w-64 p-3 border-r border-border truncate flex items-center gap-2">
+                    <span className="font-mono text-xs text-brand font-bold">{issue.key}</span>
+                    <span className="text-xs font-medium text-text truncate" title={issue.summary}>{issue.summary}</span>
+                  </div>
+                  <div className="flex-1 grid grid-cols-6 py-2 px-2 items-center relative">
+                    <div
+                      style={{ gridColumn: `${startCol} / span ${spanCols}` }}
+                      className={`h-7 rounded-md px-2.5 flex items-center justify-between text-xs font-semibold text-white shadow-xs transition-all ${
+                        issue.status === "DONE"
+                          ? "bg-emerald-500"
+                          : issue.status === "IN_PROGRESS"
+                          ? "bg-brand"
+                          : issue.status === "IN_REVIEW"
+                          ? "bg-purple-500"
+                          : "bg-amber-500"
+                      }`}
+                    >
+                      <span className="truncate" title={issue.summary}>{issue.summary}</span>
+                      <span className="text-[10px] opacity-90 shrink-0 ml-1">{issue.status.replace("_", " ")}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>
