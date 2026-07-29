@@ -23,7 +23,11 @@ const BLOCK_CONTAINERS = new Set([
   "blockquote",
 ]);
 
-function nodeToText(node: RichNode): string {
+function nodeToText(input: unknown): string {
+  // Content arrays come off an `unknown` JSON column and may hold anything —
+  // a stray `null`, a number, a string — not just well-formed RichNodes.
+  if (typeof input !== "object" || input === null) return "";
+  const node = input as RichNode;
   switch (node.type) {
     case "text":
       return node.text ?? "";
@@ -47,7 +51,10 @@ function nodeToText(node: RichNode): string {
       break;
   }
 
-  const children = (node.content ?? []).map(nodeToText);
+  // Array.isArray, not `?? []`: `content` comes off an `unknown` JSON column,
+  // and a malformed but truthy non-array value (e.g. a stray string) must be
+  // treated as "no children" rather than crash `.map`.
+  const children = (Array.isArray(node.content) ? node.content : []).map(nodeToText);
 
   if (node.type === "doc") {
     return children.filter((c) => c !== "").join("\n\n");

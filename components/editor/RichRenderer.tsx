@@ -75,8 +75,11 @@ function renderMarkedText(text: string, marks: RichMark[] | undefined): ReactNod
   }, text);
 }
 
-function renderChildren(nodes: RichNode[] | undefined, depth: number): ReactNode {
-  if (!nodes || nodes.length === 0) return null;
+function renderChildren(nodes: unknown, depth: number): ReactNode {
+  // `nodes` is `candidate.content` straight off an untrusted Json column —
+  // Array.isArray, not a truthiness check, or a malformed non-array value
+  // reaches `.map` and throws instead of rendering as "no children".
+  if (!Array.isArray(nodes) || nodes.length === 0) return null;
   return nodes.map((child, index) => (
     <Fragment key={index}>{renderNode(child, depth + 1)}</Fragment>
   ));

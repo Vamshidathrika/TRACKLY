@@ -30,7 +30,6 @@ import type {
   PlannedIssue,
   PlannedLink,
   PlannedProject,
-  PlannedSprint,
   RowIssue,
   UnmappedKind,
   UnmappedValue,

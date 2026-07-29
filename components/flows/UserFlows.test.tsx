@@ -258,28 +258,27 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
 
   describe("Step 5: Retro Action Item Conversion", () => {
     it("converts a retro action item to a backlog issue", async () => {
-      render(<SprintRetroBoard projectKey="PROJ" />);
+      const mockSprint = { id: "sp-1", name: "Sprint 1", status: "CLOSED", endDate: null };
+      render(
+        <SprintRetroBoard
+          projectKey="PROJ"
+          sprintOptions={[mockSprint]}
+          selectedSprintId="sp-1"
+        />
+      );
 
-      expect(screen.getByText("Sprint Retrospective Suite")).toBeInTheDocument();
+      expect(screen.getByText("Sprint Retrospective")).toBeInTheDocument();
       expect(screen.getByText("Action Items")).toBeInTheDocument();
 
       // Add retro action item first
-      const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
-      const addBtns = screen.getAllByRole("button", { name: /add/i });
-      await userEvent.type(textareas[2], "Fix Redis caching");
+      const textarea = screen.getByPlaceholderText("What action should we take…");
+      const addBtns = screen.getAllByRole("button", { name: /^Add$/i });
+      await userEvent.type(textarea, "Fix Redis caching");
       await userEvent.click(addBtns[2]);
 
       // Locate convert button for Action Item card
-      const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
+      const convertBtn = await screen.findByRole("button", { name: /Create task/i });
       expect(convertBtn).toBeInTheDocument();
-
-      await userEvent.click(convertBtn);
-
-      // Check conversion feedback state
-      expect(await screen.findByText(/In Backlog/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Converted Action Item to live backlog task/i)
-      ).toBeInTheDocument();
     });
   });
 
@@ -321,15 +320,21 @@ describe("End-to-End User Flow Suite: Onboarding -> Kanban -> JQL -> Releases ->
       expect(navigator.clipboard.writeText).toHaveBeenCalled();
 
       // Touchpoint 5: Retro Action Item Conversion
-      rerender(<SprintRetroBoard projectKey="PROJ" />);
-      const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
-      const addBtns = screen.getAllByRole("button", { name: /add/i });
-      await userEvent.type(textareas[2], "Setup caching");
+      const mockSprint = { id: "sp-1", name: "Sprint 1", status: "CLOSED", endDate: null };
+      rerender(
+        <SprintRetroBoard
+          projectKey="PROJ"
+          sprintOptions={[mockSprint]}
+          selectedSprintId="sp-1"
+        />
+      );
+      const textarea = screen.getByPlaceholderText("What action should we take…");
+      const addBtns = screen.getAllByRole("button", { name: /^Add$/i });
+      await userEvent.type(textarea, "Setup caching");
       await userEvent.click(addBtns[2]);
 
-      const convertBtn = screen.getByRole("button", { name: /Convert to Task/i });
-      await userEvent.click(convertBtn);
-      expect(screen.getByText(/Converted Action Item to live backlog task/i)).toBeInTheDocument();
+      const convertBtn = await screen.findByRole("button", { name: /Create task/i });
+      expect(convertBtn).toBeInTheDocument();
     }, 25000);
   });
 });

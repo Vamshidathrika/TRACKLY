@@ -60,9 +60,16 @@ export function isRichDoc(value: unknown): value is RichDoc {
   );
 }
 
-/** True when the document carries no visible content. */
+/**
+ * True when the document carries no visible content.
+ *
+ * `doc` arrives from a Prisma `Json` column typed `unknown` upstream — guard
+ * with `Array.isArray` rather than a truthiness check, or a malformed
+ * `content` (anything truthy but not an array) throws on `.every` instead of
+ * being treated as empty.
+ */
 export function isEmptyDoc(doc: RichDoc | null | undefined): boolean {
-  if (!doc || !doc.content || doc.content.length === 0) return true;
+  if (!doc || !Array.isArray(doc.content) || doc.content.length === 0) return true;
   return doc.content.every(
     (node) =>
       node.type === "paragraph" && (!node.content || node.content.length === 0)

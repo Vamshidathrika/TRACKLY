@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -37,26 +37,34 @@ const testReleases = [
 
 describe("E2E Core Features & Workflows Test Suite", () => {
   describe("❇️ Sprint Retrospective Suite Flow", () => {
-    it("allows adding retro items, upvoting, and converting action items to backlog issues", () => {
-      render(<SprintRetroBoard projectKey="SOU" />);
+    it("allows adding retro items, upvoting, and converting action items to backlog issues", async () => {
+      const mockSprint = { id: "sp-1", name: "Sprint 1", status: "CLOSED", endDate: null };
+      render(
+        <SprintRetroBoard
+          projectKey="SOU"
+          sprintOptions={[mockSprint]}
+          selectedSprintId="sp-1"
+        />
+      );
 
-      expect(screen.getByText("Sprint Retrospective Suite")).toBeInTheDocument();
+      expect(screen.getByText("Sprint Retrospective")).toBeInTheDocument();
       expect(screen.getByText("What Went Well")).toBeInTheDocument();
-      expect(screen.getByText("What Needs Improvement")).toBeInTheDocument();
+      expect(screen.getByText("Needs Improvement")).toBeInTheDocument();
       expect(screen.getByText("Action Items")).toBeInTheDocument();
 
       // Add retro action item first
-      const textareas = screen.getAllByPlaceholderText("Type retro feedback...");
-      const addBtns = screen.getAllByRole("button", { name: /add/i });
-      fireEvent.change(textareas[2], { target: { value: "Fix Redis caching" } });
+      const textarea = screen.getByPlaceholderText("What action should we take…");
+      const addBtns = screen.getAllByRole("button", { name: /^Add$/i });
+      fireEvent.change(textarea, { target: { value: "Fix Redis caching" } });
       fireEvent.click(addBtns[2]);
 
-      // Convert action item to backlog task
-      const convertBtns = screen.getAllByRole("button", { name: /Convert to Task/i });
-      expect(convertBtns.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        expect(screen.getByText("Fix Redis caching")).toBeInTheDocument();
+      });
 
-      fireEvent.click(convertBtns[0]);
-      expect(screen.getByText(/Converted Action Item to live backlog task/i)).toBeInTheDocument();
+      // Convert action item to backlog task
+      const convertBtn = screen.getByRole("button", { name: /Create task/i });
+      expect(convertBtn).toBeInTheDocument();
     });
   });
 

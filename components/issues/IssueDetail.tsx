@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
+import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
+import { RichRenderer } from "@/components/editor/RichRenderer";
+import type { RichValue } from "@/components/editor/types";
 import {
   Eye,
   Share2,
@@ -114,6 +117,10 @@ export function IssueDetail({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [description, setDescription] = useState<string>(issue.description || "");
   const [isEditingDesc, setIsEditingDesc] = useState(false);
+  // Written on every RichEditor keystroke; read once on Save. A ref (not
+  // state) so typing in the rich editor doesn't re-render the whole detail
+  // page on every character — see components/editor/RichEditor.tsx onChange.
+  const descriptionValueRef = useRef<RichValue | null>(null);
 
   const [status, setStatus] = useState<IssueStatus>(issue.status || "TO_DO");
   const [priority, setPriority] = useState<IssuePriority>(issue.priority || "MEDIUM");
@@ -185,9 +192,17 @@ export function IssueDetail({
   };
 
   const handleSaveDesc = async () => {
+    // `updateIssueFieldAction`'s `description` field only accepts a plain
+    // string today (see app/(app)/projects/[key]/issues/actions.ts — that
+    // file is owned by another agent right now). The rich doc round-trips
+    // in this session via `descriptionValueRef`; only its plaintext mirror
+    // is persisted until a `descriptionJson` write path lands. See
+    // .plan/editor-deps.md, "Server-side wiring still required".
+    const nextText = (descriptionValueRef.current?.text ?? description).trim();
+    setDescription(nextText);
     setIsEditingDesc(false);
     showToast("Description updated!");
-    await updateIssueFieldAction(issue.id, "description", description.trim());
+    await updateIssueFieldAction(issue.id, "description", nextText);
   };
 
   const handleStatusChange = (newStatus: IssueStatus) => {
@@ -486,11 +501,17 @@ export function IssueDetail({
 
             {isEditingDesc ? (
               <div className="flex flex-col gap-3">
-                <textarea
-                  rows={8}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full rounded border border-brand bg-background p-3 text-xs outline-none font-mono leading-relaxed"
+                <RichEditorLoader
+                  initialDoc={issue.descriptionJson ?? null}
+                  initialText={description}
+                  ariaLabel="Issue description"
+                  placeholder="Add a description…"
+                  members={members}
+                  issueId={issue.id}
+                  minHeightClassName="min-h-[10rem]"
+                  onChange={(value: RichValue) => {
+                    descriptionValueRef.current = value;
+                  }}
                 />
                 <div className="flex justify-end gap-2">
                   <Button appearance="subtle" onClick={() => setIsEditingDesc(false)} className="text-xs">
@@ -502,24 +523,12 @@ export function IssueDetail({
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-text leading-relaxed whitespace-pre-wrap font-sans space-y-2">
-                {description.split("\n\n").map((chunk, idx) => {
-                  if (chunk.startsWith("Date:")) {
-                    const lines = chunk.split("\n");
-                    return (
-                      <div key={idx} className="p-3 rounded-md bg-neutral/30 border border-border/60 mb-2">
-                        <span className="font-bold text-text block mb-1.5">{lines[0]}</span>
-                        <div className="pl-2 space-y-1 text-text-subtle">
-                          {lines.slice(1).map((l, i) => (
-                            <p key={i}>{l}</p>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return <p key={idx}>{chunk}</p>;
-                })}
-              </div>
+              <RichRenderer
+                doc={issue.descriptionJson}
+                fallbackText={description}
+                emptyLabel="No description yet."
+                className="text-xs"
+              />
             )}
           </div>
 
@@ -552,6 +561,8 @@ export function IssueDetail({
             loggedHours={loggedHours}
             estimatedHours={estimatedHours}
             currentUserId={currentUserId}
+            issueId={issue.id}
+            members={members}
             onAddComment={handleAddComment}
             onDeleteComment={handleDeleteComment}
             onLogWork={() => setShowTimeLog(true)}

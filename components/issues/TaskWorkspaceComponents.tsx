@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useRef, useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,10 @@ import {
   uploadAttachmentAction,
   deleteAttachmentAction,
 } from "@/app/(app)/projects/[key]/issues/actions";
+import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
+import { RichRenderer } from "@/components/editor/RichRenderer";
+import type { RichEditorHandle } from "@/components/editor/RichEditor";
+import type { MentionMember, RichValue } from "@/components/editor/types";
 import {
   CheckCircle2,
   Circle,
@@ -527,6 +531,8 @@ export function ActivitySection({
   loggedHours = 0,
   estimatedHours = 0,
   currentUserId,
+  issueId,
+  members = [],
   onAddComment,
   onDeleteComment,
   onLogWork,
@@ -538,33 +544,48 @@ export function ActivitySection({
   loggedHours?: number;
   estimatedHours?: number;
   currentUserId?: string;
+  /** Needed for the comment composer's image paste/upload. */
+  issueId?: string;
+  /** @-mention suggestion source, forwarded to RichEditor. */
+  members?: MentionMember[];
   onAddComment: (text: string) => void;
   onDeleteComment?: (commentId: string) => void;
   onLogWork?: () => void;
   onDeleteWorkLog?: (workLogId: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<"comments" | "history" | "worklog">("comments");
-  const [commentText, setCommentText] = useState("");
   const [commentsList, setCommentsList] = useState(initialComments);
+  const commentEditorRef = useRef<RichEditorHandle>(null);
+  // Written on every keystroke, read once on submit — see the matching
+  // pattern (and rationale) in components/issues/IssueDetail.tsx.
+  const commentValueRef = useRef<RichValue | null>(null);
 
   const actionChips = ["Approved 👍", "Please review 🔍", "Needs info ❓", "In progress 🚀"];
 
   const handleChipClick = (chip: string) => {
-    setCommentText((prev) => (prev ? `${prev} ${chip}` : chip));
+    commentEditorRef.current?.insertText(chip);
   };
 
-  const submitComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
+  const submitCommentValue = (value: RichValue) => {
+    const text = value.text.trim();
+    if (!text) return;
     const newComm = {
       id: `c-${Date.now()}`,
-      body: commentText.trim(),
+      body: text,
       createdAt: new Date(),
       author: { name: "Current User", avatarUrl: null },
     };
     setCommentsList((prev) => [newComm, ...prev]);
-    onAddComment(commentText.trim());
-    setCommentText("");
+    onAddComment(text);
+    commentEditorRef.current?.clear();
+    commentValueRef.current = null;
+  };
+
+  const submitComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = commentValueRef.current ?? commentEditorRef.current?.getValue();
+    if (!value) return;
+    submitCommentValue(value);
   };
 
   return (
@@ -609,12 +630,18 @@ export function ActivitySection({
               <span className="text-xs font-bold text-text">Add a collaboration comment...</span>
             </div>
 
-            <textarea
-              rows={3}
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Type your comment or update..."
-              className="w-full rounded border border-border bg-surface p-2.5 text-xs outline-none focus:border-brand"
+            <RichEditorLoader
+              ref={commentEditorRef}
+              ariaLabel="Add a comment"
+              placeholder="Type your comment or update…"
+              members={members}
+              issueId={issueId}
+              minHeightClassName="min-h-[4.5rem]"
+              submitHint="Cmd/Ctrl+Enter to post"
+              onChange={(value: RichValue) => {
+                commentValueRef.current = value;
+              }}
+              onSubmit={submitCommentValue}
             />
 
             {/* Quick Action Chips */}
@@ -651,7 +678,11 @@ export function ActivitySection({
                         {typeof c.createdAt === "string" ? c.createdAt : new Date(c.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <p className="text-text whitespace-pre-wrap leading-relaxed">{c.body}</p>
+                    <RichRenderer
+                      doc={c.bodyJson}
+                      fallbackText={c.body}
+                      className="leading-relaxed"
+                    />
                   </div>
                 </div>
                 {onDeleteComment && (c.authorId === currentUserId || c.author?.id === currentUserId) && (
