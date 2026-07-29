@@ -40,13 +40,13 @@ export function AIRiskDetectorGadget({ risks }: { risks: RiskItem[] }) {
         <div className="flex flex-col gap-3">
           {risks.map((r) => (
             <div key={r.id} className="p-3.5 rounded-xl border border-border-default bg-neutral/30 flex flex-col gap-1.5 hover:bg-neutral/50 transition-colors text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-xs text-brand">{r.issueKey}</span>
-                  <span className="font-bold text-default truncate">{r.summary}</span>
+              <div className="flex items-center justify-between gap-2.5 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="font-mono font-bold text-xs text-brand shrink-0">{r.issueKey}</span>
+                  <span className="font-bold text-default truncate flex-1 min-w-0" title={r.summary}>{r.summary}</span>
                 </div>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap uppercase tracking-wider ${
                     r.severity === "HIGH"
                       ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
                       : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
