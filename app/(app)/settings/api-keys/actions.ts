@@ -13,7 +13,6 @@ import { API_SCOPES, SCOPE_LABELS, SCOPE_PRESETS } from "@/lib/api/scopes";
 import type { ApiScope } from "@/lib/api/scopes";
 
 export type { ApiKeySummary };
-export { API_SCOPES, SCOPE_LABELS, SCOPE_PRESETS };
 
 export async function listMyApiKeysAction(): Promise<{
   keys: ApiKeySummary[];

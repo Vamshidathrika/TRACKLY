@@ -3,12 +3,26 @@
 import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sparkles, Plus, ThumbsUp, ThumbsDown, ArrowRight, Check,
-  CheckCircle2, Eye, EyeOff, Download, Trash2, Search, Flame,
-  AlertCircle, Clock, TrendingUp, Target, ChevronDown,
-  Loader2, ExternalLink,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Trash2,
+  Target,
+  ThumbsUp,
+  Search,
+  ArrowRight,
+  Download,
+  Eye,
+  ChevronDown,
+  EyeOff,
+  Clock,
+  TrendingUp,
+  Loader2,
+  ExternalLink,
+  Check,
+  Flame,
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import type { RetroCardData, SprintHealthSummary, SprintOption } from "@/lib/retro";
 import type { RetroColumn } from "@prisma/client";
 import {
@@ -222,7 +236,11 @@ export function SprintRetroBoard({
   const setCardLoading = (id: string, loading: boolean) => {
     setLoadingCards((prev) => {
       const next = new Set(prev);
-      loading ? next.add(id) : next.delete(id);
+      if (loading) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
       return next;
     });
   };

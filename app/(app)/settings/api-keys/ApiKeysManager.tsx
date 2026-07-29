@@ -4,14 +4,8 @@ import { useState, useTransition } from "react";
 import { Key, Plus, Copy, Check, Trash2, ShieldCheck, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import {
-  createApiKeyAction,
-  revokeApiKeyAction,
-  API_SCOPES,
-  SCOPE_LABELS,
-  SCOPE_PRESETS,
-  type ApiKeySummary,
-} from "./actions";
+import { createApiKeyAction, revokeApiKeyAction, type ApiKeySummary } from "./actions";
+import { API_SCOPES, SCOPE_LABELS, SCOPE_PRESETS } from "@/lib/api/scopes";
 
 const EXPIRY_OPTIONS = [
   { label: "30 days", days: 30 },

@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { ShieldAlert, Sparkles, Paperclip, ArrowRight, Layers, History as HistoryIcon, Clock, MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { TimeLogModal, formatHoursToReadable } from "@/components/issues/TimeLogModal";
 import { logWorkAction, updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
+import { RichRenderer } from "@/components/editor/RichRenderer";
+import type { RichValue } from "@/components/editor/types";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
 import { IssueDetailHeader } from "./issue-detail/IssueDetailHeader";
 import { IssueCommentsSection } from "./issue-detail/IssueCommentsSection";

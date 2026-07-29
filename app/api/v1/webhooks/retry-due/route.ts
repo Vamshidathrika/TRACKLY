@@ -29,7 +29,7 @@ import { NextResponse } from "next/server";
 import { timingSafeCompare } from "@/lib/api/tokens";
 import { processDueWebhookRetries } from "@/lib/api/webhooks/dispatch";
 
-export const RETRY_SECRET_HEADER = "x-internal-retry-secret";
+const RETRY_SECRET_HEADER = "x-internal-retry-secret";
 
 export async function POST(req: Request): Promise<NextResponse> {
   const configuredSecret = process.env.WEBHOOK_RETRY_SECRET;

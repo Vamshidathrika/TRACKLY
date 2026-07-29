@@ -32,7 +32,7 @@ export type ApiHandler<P> = (args: {
 export const MAX_BODY_BYTES = 256 * 1024;
 
 export function withApi<P = Record<string, never>>(handler: ApiHandler<P>) {
-  return async (req: Request, routeArgs?: { params: Promise<P> }): Promise<NextResponse> => {
+  return async (req: Request, routeArgs: { params: Promise<P> }): Promise<NextResponse> => {
     const requestId = newRequestId();
     let rateHeaders: Record<string, string> = {};
 
