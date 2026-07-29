@@ -62,26 +62,57 @@ export async function startSprint(
   });
 }
 
-export async function completeSprint(sprintId: string) {
-  // Both writes must land together — without a transaction, a crash between
-  // closing the sprint and detaching its issues could leave the sprint CLOSED
-  // while its incomplete issues stay pinned to a sprint nothing shows anymore.
+export type SprintCompletionDestination = "BACKLOG" | "NEXT_SPRINT" | "NEW_SPRINT";
+
+export async function completeSprint(
+  sprintId: string,
+  options?: {
+    destination?: SprintCompletionDestination;
+    targetSprintId?: string;
+    newSprintName?: string;
+  }
+) {
   return prisma.$transaction(async (tx) => {
+    const existing = await tx.sprint.findUniqueOrThrow({
+      where: { id: sprintId },
+      select: { id: true, projectId: true, name: true },
+    });
+
     const sprint = await tx.sprint.update({
       where: { id: sprintId },
       data: { status: "CLOSED" },
     });
 
-    // Move remaining un-DONE issues in closed sprint back to backlog (null sprintId)
+    let destinationSprintId: string | null = null;
+    const dest = options?.destination ?? "BACKLOG";
+
+    if (dest === "NEXT_SPRINT" && options?.targetSprintId) {
+      destinationSprintId = options.targetSprintId;
+    } else if (dest === "NEW_SPRINT") {
+      const match = existing.name.match(/\d+/);
+      const nextNum = match ? parseInt(match[0], 10) + 1 : 2;
+      const defaultName = `Sprint ${nextNum}`;
+
+      const newSprint = await tx.sprint.create({
+        data: {
+          projectId: existing.projectId,
+          name: options?.newSprintName || defaultName,
+          status: "FUTURE",
+        },
+      });
+      destinationSprintId = newSprint.id;
+    }
+
+    // Move remaining un-DONE issues in closed sprint to target destination
     await tx.issue.updateMany({
       where: {
         sprintId,
         status: { not: "DONE" },
       },
-      data: { sprintId: null },
+      data: { sprintId: destinationSprintId },
     });
 
-    return sprint;
+    return { sprint, destinationSprintId };
   });
 }
 

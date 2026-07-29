@@ -7,7 +7,7 @@ import { TimeLogModal, formatHoursToReadable } from "@/components/issues/TimeLog
 import { logWorkAction, updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
 import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
 import { RichRenderer } from "@/components/editor/RichRenderer";
-import type { RichValue } from "@/components/editor/types";
+import type { MentionMember, RichValue } from "@/components/editor/types";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
 import { IssueDetailHeader } from "./issue-detail/IssueDetailHeader";
 import { IssueCommentsSection } from "./issue-detail/IssueCommentsSection";
@@ -34,11 +34,42 @@ export function IssueDetailDrawer({
   availableUsers?: BoardUserOption[];
 }) {
   const state = useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIssue, availableUsers });
+  // Written on every RichEditor keystroke, read once on Save — same pattern
+  // (and rationale) as components/issues/IssueDetail.tsx's descriptionValueRef.
+  // Kept local to this component rather than in useIssueDetailDrawer.ts, which
+  // this task avoids touching.
+  const descriptionValueRef = useRef<RichValue | null>(null);
 
   if (!issue || !state) return null;
 
   const estimatedHoursStr = typeof state.estimateHours === "number" ? state.estimateHours : parseFloat(String(state.estimateHours)) || 0;
   const isBlocked = state.activeBlockers.length > 0;
+
+  // Project members offered by the @-mention popup in both the description
+  // editor and the comment composer below. BoardUserOption has no `email`
+  // field, so MentionMember's optional email is simply left undefined here.
+  const mentionMembers: MentionMember[] = availableUsers.map((u) => ({
+    id: u.id,
+    name: u.name,
+    avatarUrl: u.avatarUrl,
+  }));
+
+  // `updateIssueFieldAction`'s `description` field only accepts a plain
+  // string today (see app/(app)/projects/[key]/issues/actions.ts — owned by
+  // another agent right now). The rich doc round-trips in this session via
+  // `descriptionValueRef`; only its plaintext mirror is persisted until a
+  // `descriptionJson` write path lands — see .plan/editor-deps.md,
+  // "Server-side wiring still required". Written directly here (not via
+  // state.handleDescriptionSave, which only knows the hook's own plain-text
+  // `description` state) so useIssueDetailDrawer.ts stays untouched.
+  const handleRichDescriptionSave = async () => {
+    const nextText = (descriptionValueRef.current?.text ?? state.description).trim();
+    state.setIsEditingDescription(false);
+    if (nextText === (issue.description || "")) return;
+    state.setDescription(nextText);
+    onUpdateIssue({ ...issue, description: nextText });
+    await updateIssueFieldAction(issue.id, "description", nextText);
+  };
 
   return (
     <>
@@ -187,14 +218,18 @@ export function IssueDetailDrawer({
 
                 {state.isEditingDescription ? (
                   <div className="flex flex-col gap-2">
-                    <textarea
-                      value={state.description}
-                      onChange={(e) => state.setDescription(e.target.value)}
-                      onPaste={state.handlePasteImage as any}
-                      placeholder="Add a detailed description… Markdown & Cmd+V image paste supported"
-                      rows={5}
-                      className="w-full text-sm text-text bg-surface border border-brand rounded-lg p-3 outline-none resize-none font-mono"
+                    <RichEditorLoader
+                      initialDoc={(issue as any).descriptionJson ?? null}
+                      initialText={state.description}
+                      ariaLabel="Issue description"
+                      placeholder="Add a detailed description…"
+                      members={mentionMembers}
+                      issueId={issue.id}
+                      minHeightClassName="min-h-[90px]"
                       autoFocus
+                      onChange={(value: RichValue) => {
+                        descriptionValueRef.current = value;
+                      }}
                     />
                     <div className="flex items-center gap-2 justify-end">
                       <button
@@ -204,7 +239,7 @@ export function IssueDetailDrawer({
                         Cancel
                       </button>
                       <button
-                        onClick={state.handleDescriptionSave}
+                        onClick={handleRichDescriptionSave}
                         className="px-3 py-1.5 text-xs font-semibold bg-brand text-white hover:bg-brand-hovered rounded-lg shadow-xs"
                       >
                         Save
@@ -216,11 +251,12 @@ export function IssueDetailDrawer({
                     onClick={() => state.setIsEditingDescription(true)}
                     className="min-h-[90px] text-sm text-text bg-surface-sunken hover:bg-neutral/60 rounded-xl p-3 cursor-pointer transition-colors border border-border/50"
                   >
-                    {issue.description ? (
-                      <p className="whitespace-pre-wrap leading-relaxed">{issue.description}</p>
-                    ) : (
-                      <span className="text-text-subtle text-xs italic">Add a detailed description…</span>
-                    )}
+                    <RichRenderer
+                      doc={(issue as any).descriptionJson}
+                      fallbackText={issue.description}
+                      emptyLabel="Add a detailed description…"
+                      className="text-sm"
+                    />
                   </div>
                 )}
               </div>
@@ -299,7 +335,8 @@ export function IssueDetailDrawer({
                     commentsList={state.commentsList}
                     onPostComment={state.handlePostComment}
                     onToggleReaction={state.handleToggleCommentReaction}
-                    onPasteImage={state.handlePasteImage}
+                    issueId={issue.id}
+                    members={mentionMembers}
                   />
                 )}
 

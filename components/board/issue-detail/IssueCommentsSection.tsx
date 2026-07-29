@@ -1,33 +1,54 @@
-import { useState } from "react";
+import { useRef } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Send } from "lucide-react";
+import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
+import { RichRenderer } from "@/components/editor/RichRenderer";
+import type { RichEditorHandle } from "@/components/editor/RichEditor";
+import type { MentionMember, RichValue } from "@/components/editor/types";
 
 interface IssueCommentsSectionProps {
   commentsList: any[];
   onPostComment: (text: string) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
-  onPasteImage: (e: React.ClipboardEvent) => void;
+  onPasteImage?: (e: any) => void;
+  /** Needed for the comment composer's image paste/upload. */
+  issueId?: string;
+  /** @-mention suggestion source, forwarded to the rich editor. */
+  members?: MentionMember[];
 }
 
 export function IssueCommentsSection({
   commentsList,
   onPostComment,
   onToggleReaction,
-  onPasteImage,
+  issueId,
+  members = [],
 }: IssueCommentsSectionProps) {
-  const [commentInput, setCommentInput] = useState("");
+  const commentEditorRef = useRef<RichEditorHandle>(null);
+  // Written on every keystroke, read once on submit — same pattern as
+  // components/issues/TaskWorkspaceComponents.tsx's ActivitySection, the
+  // other render path for comments.
+  const commentValueRef = useRef<RichValue | null>(null);
   const actionChips = ["Approved", "Please review", "Needs info", "In progress"];
 
   const handleChipClick = (chip: string) => {
-    setCommentInput((prev) => (prev ? `${prev} ${chip}` : chip));
+    commentEditorRef.current?.insertText(chip);
+  };
+
+  const submitCommentValue = (value: RichValue) => {
+    const text = value.text.trim();
+    if (!text) return;
+    onPostComment(text);
+    commentEditorRef.current?.clear();
+    commentValueRef.current = null;
   };
 
   const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentInput.trim()) return;
-    onPostComment(commentInput.trim());
-    setCommentInput("");
+    const value = commentValueRef.current ?? commentEditorRef.current?.getValue();
+    if (!value) return;
+    submitCommentValue(value);
   };
 
   return (
@@ -40,14 +61,18 @@ export function IssueCommentsSection({
           <span className="text-[10px] text-text-subtle ml-auto italic">Cmd+V paste image • Hotkey &apos;C&apos;</span>
         </div>
 
-        <textarea
-          id="comment-input"
-          rows={3}
-          value={commentInput}
-          onChange={(e) => setCommentInput(e.target.value)}
-          onPaste={onPasteImage}
-          placeholder="Type your comment or update... Markdown & Cmd+V image paste supported"
-          className="w-full rounded border border-border bg-surface p-2.5 text-xs outline-none focus:border-brand font-sans"
+        <RichEditorLoader
+          ref={commentEditorRef}
+          ariaLabel="Add a comment"
+          placeholder="Type your comment or update…"
+          members={members}
+          issueId={issueId}
+          minHeightClassName="min-h-[4.5rem]"
+          submitHint="Cmd/Ctrl+Enter to post"
+          onChange={(value: RichValue) => {
+            commentValueRef.current = value;
+          }}
+          onSubmit={submitCommentValue}
         />
 
         <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
@@ -85,7 +110,11 @@ export function IssueCommentsSection({
                     {typeof c.createdAt === "string" ? c.createdAt.split("T")[0] : "Recently"}
                   </span>
                 </div>
-                <p className="text-text whitespace-pre-wrap leading-relaxed mb-2">{c.body || c.text}</p>
+                <RichRenderer
+                  doc={c.bodyJson}
+                  fallbackText={c.body || c.text}
+                  className="mb-2 leading-relaxed"
+                />
 
                 {/* Comment Emoji Reactions Bar */}
                 <div className="flex items-center gap-1.5">

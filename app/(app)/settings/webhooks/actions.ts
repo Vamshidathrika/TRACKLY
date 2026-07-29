@@ -24,7 +24,6 @@ import { WEBHOOK_EVENTS } from "@/lib/api/schemas";
 import type { WebhookEndpointInput, WebhookEvent } from "@/lib/api/schemas";
 
 export type { WebhookEndpointSummary };
-export { WEBHOOK_EVENTS };
 
 export async function listMyWebhooksAction(): Promise<WebhookEndpointSummary[]> {
   const { siteId } = await requireAdmin();

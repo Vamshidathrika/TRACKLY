@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Play,
@@ -23,6 +24,7 @@ import { PriorityIcon } from "@/components/ui/PriorityIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { IssueFilterToolbar, type TeammateUser } from "@/components/issues/IssueFilterToolbar";
+import { CompleteSprintModal } from "@/components/sprints/CompleteSprintModal";
 import { updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
 import {
   createSprintAction,
@@ -95,6 +97,8 @@ export function BacklogView({
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
   const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
   const [dragOverTargetId, setDragOverTargetId] = useState<string | null>(null);
+
+  const router = useRouter();
 
   // Quick Inline Issue creation states per block (sprintId or 'backlog')
   const [quickInputTarget, setQuickInputTarget] = useState<string | null>(null);
@@ -209,25 +213,16 @@ export function BacklogView({
     setIsSprintModalOpen(false);
   };
 
+  const [completingSprintData, setCompletingSprintData] = useState<SprintData | null>(null);
+
   const handleStartSprint = async (sprintId: string) => {
     await startSprintAction(sprintId);
     setSprints((prev) => prev.map((s) => (s.id === sprintId ? { ...s, status: "ACTIVE" } : s)));
   };
 
-  const handleCompleteSprint = async (sprintId: string) => {
-    await completeSprintAction(sprintId);
-    setSprints((prev) =>
-      prev.map((s) => {
-        if (s.id === sprintId) {
-          // move incomplete to backlog optimistically
-          const unDone = s.issues.filter((i) => i.status !== "DONE");
-          const done = s.issues.filter((i) => i.status === "DONE");
-          setBacklog((b) => [...b, ...unDone.map((i) => ({ ...i, sprintId: null }))]);
-          return { ...s, status: "CLOSED", issues: done };
-        }
-        return s;
-      })
-    );
+  const handleCompleteSprint = (sprintId: string) => {
+    const s = sprints.find((item) => item.id === sprintId);
+    if (s) setCompletingSprintData(s);
   };
 
   // Drag and drop movement handler (optimistic & instant)
@@ -1025,6 +1020,38 @@ export function BacklogView({
           </div>
         </div>
       </div>
+
+      {completingSprintData && (
+        <CompleteSprintModal
+          isOpen={!!completingSprintData}
+          onClose={() => setCompletingSprintData(null)}
+          sprint={{
+            id: completingSprintData.id,
+            name: completingSprintData.name,
+            projectId,
+            projectKey,
+            issues: completingSprintData.issues,
+            availableTargetSprints: sprints
+              .filter((s) => s.status === "FUTURE" && s.id !== completingSprintData.id)
+              .map((s) => ({ id: s.id, name: s.name })),
+          }}
+          onCompleted={() => {
+            const sId = completingSprintData.id;
+            setSprints((prev) =>
+              prev.map((s) => {
+                if (s.id === sId) {
+                  const unDone = s.issues.filter((i) => i.status !== "DONE");
+                  const done = s.issues.filter((i) => i.status === "DONE");
+                  setBacklog((b) => [...b, ...unDone.map((i) => ({ ...i, sprintId: null }))]);
+                  return { ...s, status: "CLOSED", issues: done };
+                }
+                return s;
+              })
+            );
+          }}
+          onOpenRetro={() => router.push(`/projects/${projectKey}/retro?sprintId=${completingSprintData.id}`)}
+        />
+      )}
     </div>
   );
 }

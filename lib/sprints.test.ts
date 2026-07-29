@@ -7,6 +7,7 @@ vi.mock("./prisma", () => {
     findFirst: vi.fn(),
     update: vi.fn(),
     findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
   };
   const issue = { update: vi.fn(), updateMany: vi.fn() };
   return {
@@ -73,12 +74,14 @@ describe("sprints lib", () => {
   });
 
   it("completes sprint changing status to CLOSED", async () => {
+    (prisma.sprint.findUniqueOrThrow as any).mockResolvedValue({ id: "sp1", projectId: "p1", name: "Sprint 1" });
     (prisma.sprint.update as any).mockResolvedValue({ id: "sp1", status: "CLOSED" });
     const res = await completeSprint("sp1");
-    expect(res.status).toBe("CLOSED");
+    expect(res.sprint.status).toBe("CLOSED");
   });
 
   it("returns un-DONE issues to the backlog inside the same transaction", async () => {
+    (prisma.sprint.findUniqueOrThrow as any).mockResolvedValue({ id: "sp1", projectId: "p1", name: "Sprint 1" });
     (prisma.sprint.update as any).mockResolvedValue({ id: "sp1", status: "CLOSED" });
 
     await completeSprint("sp1");

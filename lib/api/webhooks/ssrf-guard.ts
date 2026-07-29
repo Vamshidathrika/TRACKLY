@@ -71,7 +71,9 @@ export function assertSafeWebhookUrlShape(rawUrl: string): URL {
     throw new UnsafeWebhookUrlError("Webhook URLs may not embed credentials.");
   }
 
-  const hostname = url.hostname.toLowerCase();
+  const rawHostname = url.hostname.toLowerCase();
+  const hostname = rawHostname.replace(/^\[|\]$/g, "");
+
   if (BLOCKED_HOSTNAMES.has(hostname) || BLOCKED_HOSTNAME_SUFFIXES.some((s) => hostname.endsWith(s))) {
     throw new UnsafeWebhookUrlError("This hostname is not reachable from the public internet and cannot be used.");
   }
@@ -92,7 +94,7 @@ export function assertSafeWebhookUrlShape(rawUrl: string): URL {
  */
 export async function assertSafeWebhookUrl(rawUrl: string): Promise<{ url: URL; resolvedAddresses: string[] }> {
   const url = assertSafeWebhookUrlShape(rawUrl);
-  const hostname = url.hostname;
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
 
   // A literal IP host has nothing to resolve — the shape check already
   // covers it, but re-run the same range check for defense in depth in case
@@ -164,10 +166,25 @@ function isReservedIPv6(address: string): boolean {
 
   if (normalized === "::" || normalized === "::1") return true; // unspecified / loopback
 
-  // IPv4-mapped (::ffff:a.b.c.d) and IPv4-compatible (::a.b.c.d) addresses —
-  // the classic normalization bypass. Extract the embedded IPv4 and recurse.
-  const mappedMatch = /^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(normalized);
-  if (mappedMatch) return isReservedIPv4(mappedMatch[1]);
+  // IPv4-mapped (::ffff:a.b.c.d or ::ffff:7f00:1) addresses — classic SSRF bypass
+  if (normalized.includes("ffff:")) {
+    const afterFfff = normalized.split("ffff:")[1];
+    if (afterFfff) {
+      if (afterFfff.includes(".")) {
+        if (isReservedIPv4(afterFfff)) return true;
+      } else {
+        const hexParts = afterFfff.split(":");
+        if (hexParts.length === 2) {
+          const high = parseInt(hexParts[0], 16);
+          const low = parseInt(hexParts[1], 16);
+          if (!isNaN(high) && !isNaN(low)) {
+            const ip4 = `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
+            if (isReservedIPv4(ip4)) return true;
+          }
+        }
+      }
+    }
+  }
 
   if (normalized.startsWith("fe80:") || normalized.startsWith("fe8") || normalized.startsWith("fe9")) return true; // link-local fe80::/10
   if (normalized.startsWith("fea") || normalized.startsWith("feb")) return true; // link-local fe80::/10 (remaining range)

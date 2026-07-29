@@ -90,13 +90,16 @@ export async function startSprintAction(sprintId: string, goal?: string) {
   }
 }
 
-export async function completeSprintAction(sprintId: string) {
+export async function completeSprintAction(
+  sprintId: string,
+  options?: {
+    destination?: "BACKLOG" | "NEXT_SPRINT" | "NEW_SPRINT";
+    targetSprintId?: string;
+    newSprintName?: string;
+  }
+) {
   try {
     const user = await getAuthUser();
-    // Without this, POSTing a bare Next-Action header with a victim's sprintId
-    // and no session would close another tenant's active sprint and dump all
-    // of its incomplete work back to backlog — see lib/tenant.ts for why
-    // client-supplied ids must always be resolved and checked, never trusted.
     const existingSprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
       select: { projectId: true },
@@ -106,9 +109,9 @@ export async function completeSprintAction(sprintId: string) {
     const access = await checkProjectAccess(user.id, existingSprint.projectId);
     if (!access) return { error: "You don't have access to this project" };
 
-    await completeSprint(sprintId);
+    const result = await completeSprint(sprintId, options);
     revalidatePath("/projects");
-    return { success: true };
+    return { success: true, result };
   } catch (e) {
     if (e instanceof Error) return { error: e.message };
     throw e;

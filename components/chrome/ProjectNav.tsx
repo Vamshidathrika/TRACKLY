@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   Package,
   Sparkles,
+  Layers,
 } from "lucide-react";
 import { toggleStarAction } from "@/app/(app)/chrome-actions";
 
@@ -63,6 +64,7 @@ export function ProjectNav({
   const navItems = [
     { label: "Board", href: `${basePath}/board`, icon: Columns3 },
     { label: "Backlog", href: `${basePath}/backlog`, icon: List },
+    { label: "Sprints", href: `${basePath}/sprints`, icon: Layers },
     { label: "Summary", href: `${basePath}/summary`, icon: LayoutDashboard },
     { label: "Timeline", href: `${basePath}/timeline`, icon: CalendarDays },
     { label: "Calendar", href: `${basePath}/calendar`, icon: Calendar },
