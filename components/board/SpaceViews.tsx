@@ -33,99 +33,226 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import type { IssueType, IssuePriority } from "@prisma/client";
+import { calculateIssueSLA } from "@/lib/sla";
+import { calculateMemberCapacity } from "@/lib/capacity";
 
 // 1. Summary View Component
 export function SummaryView({ issues, projectName }: { issues: BoardIssue[]; projectName: string }) {
   const todoCount = issues.filter((i) => i.status === "TO_DO").length;
   const inProgressCount = issues.filter((i) => i.status === "IN_PROGRESS").length;
+  const inReviewCount = issues.filter((i) => i.status === "IN_REVIEW").length;
   const doneCount = issues.filter((i) => i.status === "DONE").length;
   const total = issues.length || 1;
 
   const donePercent = Math.round((doneCount / total) * 100);
   const inProgressPercent = Math.round((inProgressCount / total) * 100);
+  const inReviewPercent = Math.round((inReviewCount / total) * 100);
   const todoPercent = Math.round((todoCount / total) * 100);
+
+  // Story points calculation
+  const totalPoints = issues.reduce((acc, i) => acc + (i.storyPoints || 0), 0);
+  const donePoints = issues.filter((i) => i.status === "DONE").reduce((acc, i) => acc + (i.storyPoints || 0), 0);
+
+  // SLA Breach Detection using real SLA engine
+  const slaBreachedIssues = issues.filter((i) => {
+    if (i.status === "DONE") return false;
+    const sla = calculateIssueSLA(i.priority, i.createdAt || new Date(), i.status);
+    return sla.isBreached;
+  });
+
+  // Logged vs Estimated Hours
+  const totalLoggedHours = issues.reduce((acc, i) => acc + (i.loggedHours || 0), 0);
+  const totalEstimatedHours = issues.reduce((acc, i) => acc + (i.estimatedHours || 0), 0);
+
+  // Priority Breakdown
+  const priorityCounts = {
+    HIGHEST: issues.filter((i) => i.priority === "HIGHEST").length,
+    HIGH: issues.filter((i) => i.priority === "HIGH").length,
+    MEDIUM: issues.filter((i) => i.priority === "MEDIUM").length,
+    LOW: issues.filter((i) => i.priority === "LOW" || i.priority === "LOWEST").length,
+  };
+
+  // Issue Type Spectrum
+  const typeCounts = {
+    STORY: issues.filter((i) => i.type === "STORY").length,
+    TASK: issues.filter((i) => i.type === "TASK").length,
+    BUG: issues.filter((i) => i.type === "BUG").length,
+    EPIC: issues.filter((i) => i.type === "EPIC").length,
+  };
+
+  // Member Workload Leaderboard
+  const workloadMap = new Map<string, { id: string; name: string; avatarUrl?: string | null; count: number; points: number }>();
+  let unassignedCount = 0;
+
+  for (const issue of issues) {
+    if (issue.assignee) {
+      const existing = workloadMap.get(issue.assignee.id);
+      if (existing) {
+        existing.count += 1;
+        existing.points += issue.storyPoints || 0;
+      } else {
+        workloadMap.set(issue.assignee.id, {
+          id: issue.assignee.id,
+          name: issue.assignee.name,
+          avatarUrl: issue.assignee.avatarUrl,
+          count: 1,
+          points: issue.storyPoints || 0,
+        });
+      }
+    } else {
+      unassignedCount += 1;
+    }
+  }
+
+  const memberWorkloads = Array.from(workloadMap.values()).map((m) =>
+    calculateMemberCapacity({ userId: m.id, userName: m.name, assignedPoints: m.points })
+  );
 
   return (
     <div className="flex flex-col gap-6 py-4 animate-in fade-in duration-200">
-      {/* Top Banner Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs">
-          <div className="flex items-center justify-between text-text-subtle mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider">Total Issues</span>
-            <Layers size={16} className="text-brand" />
+      {/* Executive Key Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-border-default bg-surface p-4 shadow-xs">
+          <div className="flex items-center justify-between text-subtle mb-1">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-subtlest">Total Work Items</span>
+            <Layers size={17} className="text-brand" />
           </div>
-          <p className="text-2xl font-bold text-text">{issues.length}</p>
-          <span className="text-xs text-text-subtle">Active in sprint</span>
+          <p className="text-3xl font-extrabold text-default tracking-tight">{issues.length}</p>
+          <span className="text-xs text-subtle font-mono">{totalPoints} total story points</span>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs">
-          <div className="flex items-center justify-between text-text-subtle mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider">Completed</span>
-            <CheckCircle2 size={16} className="text-emerald-500" />
+        <div className="rounded-xl border border-border-default bg-surface p-4 shadow-xs">
+          <div className="flex items-center justify-between text-subtle mb-1">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-subtlest">Release Velocity</span>
+            <CheckCircle2 size={17} className="text-emerald-500" />
           </div>
-          <p className="text-2xl font-bold text-emerald-600">{doneCount}</p>
-          <span className="text-xs text-emerald-600 font-medium">{donePercent}% completed</span>
+          <p className="text-3xl font-extrabold text-emerald-600 tracking-tight">{doneCount}</p>
+          <span className="text-xs text-emerald-600 font-bold">{donePercent}% completed ({donePoints} pts)</span>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs">
-          <div className="flex items-center justify-between text-text-subtle mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider">In Progress</span>
-            <Clock size={16} className="text-sky-500" />
+        <div className="rounded-xl border border-border-default bg-surface p-4 shadow-xs">
+          <div className="flex items-center justify-between text-subtle mb-1">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-subtlest">SLA Risk Detector</span>
+            <AlertCircle size={17} className={slaBreachedIssues.length > 0 ? "text-red-500" : "text-amber-500"} />
           </div>
-          <p className="text-2xl font-bold text-sky-600">{inProgressCount}</p>
-          <span className="text-xs text-sky-600 font-medium">{inProgressPercent}% of workload</span>
+          <p className={`text-3xl font-extrabold tracking-tight ${slaBreachedIssues.length > 0 ? "text-red-600" : "text-default"}`}>
+            {slaBreachedIssues.length}
+          </p>
+          <span className={`text-xs font-bold ${slaBreachedIssues.length > 0 ? "text-red-600" : "text-subtle"}`}>
+            {slaBreachedIssues.length > 0 ? "SLA Breaches Flagged" : "All SLAs Active & On Track"}
+          </span>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-xs">
-          <div className="flex items-center justify-between text-text-subtle mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider">To Do</span>
-            <AlertCircle size={16} className="text-amber-500" />
+        <div className="rounded-xl border border-border-default bg-surface p-4 shadow-xs">
+          <div className="flex items-center justify-between text-subtle mb-1">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-subtlest">Time Tracking</span>
+            <Clock size={17} className="text-sky-500" />
           </div>
-          <p className="text-2xl font-bold text-amber-600">{todoCount}</p>
-          <span className="text-xs text-amber-600 font-medium">{todoPercent}% pending</span>
+          <p className="text-3xl font-extrabold text-sky-600 tracking-tight">{totalLoggedHours.toFixed(1)}h</p>
+          <span className="text-xs text-subtle font-mono">
+            {totalEstimatedHours > 0 ? `of ${totalEstimatedHours}h estimated` : "Hours logged"}
+          </span>
         </div>
       </div>
 
-      {/* Progress & Workload Bar */}
-      <div className="rounded-lg border border-border bg-surface p-5 shadow-xs">
-        <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-2">
-          <TrendingUp size={16} className="text-brand" /> Workload Status Distribution
-        </h3>
-        <div className="flex h-3 w-full rounded-full bg-neutral overflow-hidden mb-3">
-          <div style={{ width: `${donePercent}%` }} className="bg-emerald-500 transition-all" title="Done" />
-          <div style={{ width: `${inProgressPercent}%` }} className="bg-sky-500 transition-all" title="In Progress" />
-          <div style={{ width: `${todoPercent}%` }} className="bg-amber-400 transition-all" title="To Do" />
+      {/* Workload Status Distribution Bar */}
+      <div className="rounded-xl border border-border-default bg-surface p-5 shadow-xs flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-default flex items-center gap-2">
+            <TrendingUp size={16} className="text-brand" /> Workload Status Distribution
+          </h3>
+          <span className="text-xs text-subtle font-mono">{issues.length} active tasks</span>
         </div>
-        <div className="flex items-center gap-6 text-xs text-text-subtle">
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Done ({doneCount})
+
+        <div className="flex h-3.5 w-full rounded-full bg-neutral overflow-hidden p-0.5 gap-0.5">
+          <div style={{ width: `${donePercent}%` }} className="bg-emerald-500 rounded-full transition-all" title={`Done: ${doneCount}`} />
+          <div style={{ width: `${inReviewPercent}%` }} className="bg-purple-500 rounded-full transition-all" title={`In Review: ${inReviewCount}`} />
+          <div style={{ width: `${inProgressPercent}%` }} className="bg-sky-500 rounded-full transition-all" title={`In Progress: ${inProgressCount}`} />
+          <div style={{ width: `${todoPercent}%` }} className="bg-amber-400 rounded-full transition-all" title={`To Do: ${todoCount}`} />
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-4 text-xs text-subtle pt-1">
+          <div className="flex items-center gap-2 font-medium">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Done ({doneCount} • {donePercent}%)
           </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> In Progress ({inProgressCount})
+          <div className="flex items-center gap-2 font-medium">
+            <span className="h-2.5 w-2.5 rounded-full bg-purple-500" /> In Review ({inReviewCount} • {inReviewPercent}%)
           </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> To Do ({todoCount})
+          <div className="flex items-center gap-2 font-medium">
+            <span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> In Progress ({inProgressCount} • {inProgressPercent}%)
+          </div>
+          <div className="flex items-center gap-2 font-medium">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> To Do ({todoCount} • {todoPercent}%)
           </div>
         </div>
       </div>
 
-      {/* Recent Activity & Issues overview */}
+      {/* Priority & Issue Type Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-border-default bg-surface p-5 shadow-xs flex flex-col gap-3">
+          <h3 className="text-sm font-bold text-default">Priority Distribution</h3>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Highest", count: priorityCounts.HIGHEST, color: "bg-red-500" },
+              { label: "High", count: priorityCounts.HIGH, color: "bg-orange-500" },
+              { label: "Medium", count: priorityCounts.MEDIUM, color: "bg-amber-500" },
+              { label: "Low", count: priorityCounts.LOW, color: "bg-emerald-500" },
+            ].map((p) => (
+              <div key={p.label} className="flex items-center justify-between text-xs font-medium">
+                <div className="flex items-center gap-2 w-28">
+                  <span className={`h-2.5 w-2.5 rounded-full ${p.color}`} />
+                  <span className="text-default">{p.label}</span>
+                </div>
+                <div className="flex-1 mx-3 h-2 rounded-full bg-neutral overflow-hidden">
+                  <div style={{ width: `${Math.round((p.count / total) * 100)}%` }} className={`h-full ${p.color}`} />
+                </div>
+                <span className="font-mono text-subtle text-[11px] w-12 text-right">{p.count} tasks</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border-default bg-surface p-5 shadow-xs flex flex-col gap-3">
+          <h3 className="text-sm font-bold text-default">Issue Type Spectrum</h3>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Stories", count: typeCounts.STORY, color: "bg-emerald-500" },
+              { label: "Tasks", count: typeCounts.TASK, color: "bg-blue-500" },
+              { label: "Bugs", count: typeCounts.BUG, color: "bg-rose-500" },
+              { label: "Epics", count: typeCounts.EPIC, color: "bg-purple-500" },
+            ].map((t) => (
+              <div key={t.label} className="flex items-center justify-between text-xs font-medium">
+                <div className="flex items-center gap-2 w-28">
+                  <span className={`h-2.5 w-2.5 rounded-full ${t.color}`} />
+                  <span className="text-default">{t.label}</span>
+                </div>
+                <div className="flex-1 mx-3 h-2 rounded-full bg-neutral overflow-hidden">
+                  <div style={{ width: `${Math.round((t.count / total) * 100)}%` }} className={`h-full ${t.color}`} />
+                </div>
+                <span className="font-mono text-subtle text-[11px] w-12 text-right">{t.count} items</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Contributor Workload & Recent Updates */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-xs">
-          <h3 className="text-sm font-bold text-text mb-4 flex items-center gap-2">
-            <Activity size={16} className="text-brand" /> Recent Activity Feed
+        <div className="rounded-xl border border-border-default bg-surface p-5 shadow-xs flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-text flex items-center gap-2">
+            <Activity size={16} className="text-brand" /> Recent Work Item Updates
           </h3>
           <div className="flex flex-col gap-3">
             {issues.slice(0, 5).map((issue) => (
-              <div key={issue.id} className="flex items-start justify-between border-b border-border/50 pb-2.5 last:border-0">
-                <div className="flex items-start gap-2.5">
-                  <Avatar name={issue.assignee?.name ?? "User"} size={26} />
-                  <div>
-                    <p className="text-xs font-semibold text-text">
-                      <span className="font-mono text-text-subtle mr-1.5">{issue.key}</span>
+              <div key={issue.id} className="flex items-start justify-between border-b border-border/50 pb-2.5 last:border-0 gap-2">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  <Avatar name={issue.assignee?.name ?? "Unassigned"} src={issue.assignee?.avatarUrl} size={26} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-text truncate">
+                      <span className="font-mono text-brand font-bold mr-1.5">{issue.key}</span>
                       {issue.summary}
                     </p>
-                    <span className="text-[11px] text-text-subtle">Updated status to {issue.status.replace("_", " ")}</span>
+                    <span className="text-[11px] text-text-subtle">Status: {issue.status.replace("_", " ")}</span>
                   </div>
                 </div>
                 <Tag color={issue.status === "DONE" ? "green" : issue.status === "IN_PROGRESS" ? "blue" : "gray"}>
@@ -136,20 +263,34 @@ export function SummaryView({ issues, projectName }: { issues: BoardIssue[]; pro
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-xs">
-          <h3 className="text-sm font-bold text-text mb-4 flex items-center gap-2">
-            <ShieldCheck size={16} className="text-brand" /> Health & Team Pulse
+        <div className="rounded-xl border border-border-default bg-surface p-5 shadow-xs flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-text flex items-center gap-2">
+            <ShieldCheck size={16} className="text-brand" /> Team Contributor Workload
           </h3>
-          <div className="flex flex-col gap-3 text-xs">
-            <div className="p-3 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <span className="font-semibold">Sprint Pace:</span> On track to complete {donePercent}% of planned items.
-            </div>
-            <div className="p-3 rounded-md bg-sky-50 text-sky-800 border border-sky-200">
-              <span className="font-semibold">Active Contributors:</span> {new Set(issues.map(i => i.assignee?.name).filter(Boolean)).size || 1} team members assigned.
-            </div>
-            <div className="p-3 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-              <span className="font-semibold">Attention Needed:</span> {todoCount} tasks pending assignment or start.
-            </div>
+          <div className="flex flex-col gap-3">
+            {memberWorkloads.length === 0 ? (
+              <p className="text-xs text-subtle italic py-3 text-center">No assigned contributors yet.</p>
+            ) : (
+              memberWorkloads.map((m) => (
+                <div key={m.userId} className="flex items-center justify-between p-2.5 rounded-lg bg-neutral/30 border border-border-default">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={m.userName} size={24} />
+                    <div>
+                      <p className="text-xs font-bold text-default">{m.userName}</p>
+                      <span className="text-[10px] text-subtle font-mono">{m.assignedPoints} story points assigned</span>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${m.statusBadgeClass}`}>
+                    {m.utilizationPct}% Capacity ({m.status})
+                  </span>
+                </div>
+              ))
+            )}
+            {unassignedCount > 0 && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-700 dark:text-amber-400">
+                ⚠️ {unassignedCount} task{unassignedCount === 1 ? "" : "s"} currently unassigned.
+              </div>
+            )}
           </div>
         </div>
       </div>
