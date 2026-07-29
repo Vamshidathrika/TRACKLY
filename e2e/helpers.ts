@@ -11,6 +11,8 @@ export async function loginDemo(page: import("@playwright/test").Page) {
   await page.locator('input[name="password"]').fill("password123");
   await page.locator('input[name="siteName"]').fill("Demo Workspace");
   await page.getByRole("button", { name: /create workspace/i }).click();
-  await expect(page).toHaveURL(/\/your-work/);
+  // Signup writes user + site + membership and hashes a password, each a
+  // database round trip — comfortably past Playwright's 5s expect default.
+  await expect(page).toHaveURL(/\/your-work/, { timeout: 30_000 });
 }
 
