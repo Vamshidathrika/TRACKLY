@@ -7,7 +7,7 @@ import { getCache, setCache } from "../redis";
  * Returns lightweight card payloads (avoids pulling description, history, attachments, worklogs)
  */
 export const getBoardIssues = cache(async (projectId: string, sprintId?: string) => {
-  return prisma.issue.findMany({
+  const rows = await prisma.issue.findMany({
     where: {
       projectId,
       ...(sprintId ? { sprintId } : {}),
@@ -31,10 +31,24 @@ export const getBoardIssues = cache(async (projectId: string, sprintId?: string)
       assignee: {
         select: { id: true, name: true, avatarUrl: true },
       },
+      // Aggregate worklog hours so cards show real logged time without a
+      // separate detail-fetch round-trip. _sum is a single GROUP BY in SQL.
+      workLogs: {
+        select: { hours: true },
+      },
     },
     orderBy: { rank: "asc" },
   });
+
+  // Collapse workLogs array into a scalar so downstream code sees loggedHours
+  // directly on the card, matching the shape getIssueDetail returns.
+  return rows.map((r) => ({
+    ...r,
+    loggedHours: r.workLogs.reduce((sum, w) => sum + Number(w.hours ?? 0), 0),
+    workLogs: undefined, // strip the raw array — callers use the scalar
+  }));
 });
+
 
 /**
  * Core Issue Metadata Query

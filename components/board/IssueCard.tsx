@@ -167,10 +167,10 @@ function IssueCardComponent({
             e.stopPropagation();
             setShowTimeModal(true);
           }}
-          className="flex flex-col gap-1 cursor-pointer pt-1 group/timebar"
+          className="flex flex-col gap-1.5 cursor-pointer pt-1 group/timebar"
           title="Click to log time spent"
         >
-          {/* Label row: clock + logged on left, estimated on right */}
+          {/* Label row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-[10px] text-text-subtle group-hover/timebar:text-brand transition-colors">
               <Clock size={10} />
@@ -182,17 +182,19 @@ function IssueCardComponent({
               </span>
             )}
           </div>
-          {/* Progress track */}
-          <div className="h-[3px] w-full rounded-full bg-neutral overflow-hidden">
+          {/* Progress track — explicit grey so it's always visible */}
+          <div className="h-[5px] w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
             <div
               style={{
                 width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
-                transition: "width 0.4s ease",
+                transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
               }}
-              className={`h-full rounded-full ${
+              className={`h-full rounded-full shadow-sm ${
                 estimatedHours > 0 && loggedHours >= estimatedHours
                   ? "bg-red-400"
-                  : "bg-brand"
+                  : loggedHours > 0
+                  ? "bg-brand"
+                  : ""
               }`}
             />
           </div>

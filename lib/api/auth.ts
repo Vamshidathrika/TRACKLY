@@ -114,18 +114,24 @@ async function touchLastUsed(keyId: string, lastUsedAt: Date | null, now: Date):
   }
 }
 
+/**
+ * Throttles token guessing per source address. Throws 429 once the source has
+ * burnt through its failure budget, so a scanner gets a wall rather than an
+ * unlimited oracle — but a limiter outage never blocks a legitimate 401.
+ */
 async function recordAuthFailure(headers: Headers): Promise<void> {
+  let result;
   try {
-    const result = await consumeRateLimit(
+    result = await consumeRateLimit(
       rateLimitKeys.authFailure(clientIdentifier(headers)),
       AUTH_FAILURE_LIMIT
     );
-    if (!result.allowed) {
-      throw apiError.rateLimited(result.retryAfterSeconds);
-    }
   } catch (err) {
-    if (err instanceof Error && err.name === "ApiError") throw err;
     console.error("[api/auth] auth-failure throttle unavailable:", err);
+    return;
+  }
+  if (!result.allowed) {
+    throw apiError.rateLimited(result.retryAfterSeconds);
   }
 }
 
