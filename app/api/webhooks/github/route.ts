@@ -19,7 +19,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const payload = JSON.parse(rawBody);
+    let payload: any;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
 
     // 2. Resolve Multi-Tenant Site (tenantId)
     let siteId: string | null = null;
@@ -44,14 +49,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // Fallback: If single tenant site exists
     if (!siteId) {
-      const firstSite = await prisma.site.findFirst({ select: { id: true } });
-      if (firstSite) siteId = firstSite.id;
-    }
-
-    if (!siteId) {
-      return NextResponse.json({ message: "No matching tenant site found" }, { status: 200 });
+      return NextResponse.json({ message: "No matching tenant site found" }, { status: 404 });
     }
 
     // 3. Dispatch Webhook Event Handlers

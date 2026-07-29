@@ -1,13 +1,21 @@
-import { expect } from "@playwright/test";
-
 export async function loginDemo(page: import("@playwright/test").Page) {
-  await page.goto("/signup");
-  const uniqueEmail = `demo-${Date.now()}-${Math.floor(Math.random() * 10000)}@trackly.dev`;
-  await page.getByPlaceholder("Full name").fill("Demo User");
-  await page.getByPlaceholder("Work email").fill(uniqueEmail);
-  await page.getByPlaceholder("Password (8+ characters)").fill("password123");
-  await page.getByPlaceholder("Site name (e.g. your company)").fill("Demo Workspace");
-  await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/your-work/);
+  if (page.url() === "about:blank" || !page.url().includes("localhost")) {
+    await page.goto("/your-work");
+  }
+  if (page.url().includes("/login")) {
+    await page.locator("#login-email").fill("demo@trackly.dev");
+    await page.locator("#login-password").fill("password123");
+    await page.getByRole("button", { name: /Sign In|Sign in/i }).click();
+    await page.waitForURL(/\/your-work|\/projects/);
+  }
 }
 
+export async function navigateToFirstProject(page: import("@playwright/test").Page) {
+  await loginDemo(page);
+  await page.goto("/projects");
+  const projectLink = page.locator("table tbody tr td a").first();
+  if (await projectLink.isVisible()) {
+    await projectLink.click();
+    await page.waitForURL(/\/projects/);
+  }
+}

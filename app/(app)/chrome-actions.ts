@@ -11,8 +11,13 @@ export async function setThemeAction(pref: ThemePref) {
   });
 }
 
+import { checkProjectAccess } from "@/lib/tenant";
+
 export async function toggleStarAction(projectId: string) {
   const user = await getAuthUser();
+  const access = await checkProjectAccess(user.id, projectId);
+  if (!access) return { starred: false, count: 0, error: "You don't have access to this project" };
+
   const res = await toggleStar(user.id, projectId);
   revalidatePath("/your-work");
   revalidatePath("/projects");

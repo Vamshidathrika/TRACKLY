@@ -10,11 +10,14 @@ import type { NormalizedDevEvent, ParsedFigmaUrl, ParsedLoomUrl, ParsedMiroUrl }
  * no concept of a Trackly user to attribute the report to).
  */
 async function resolveSiteReporterId(siteId: string): Promise<string | null> {
-  const membership = await prisma.membership.findFirst({
+  const membership = await prisma.membership?.findFirst({
     where: { siteId, role: "ADMIN" },
     select: { userId: true },
   });
-  return membership?.userId ?? null;
+  if (membership?.userId) return membership.userId;
+
+  const fallbackUser = await prisma.user.findFirst();
+  return fallbackUser?.id ?? null;
 }
 
 /**
@@ -239,8 +242,8 @@ export async function processSentryWebhook(
     targetProjectId = firstProject.id;
   }
 
-  const leadUser = await prisma.user.findFirst();
-  if (!leadUser) return { success: false };
+  const reporterId = await resolveSiteReporterId(siteId);
+  if (!reporterId) return { success: false };
 
   const stacktraceMarkdown = `### 🚨 Automated Sentry Error Report\n**Environment:** \`${env}\`\n**Culprit:** \`${culprit}\`\n**Timestamp:** ${new Date().toISOString()}\n\n\`\`\`\n${title}\n  at ${culprit}\n\`\`\`\n\n[🔗 View Error in Sentry](${permalink})`;
 
@@ -250,7 +253,7 @@ export async function processSentryWebhook(
     description: stacktraceMarkdown,
     type: "BUG",
     priority: "HIGH",
-    reporterId: leadUser.id,
+    reporterId,
   });
 
   return {
@@ -282,8 +285,8 @@ export async function processZendeskWebhook(
     targetProjectId = firstProject.id;
   }
 
-  const leadUser = await prisma.user.findFirst();
-  if (!leadUser) return { success: false };
+  const reporterId = await resolveSiteReporterId(siteId);
+  if (!reporterId) return { success: false };
 
   const formattedDescription = `### 🎧 Linked Zendesk Customer Ticket #${ticketNumber}\n**Requester Email:** \`${ticket.requester?.email || "customer@acme.com"}\`\n**Zendesk Priority:** \`${priority}\`\n\n> ${description}\n\n[🔗 Open in Zendesk Agent Portal](https://support.zendesk.com/agent/tickets/${ticketNumber})`;
 
@@ -293,7 +296,7 @@ export async function processZendeskWebhook(
     description: formattedDescription,
     type: "BUG",
     priority: priority === "URGENT" ? "HIGHEST" : priority === "HIGH" ? "HIGH" : "MEDIUM",
-    reporterId: leadUser.id,
+    reporterId,
   });
 
   return { success: true, issueKey: issue.key };
@@ -319,8 +322,8 @@ export async function processDatadogWebhook(
     targetProjectId = firstProject.id;
   }
 
-  const leadUser = await prisma.user.findFirst();
-  if (!leadUser) return { success: false };
+  const reporterId = await resolveSiteReporterId(siteId);
+  if (!reporterId) return { success: false };
 
   const issue = await createIssue({
     projectId: targetProjectId,
@@ -328,7 +331,7 @@ export async function processDatadogWebhook(
     description: `### 📊 Datadog APM Alert (${alertStatus})\n\n> ${alertMsg}\n\n[🔗 Open Datadog APM Dashboard](https://app.datadoghq.com)`,
     type: "BUG",
     priority: alertStatus === "ALERT" ? "HIGHEST" : "HIGH",
-    reporterId: leadUser.id,
+    reporterId,
   });
 
   return { success: true, issueKey: issue.key };

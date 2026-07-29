@@ -20,7 +20,7 @@ vi.mock("./redis", () => ({
 }));
 
 import { prisma } from "./prisma";
-import { createInvite, acceptInvite } from "./invites";
+import { createInvite, acceptInvite, getPendingInvites } from "./invites";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -38,6 +38,26 @@ describe("createInvite", () => {
     (prisma.invite.create as any).mockImplementation(async ({ data }: any) => data);
     const inv = await createInvite({ siteId: "s1", email: "x@y.z", role: "MEMBER", projectId: "p1" });
     expect(inv.projectId).toBe("p1");
+  });
+});
+
+describe("getPendingInvites", () => {
+  it("queries active pending invites for a siteId", async () => {
+    (prisma.invite.findMany as any) = vi.fn().mockResolvedValue([
+      { id: "inv-1", email: "user@test.com", siteId: "s1" },
+    ]);
+    const res = await getPendingInvites("s1");
+    expect(prisma.invite.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          siteId: "s1",
+          acceptedAt: null,
+          revokedAt: null,
+        }),
+      })
+    );
+    expect(res).toHaveLength(1);
+    expect(res[0].id).toBe("inv-1");
   });
 });
 
@@ -68,3 +88,4 @@ describe("acceptInvite", () => {
     expect(grantAllProjectAccess).toHaveBeenCalledWith("s1", "u1");
   });
 });
+
