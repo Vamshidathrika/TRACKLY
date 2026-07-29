@@ -84,11 +84,11 @@ export async function fetchGithubRepoStats(
     const commitsData = commitsRes?.ok ? await commitsRes.json() : [];
     const runsData = runsRes?.ok ? await runsRes.json() : { workflow_runs: [] };
 
-    const activeBranches = Array.isArray(branches) ? branches.length : 14;
-    const openPRs = Array.isArray(pulls) ? pulls.filter((p: any) => p.state === "open").length : 2;
-    const mergedPRs = Array.isArray(pulls) ? pulls.filter((p: any) => p.merged_at !== null).length : 5;
+    const activeBranches = Array.isArray(branches) ? branches.length : 0;
+    const openPRs = Array.isArray(pulls) ? pulls.filter((p: any) => p.state === "open").length : 0;
+    const mergedPRs = Array.isArray(pulls) ? pulls.filter((p: any) => p.merged_at !== null).length : 0;
 
-    let pipelineStatus: "Passing" | "Failing" | "In Progress" | "Idle" = "Passing";
+    let pipelineStatus: "Passing" | "Failing" | "In Progress" | "Idle" = "Idle";
     if (Array.isArray(runsData.workflow_runs) && runsData.workflow_runs.length > 0) {
       const latestRun = runsData.workflow_runs[0];
       if (latestRun.status === "in_progress") pipelineStatus = "In Progress";
@@ -100,8 +100,8 @@ export async function fetchGithubRepoStats(
       ? commitsData.slice(0, 5).map((c: any) => {
           const keys = extractTaskKeys(c.commit?.message || "");
           return {
-            hash: c.sha?.substring(0, 7) || "8f3a12b",
-            message: c.commit?.message?.split("\n")[0] || "Update dependencies",
+            hash: c.sha ? c.sha.substring(0, 7) : "",
+            message: c.commit?.message ? c.commit.message.split("\n")[0] : "",
             author: c.commit?.author?.name || c.author?.login || "Developer",
             avatarUrl: c.author?.avatar_url || null,
             committedAt: c.commit?.author?.date || new Date().toISOString(),
