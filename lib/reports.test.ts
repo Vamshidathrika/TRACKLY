@@ -7,7 +7,8 @@ vi.mock("./prisma", () => ({
   },
 }));
 import { prisma } from "./prisma";
-import { getBurndownData, getVelocityData, getProjectMetrics, formatReportCSV } from "./reports";
+import { getBurndownData, getVelocityData, getProjectMetrics, formatReportCSV, getLeadCycleTimeMetrics, formatHoursDuration } from "./reports";
+
 
 describe("reports data layer", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -78,5 +79,48 @@ describe("reports data layer", () => {
     ]);
     expect(csv).toContain("Sprint Name,Committed Points,Completed Points");
     expect(csv).toContain('"Sprint 1",10,8');
+  });
+  it("calculates lead time and cycle time metrics for completed issues", async () => {
+    const now = new Date();
+    const createdAt = new Date(now.getTime() - 48 * 3_600_000); // 48h ago
+    const firstWorklogAt = new Date(now.getTime() - 24 * 3_600_000); // 24h ago
+
+    (prisma.issue.findMany as any).mockResolvedValue([
+      {
+        id: "i1",
+        key: "TRK-100",
+        summary: "Fix login page",
+        priority: "HIGH",
+        createdAt,
+        updatedAt: now,
+        dueDate: null,
+        workLogs: [{ createdAt: firstWorklogAt }],
+      },
+    ]);
+
+    const summary = await getLeadCycleTimeMetrics("p1");
+    expect(summary.totalSampled).toBe(1);
+    expect(summary.metrics[0].leadTimeHours).toBeGreaterThanOrEqual(48);
+    expect(summary.metrics[0].cycleTimeHours).toBeGreaterThanOrEqual(24);
+    expect(summary.avgLeadTimeHours).toBeGreaterThan(0);
+    expect(summary.avgCycleTimeHours).toBeGreaterThan(0);
+  });
+
+  it("returns zero averages when no completed issues exist", async () => {
+    (prisma.issue.findMany as any).mockResolvedValue([]);
+    const summary = await getLeadCycleTimeMetrics("p1");
+    expect(summary.totalSampled).toBe(0);
+    expect(summary.avgLeadTimeHours).toBe(0);
+    expect(summary.avgCycleTimeHours).toBe(0);
+  });
+
+  it("formats hour durations into human-readable strings", () => {
+    expect(formatHoursDuration(null)).toBe("—");
+    expect(formatHoursDuration(0)).toBe("0h");
+    expect(formatHoursDuration(0.5)).toBe("30min");
+    expect(formatHoursDuration(6)).toBe("6h");
+    expect(formatHoursDuration(24)).toBe("1d");
+    expect(formatHoursDuration(48)).toBe("2d");
+    expect(formatHoursDuration(27)).toBe("1d 3h");
   });
 });

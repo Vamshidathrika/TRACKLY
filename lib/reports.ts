@@ -108,3 +108,120 @@ export function formatReportCSV(type: "burndown" | "velocity" | "cumulative", da
 
   return "";
 }
+
+/**
+ * Lead Time: total time from issue creation to completion (DONE).
+ * Cycle Time: time from the issue entering IN_PROGRESS to DONE.
+ * Both are core engineering productivity metrics (Linear Cycle Time, Jira Control Chart).
+ */
+export interface LeadCycleTimeMetric {
+  issueId: string;
+  issueKey: string;
+  summary: string;
+  priority: string;
+  leadTimeHours: number | null;   // createdAt → DONE
+  cycleTimeHours: number | null;  // IN_PROGRESS → DONE
+  completedAt: Date | null;
+}
+
+export interface LeadCycleTimeSummary {
+  avgLeadTimeHours: number;
+  avgCycleTimeHours: number;
+  p50LeadTimeHours: number;
+  p50CycleTimeHours: number;
+  p90LeadTimeHours: number;
+  p90CycleTimeHours: number;
+  totalSampled: number;
+  metrics: LeadCycleTimeMetric[];
+}
+
+/** Calculate lead time & cycle time for completed issues in a project */
+export async function getLeadCycleTimeMetrics(
+  projectId: string,
+  limit = 50
+): Promise<LeadCycleTimeSummary> {
+  const issues = await prisma.issue.findMany({
+    where: { projectId, status: "DONE" },
+    select: {
+      id: true,
+      key: true,
+      summary: true,
+      priority: true,
+      createdAt: true,
+      updatedAt: true,
+      dueDate: true,
+      workLogs: {
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+  });
+
+  const metrics: LeadCycleTimeMetric[] = issues.map((issue) => {
+    const completedAt = issue.updatedAt; // updatedAt when status became DONE
+    const firstWorklogAt = issue.workLogs[0]?.createdAt ?? null;
+
+    const leadTimeHours = completedAt
+      ? Math.round((completedAt.getTime() - issue.createdAt.getTime()) / 3_600_000)
+      : null;
+
+    const cycleTimeHours =
+      completedAt && firstWorklogAt
+        ? Math.max(
+            0,
+            Math.round((completedAt.getTime() - firstWorklogAt.getTime()) / 3_600_000)
+          )
+        : null;
+
+    return {
+      issueId: issue.id,
+      issueKey: issue.key,
+      summary: issue.summary,
+      priority: issue.priority,
+      leadTimeHours,
+      cycleTimeHours,
+      completedAt,
+    };
+  });
+
+  const leadTimes = metrics
+    .map((m) => m.leadTimeHours)
+    .filter((v): v is number => v !== null)
+    .sort((a, b) => a - b);
+
+  const cycleTimes = metrics
+    .map((m) => m.cycleTimeHours)
+    .filter((v): v is number => v !== null)
+    .sort((a, b) => a - b);
+
+  const percentile = (arr: number[], pct: number) =>
+    arr.length > 0 ? arr[Math.floor((arr.length - 1) * pct)] : 0;
+
+  const avg = (arr: number[]) =>
+    arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+
+  return {
+    avgLeadTimeHours: avg(leadTimes),
+    avgCycleTimeHours: avg(cycleTimes),
+    p50LeadTimeHours: percentile(leadTimes, 0.5),
+    p50CycleTimeHours: percentile(cycleTimes, 0.5),
+    p90LeadTimeHours: percentile(leadTimes, 0.9),
+    p90CycleTimeHours: percentile(cycleTimes, 0.9),
+    totalSampled: metrics.length,
+    metrics,
+  };
+}
+
+/** Format hours into human-readable string (e.g. "2d 3h", "45min") */
+export function formatHoursDuration(hours: number | null): string {
+  if (hours === null || hours < 0) return "—";
+  if (hours > 0 && hours < 1) return `${Math.round(hours * 60)}min`;
+  const days = Math.floor(hours / 24);
+  const remainHours = hours % 24;
+  if (days === 0) return `${hours}h`;
+  if (remainHours === 0) return `${days}d`;
+  return `${days}d ${remainHours}h`;
+}
