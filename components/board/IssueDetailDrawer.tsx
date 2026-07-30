@@ -474,6 +474,7 @@ export function IssueDetailDrawer({
       applyOptimisticIssue({ status: newStatus });
       const res = await updateIssueFieldAction(issue.id, "status", newStatus);
       if (res?.error) {
+        applyOptimisticIssue({ status: issue.status });
         showToast(`Could not update status: ${res.error}`);
         return;
       }
