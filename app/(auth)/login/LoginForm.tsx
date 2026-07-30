@@ -32,6 +32,7 @@ export function LoginForm({
     return "Authentication failed. Please try again.";
   };
 
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
   const errorMessage = state.error || getOAuthErrorMessage(errorParam);
 
   return (
@@ -53,6 +54,12 @@ export function LoginForm({
             Sign in to access your Trackly workspace
           </p>
         </div>
+
+        {resetMsg && (
+          <div className="mb-4 p-3 rounded-lg border border-brand/30 bg-brand/10 text-xs font-semibold text-brand">
+            {resetMsg}
+          </div>
+        )}
 
         {/* Optional Google SSO */}
         {googleEnabled && (
@@ -118,7 +125,7 @@ export function LoginForm({
               </label>
               <button
                 type="button"
-                onClick={() => alert("Password reset link will be sent to your email if registered.")}
+                onClick={() => setResetMsg("Password reset link dispatched! Check your inbox if account exists.")}
                 tabIndex={-1}
                 className="text-xs font-semibold text-brand hover:underline cursor-pointer"
               >

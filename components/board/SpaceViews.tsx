@@ -679,7 +679,13 @@ export function AutomationModal({
             <div className="py-6 text-center text-xs text-text-subtle border border-dashed border-border rounded-lg bg-neutral/20 flex flex-col items-center gap-1.5">
               <Zap size={20} className="text-text-subtle opacity-50" />
               <p className="font-semibold text-text">No active automation rules for this project</p>
-              <p className="text-[11px]">Configure rules in Project Settings to automate task transitions.</p>
+              <p className="text-[11px]">Configure rules in Project Settings or Settings &rarr; Automation to automate task transitions.</p>
+              <a
+                href="/settings/automation"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand hover:underline"
+              >
+                Open Automation Settings &rarr;
+              </a>
             </div>
           ) : (
             rules.map((rule, idx) => (

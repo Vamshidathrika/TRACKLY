@@ -123,7 +123,11 @@ export function TimeLogModal({
 
   const totalLogged = currentLoggedHours + parsedHours;
   const progressPercent =
-    currentEstimate > 0 ? Math.min(100, Math.round((totalLogged / currentEstimate) * 100)) : 0;
+    currentEstimate > 0
+      ? Math.min(100, Math.round((totalLogged / currentEstimate) * 100))
+      : totalLogged > 0
+      ? 100
+      : 0;
 
   const quickPresets = ["15m", "30m", "1h", "2h 30m", "45s"];
 
@@ -235,15 +239,17 @@ export function TimeLogModal({
                 <span>Logged: {formatHoursToReadable(totalLogged)} ({totalLogged.toFixed(1)}h)</span>
                 <span>Estimated: {currentEstimate > 0 ? `${formatHoursToReadable(currentEstimate)} (${currentEstimate.toFixed(1)}h)` : "Not set"}</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-border/60 overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
                 <div
                   style={{ width: `${progressPercent}%` }}
                   className={`h-full transition-all duration-500 ${
-                    progressPercent < 34
-                      ? "bg-rose-500"
-                      : progressPercent < 100
-                      ? "bg-amber-500"
-                      : "bg-emerald-500"
+                    currentEstimate > 0 && totalLogged >= currentEstimate
+                      ? "bg-red-400"
+                      : totalLogged > 0
+                      ? currentEstimate > 0
+                        ? "bg-brand"
+                        : "bg-zinc-300 dark:bg-zinc-600"
+                      : ""
                   }`}
                 />
               </div>

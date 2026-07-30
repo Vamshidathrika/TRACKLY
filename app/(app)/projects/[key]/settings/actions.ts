@@ -285,3 +285,72 @@ export async function revokeShareLinkAction(projectKey: string) {
     throw e;
   }
 }
+
+export async function createProjectComponentAction(
+  projectId: string,
+  name: string,
+  description?: string
+) {
+  try {
+    const { userId } = await requireMembership();
+    if (!(await checkProjectAdmin(userId, projectId))) {
+      return { error: "Only board owners and workspace admins can manage components" };
+    }
+    const { prisma } = await import("@/lib/prisma");
+
+    const component = await prisma.projectComponent.create({
+      data: {
+        projectId,
+        name: name.trim(),
+        description: description?.trim() || null,
+        leadId: userId,
+      },
+      include: {
+        lead: { select: { name: true } },
+      },
+    });
+
+    revalidatePath("/projects");
+    return {
+      success: true,
+      component: {
+        id: component.id,
+        name: component.name,
+        description: component.description || "",
+        leadName: component.lead?.name || "Unassigned",
+      },
+    };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function deleteProjectComponentAction(componentId: string) {
+  try {
+    const { userId } = await requireMembership();
+    const { prisma } = await import("@/lib/prisma");
+
+    const comp = await prisma.projectComponent.findUnique({
+      where: { id: componentId },
+      select: { projectId: true },
+    });
+
+    if (!comp) return { error: "Component not found" };
+
+    if (!(await checkProjectAdmin(userId, comp.projectId))) {
+      return { error: "Only board owners and workspace admins can delete components" };
+    }
+
+    await prisma.projectComponent.delete({
+      where: { id: componentId },
+    });
+
+    revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+

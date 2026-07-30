@@ -508,13 +508,23 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
 
 
   // Superpower Action: AI Acceptance Criteria Generator
-  const handleAiGenerateAcceptanceCriteria = () => {
-    const acTemplate = `\n\n### Acceptance Criteria (Definition of Done)\n- [ ] **Given** the user inspects ${issue.key}, **When** they edit any field, **Then** state updates instantly (<10ms).\n- [ ] **Given** a blocker issue is unresolved, **When** user attempts resolution, **Then** a blocker alert prevents invalid transition.\n- [ ] **Given** screenshot image is copied to clipboard, **When** user presses Cmd+V, **Then** file attaches automatically.`;
-    
-    const newDesc = description ? `${description}${acTemplate}` : acTemplate.trim();
-    setDescription(newDesc);
-    setIsEditingDescription(true);
-    showToast("AI generated Acceptance Criteria template!");
+  const handleAiGenerateAcceptanceCriteria = async () => {
+    try {
+      const { generateAcceptanceCriteriaAction } = await import("@/app/(app)/ai/actions");
+      const res = await generateAcceptanceCriteriaAction(issue.summary, description);
+      if (res.success && res.criteria) {
+        const newDesc = description ? `${description}\n\n${res.criteria}` : res.criteria;
+        setDescription(newDesc);
+        setIsEditingDescription(true);
+        showToast("AI generated Acceptance Criteria template!");
+      }
+    } catch {
+      const acTemplate = `\n\n### Acceptance Criteria (Definition of Done)\n- [ ] **Given** the user inspects ${issue.key}, **When** they edit any field, **Then** state updates instantly (<10ms).\n- [ ] **Given** a blocker issue is unresolved, **When** user attempts resolution, **Then** a blocker alert prevents invalid transition.\n- [ ] **Given** screenshot image is copied to clipboard, **When** user presses Cmd+V, **Then** file attaches automatically.`;
+      const newDesc = description ? `${description}${acTemplate}` : acTemplate.trim();
+      setDescription(newDesc);
+      setIsEditingDescription(true);
+      showToast("AI generated Acceptance Criteria template!");
+    }
   };
 
   // Superpower Action: AI Executive Summary Recap

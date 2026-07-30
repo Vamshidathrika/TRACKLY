@@ -85,15 +85,15 @@ export async function fetchUserProjectsAction() {
 export async function fetchWorkspaceMembersAction() {
   const { siteId } = await requireMembership();
 
-  return prisma.user.findMany({
-    where: {
-      memberships: {
-        some: { siteId },
-      },
+  // Direct query: much faster than nested memberships lookup
+  const members = await prisma.membership.findMany({
+    where: { siteId },
+    select: {
+      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
     },
-    select: { id: true, name: true, email: true, avatarUrl: true },
-    orderBy: { name: "asc" },
+    orderBy: { user: { name: "asc" } },
   });
+  return members.map((m) => m.user);
 }
 
 export async function createSubtaskAction(input: {

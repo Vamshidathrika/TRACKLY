@@ -348,23 +348,29 @@ export async function logWorkAction(
     });
 
     revalidatePath(`/projects/${issue.project.key}/issues/${issue.key}`);
-    revalidatePath("/projects");
+    // Tag-based revalidation is faster than full path revalidation
+    const { revalidateTag } = await import("next/cache");
+    revalidateTag(`project:${issue.project.id}`);
 
-    // Fire-and-forget: watcher notifications run in background
-    void Promise.all(
-      issue.watchers
-        .filter((w) => w.userId !== user.id)
-        .map((w) =>
-          createNotification({
-            userId: w.userId,
-            actorId: user.id,
-            type: "STATUS_CHANGE",
-            title: `Work logged on ${issue.key}`,
-            message: `${user.name} logged ${hours}h on ${issue.key}`,
-            link: `/projects/${issue.project.key}/issues/${issue.key}`,
-          })
-        )
-    ).catch(() => {});
+    // Fire-and-forget: run notifications async (don't block response)
+    if (typeof setImmediate !== 'undefined') {
+      setImmediate(() =>
+        void Promise.all(
+          issue.watchers
+            .filter((w) => w.userId !== user.id)
+            .map((w) =>
+              createNotification({
+                userId: w.userId,
+                actorId: user.id,
+                type: "STATUS_CHANGE",
+                title: `Work logged on ${issue.key}`,
+                message: `${user.name} logged ${hours}h on ${issue.key}`,
+                link: `/projects/${issue.project.key}/issues/${issue.key}`,
+              })
+            )
+        ).catch(() => {})
+      );
+    }
 
     return { success: true, log };
   } catch (e) {

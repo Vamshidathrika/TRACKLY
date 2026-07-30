@@ -59,8 +59,8 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
     }),
   ]);
 
-  const activeUsers = projectMembers.map((m) => m.user);
-  const availableUsers = activeUsers.length > 0 ? activeUsers : siteUsers;
+  // Board members only - no fallback to site users
+  const availableUsers = projectMembers.map((m) => m.user);
   const isOwnerOrAdmin = role === "ADMIN" || project.leadId === userId || access.projectRole === "WORKSPACE_ADMIN" || access.projectRole === "ADMIN";
 
   return (

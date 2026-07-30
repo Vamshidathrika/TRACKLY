@@ -56,19 +56,34 @@ export function IssueWorkLogsSection({
           </Button>
         </div>
 
-        {Number(estimateHours) > 0 && (
+        {(Number(estimateHours) > 0 || loggedHours > 0) && (
           <div className="flex flex-col gap-1 pt-1 border-t border-border/40">
             {(() => {
               const estNum = Number(estimateHours);
-              const pct = estNum > 0 ? Math.min(100, Math.round((loggedHours / estNum) * 100)) : 0;
-              const barColor = pct < 34 ? "bg-rose-500" : pct < 100 ? "bg-amber-500" : "bg-emerald-500";
+              const pct =
+                estNum > 0
+                  ? Math.min(100, Math.round((loggedHours / estNum) * 100))
+                  : loggedHours > 0
+                  ? 100
+                  : 0;
+              const barColor =
+                estNum > 0 && loggedHours >= estNum
+                  ? "bg-red-400"
+                  : loggedHours > 0
+                  ? estNum > 0
+                    ? "bg-brand"
+                    : "bg-zinc-300 dark:bg-zinc-600"
+                  : "";
               return (
                 <>
                   <div className="flex justify-between text-[10px] text-text-subtle font-medium">
                     <span>Worklog Progress ({pct}%)</span>
-                    <span>{formatHoursToReadable(loggedHours)} of {formatHoursToReadable(estNum)}</span>
+                    <span>
+                      {formatHoursToReadable(loggedHours)}{" "}
+                      {estNum > 0 ? `of ${formatHoursToReadable(estNum)}` : ""}
+                    </span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-neutral overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
                     <div style={{ width: `${pct}%` }} className={`h-full transition-all duration-500 ${barColor}`} />
                   </div>
                 </>

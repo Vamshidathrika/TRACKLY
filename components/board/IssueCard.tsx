@@ -191,14 +191,22 @@ function IssueCardComponent({
           <div className="h-[5px] w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
             <div
               style={{
-                width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
+                width: `${
+                  estimatedHours > 0
+                    ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100))
+                    : loggedHours > 0
+                    ? 100
+                    : 0
+                }%`,
                 transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
               }}
               className={`h-full rounded-full shadow-sm ${
                 estimatedHours > 0 && loggedHours >= estimatedHours
                   ? "bg-red-400"
                   : loggedHours > 0
-                  ? "bg-brand"
+                  ? estimatedHours > 0
+                    ? "bg-brand"
+                    : "bg-zinc-300 dark:bg-zinc-600"
                   : ""
               }`}
             />

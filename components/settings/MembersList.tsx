@@ -42,7 +42,7 @@ export function MembersList({ members: initialMembers }: { members: MemberItem[]
     if (res?.success) {
       setMembers((prev) => prev.filter((m) => m.user.id !== userId));
     } else if (res?.error) {
-      alert(res.error);
+      setInviteResult({ error: res.error });
     }
   };
 

@@ -811,12 +811,26 @@ export function IssueDetail({
                         {loggedHours.toFixed(1)}h / {estimatedHours.toFixed(1)}h
                       </span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-neutral overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
                       <div
                         style={{
-                          width: `${estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0}%`,
+                          width: `${
+                            estimatedHours > 0
+                              ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100))
+                              : loggedHours > 0
+                              ? 100
+                              : 0
+                          }%`,
                         }}
-                        className="h-full bg-brand transition-all"
+                        className={`h-full transition-all ${
+                          estimatedHours > 0 && loggedHours >= estimatedHours
+                            ? "bg-red-400"
+                            : loggedHours > 0
+                            ? estimatedHours > 0
+                              ? "bg-brand"
+                              : "bg-zinc-300 dark:bg-zinc-600"
+                            : ""
+                        }`}
                       />
                     </div>
                     <button

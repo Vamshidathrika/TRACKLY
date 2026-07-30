@@ -75,6 +75,12 @@ const selectClass =
 
 import { useRouter } from "next/navigation";
 
+// Cache to avoid re-fetching on every modal open
+let cachedProjects: { id: string; name: string; key: string }[] | null = null;
+let cachedMembers: { id: string; name: string; email: string }[] | null = null;
+let projectsFetchPromise: Promise<any> | null = null;
+let membersFetchPromise: Promise<any> | null = null;
+
 export function CreateIssueModal({
   trigger,
   defaultProjectId,
@@ -103,15 +109,37 @@ export function CreateIssueModal({
   useEffect(() => {
     if (open) {
       setSelectedType(defaultType || "STORY");
-      fetchUserProjectsAction().then((projs) => {
-        setProjects(projs);
+      
+      // Use cached results or fetch once and cache
+      if (cachedProjects) {
+        setProjects(cachedProjects);
         if (defaultProjectId) {
           setSelectedProjectId(defaultProjectId);
-        } else if (projs.length > 0) {
-          setSelectedProjectId((prev) => prev || projs[0].id);
+        } else if (cachedProjects.length > 0) {
+          setSelectedProjectId((prev) => prev || cachedProjects![0].id);
         }
-      });
-      fetchWorkspaceMembersAction().then(setMembers);
+      } else {
+        projectsFetchPromise = projectsFetchPromise || fetchUserProjectsAction();
+        projectsFetchPromise.then((projs) => {
+          cachedProjects = projs;
+          setProjects(projs);
+          if (defaultProjectId) {
+            setSelectedProjectId(defaultProjectId);
+          } else if (projs.length > 0) {
+            setSelectedProjectId((prev) => prev || projs[0].id);
+          }
+        });
+      }
+      
+      if (cachedMembers) {
+        setMembers(cachedMembers);
+      } else {
+        membersFetchPromise = membersFetchPromise || fetchWorkspaceMembersAction();
+        membersFetchPromise.then((m) => {
+          cachedMembers = m;
+          setMembers(m);
+        });
+      }
     }
   }, [open, defaultType, defaultProjectId]);
 
