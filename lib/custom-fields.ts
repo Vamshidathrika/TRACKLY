@@ -275,7 +275,7 @@ export function toPrismaValue(
     return { valueDate: value === null || value === undefined ? null : new Date(value as string) };
   }
   if (column === "valueTextArray") {
-    return { valueTextArray: Array.isArray(value) ? value : [] };
+    return { valueTextArray: value === null || value === undefined ? null : (Array.isArray(value) ? value : []) };
   }
   return { [column]: value ?? null };
 }

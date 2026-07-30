@@ -190,6 +190,12 @@ describe("column mapping", () => {
     expect(data).toEqual({ valueTextArray: ["Production", "Staging"] });
   });
 
+  test("toPrismaValue clears a MULTI_SELECT field when passed null", () => {
+    const field = baseField({ type: "MULTI_SELECT" });
+    const data = toPrismaValue(field, null);
+    expect(data).toEqual({ valueTextArray: null });
+  });
+
   test("toPrismaValue on a null value clears the mapped column", () => {
     const field = baseField({ type: "TEXT" });
     const data = toPrismaValue(field, null);
