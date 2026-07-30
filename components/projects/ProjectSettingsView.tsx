@@ -122,24 +122,6 @@ export function ProjectSettingsView({
     await deleteCustomFieldAction(fieldId);
   };
 
-  const handleCreateComponent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!compName.trim()) return;
-    const newComp: ComponentItem = {
-      id: `comp-${Date.now()}`,
-      name: compName.trim(),
-      description: compDesc.trim() || "No description provided",
-      leadName: project.lead.name,
-    };
-    setComponents((prev) => [...prev, newComp]);
-    setCompName("");
-    setCompDesc("");
-  };
-
-  const handleDeleteComponent = (id: string) => {
-    setComponents((prev) => prev.filter((c) => c.id !== id));
-  };
-
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       {/* Settings Navigation Tabs */}

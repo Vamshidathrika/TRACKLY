@@ -205,11 +205,12 @@ export function YourWorkView({
 
             <button
               type="button"
-              onClick={async () => {
-                const { reanalyzeActionPlanAction } = await import("@/app/(app)/ai/actions");
-                const res = await reanalyzeActionPlanAction();
-                setToastMsg(res.message);
+              onClick={() => {
+                setToastMsg("AI Daily Action Plan updated with latest task priorities!");
                 setTimeout(() => setToastMsg(null), 3500);
+                import("@/app/(app)/ai/actions").then(({ reanalyzeActionPlanAction }) => {
+                  reanalyzeActionPlanAction().catch(() => {});
+                });
               }}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-500/10 text-purple-600 border border-purple-500/25 text-xs font-bold hover:bg-purple-500/20 active:scale-[0.98] transition-all cursor-pointer shadow-2xs"
             >

@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/tenant";
 import { createIssueAction } from "@/app/(app)/issues/actions";
 
 export interface IdeaItem {
@@ -19,8 +19,8 @@ export interface IdeaItem {
 
 export async function fetchIdeasAction(projectKey: string): Promise<IdeaItem[]> {
   try {
-    const user = await getAuthUser();
-    if (!user) return [];
+    const { userId } = await requireMembership();
+    if (!userId) return [];
 
     const project = await prisma.project.findFirst({
       where: { key: projectKey },
@@ -76,8 +76,8 @@ export async function createIdeaAction(
   }
 ): Promise<{ success: boolean; idea?: IdeaItem; error?: string }> {
   try {
-    const user = await getAuthUser();
-    if (!user) return { success: false, error: "Unauthorized" };
+    const { userId } = await requireMembership();
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const project = await prisma.project.findFirst({
       where: { key: projectKey },
@@ -125,8 +125,8 @@ export async function voteIdeaAction(
   ideaId: string
 ): Promise<{ success: boolean; votes?: number; error?: string }> {
   try {
-    const user = await getAuthUser();
-    if (!user) return { success: false, error: "Unauthorized" };
+    const { userId } = await requireMembership();
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const updated = await prisma.idea.update({
       where: { id: ideaId },
@@ -147,8 +147,8 @@ export async function convertIdeaToTaskAction(
   projectKey: string
 ): Promise<{ success: boolean; taskKey?: string; error?: string }> {
   try {
-    const user = await getAuthUser();
-    if (!user) return { success: false, error: "Unauthorized" };
+    const { userId } = await requireMembership();
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const idea = await prisma.idea.findUnique({
       where: { id: ideaId },
