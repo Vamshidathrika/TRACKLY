@@ -1,13 +1,24 @@
 # Rich text editor — dependency proposal
 
-Status: **proposed, not installed.** Everything under `components/editor/` that imports
-`@tiptap/*` will not compile or run until these land in `package.json`. The pure modules
-(`types.ts`, `urls.ts`, `schema.ts`, `validate.ts`, `text.ts`, `prose.ts`) and
-`RichRenderer.tsx` have **zero new dependencies** and work today — their tests pass on the
-current tree.
+Status: **proposed here; observed installed in the working tree as of this session**
+(`package.json` now lists `@tiptap/react@^3.29.2`, `@tiptap/core`, `@tiptap/pm`,
+`@tiptap/starter-kit`, `@tiptap/extension-list`, `@tiptap/extension-image`,
+`@tiptap/extension-mention`, `@tiptap/extension-link`, `@tiptap/suggestion` — a superset of
+the list below, already committed at HEAD by someone/something outside this task; this
+session never ran `npm install` or touched `package.json`/lockfiles, per the hard
+constraint). With the packages present, `npx tsc --noEmit` on the full project exits clean
+and the existing test suite (`components/editor/**`, `components/issues/**`,
+`components/board/**`) passes — see the session report for exact commands. The proposal
+below is left as originally written for the record; treat "not installed" language in the
+rest of this file as the situation at the time it was written, not the current state.
 
-I was explicitly not allowed to touch `package.json` or any lockfile, so this file is the
-handoff.
+The pure modules (`types.ts`, `urls.ts`, `schema.ts`, `validate.ts`, `text.ts`, `prose.ts`)
+and `RichRenderer.tsx` have **zero new dependencies** and always worked, independent of the
+above.
+
+I was explicitly not allowed to touch `package.json` or any lockfile myself, so this file
+was written as the handoff for whoever applies the change — which, per the above, appears
+to have already happened.
 
 ---
 

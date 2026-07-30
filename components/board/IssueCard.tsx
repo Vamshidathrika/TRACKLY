@@ -11,6 +11,7 @@ import { TimeLogModal } from "@/components/issues/TimeLogModal";
 import { logWorkAction } from "@/app/(app)/projects/[key]/issues/actions";
 import { calculateIssueSLA } from "@/lib/sla";
 import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
+import type { RichDoc } from "@/components/editor/types";
 
 export type BoardUserOption = {
   id: string;
@@ -25,6 +26,9 @@ export type BoardIssue = {
   key: string;
   summary: string;
   description?: string | null;
+  /** ProseMirror doc. Absent from the lightweight board-card fetch (getBoardIssues);
+   *  populated once the drawer's own detail fetch resolves — see useIssueDetailDrawer.ts. */
+  descriptionJson?: RichDoc | null;
   type: IssueType;
   status: IssueStatus;
   priority: IssuePriority;

@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 import { ShieldAlert, Sparkles, Paperclip, ArrowRight, Layers, History as HistoryIcon, Clock, MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { TimeLogModal, formatHoursToReadable } from "@/components/issues/TimeLogModal";
-import { logWorkAction, updateIssueFieldAction } from "@/app/(app)/projects/[key]/issues/actions";
+import { logWorkAction, updateIssueFieldAction, updateIssueDescriptionAction } from "@/app/(app)/projects/[key]/issues/actions";
 import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
 import { RichRenderer } from "@/components/editor/RichRenderer";
 import type { MentionMember, RichValue } from "@/components/editor/types";
@@ -54,21 +54,26 @@ export function IssueDetailDrawer({
     avatarUrl: u.avatarUrl,
   }));
 
-  // `updateIssueFieldAction`'s `description` field only accepts a plain
-  // string today (see app/(app)/projects/[key]/issues/actions.ts — owned by
-  // another agent right now). The rich doc round-trips in this session via
-  // `descriptionValueRef`; only its plaintext mirror is persisted until a
-  // `descriptionJson` write path lands — see .plan/editor-deps.md,
-  // "Server-side wiring still required". Written directly here (not via
-  // state.handleDescriptionSave, which only knows the hook's own plain-text
-  // `description` state) so useIssueDetailDrawer.ts stays untouched.
+  // Written directly here (not via state.handleDescriptionSave, which only
+  // knows the hook's own plain-text `description` state) to keep the rich-doc
+  // save path scoped to this component.
   const handleRichDescriptionSave = async () => {
-    const nextText = (descriptionValueRef.current?.text ?? state.description).trim();
+    const value = descriptionValueRef.current;
     state.setIsEditingDescription(false);
-    if (nextText === (issue.description || "")) return;
-    state.setDescription(nextText);
-    onUpdateIssue({ ...issue, description: nextText });
-    await updateIssueFieldAction(issue.id, "description", nextText);
+    if (value) {
+      const nextText = value.text.trim();
+      if (nextText === state.description.trim() && state.descriptionJson) return;
+      state.setDescription(nextText);
+      state.setDescriptionJson(value.doc);
+      onUpdateIssue({ ...issue, description: nextText, descriptionJson: value.doc });
+      await updateIssueDescriptionAction(issue.id, value.doc);
+    } else {
+      const nextText = state.description.trim();
+      if (nextText === (issue.description || "")) return;
+      state.setDescription(nextText);
+      onUpdateIssue({ ...issue, description: nextText });
+      await updateIssueFieldAction(issue.id, "description", nextText);
+    }
   };
 
   return (
@@ -219,7 +224,7 @@ export function IssueDetailDrawer({
                 {state.isEditingDescription ? (
                   <div className="flex flex-col gap-2">
                     <RichEditorLoader
-                      initialDoc={(issue as any).descriptionJson ?? null}
+                      initialDoc={state.descriptionJson ?? null}
                       initialText={state.description}
                       ariaLabel="Issue description"
                       placeholder="Add a detailed description…"
@@ -252,8 +257,8 @@ export function IssueDetailDrawer({
                     className="min-h-[90px] text-sm text-text bg-surface-sunken hover:bg-neutral/60 rounded-xl p-3 cursor-pointer transition-colors border border-border/50"
                   >
                     <RichRenderer
-                      doc={(issue as any).descriptionJson}
-                      fallbackText={issue.description}
+                      doc={state.descriptionJson ?? issue.descriptionJson}
+                      fallbackText={state.description || issue.description}
                       emptyLabel="Add a detailed description…"
                       className="text-sm"
                     />

@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { prisma } from "./prisma";
-import type { IssueType, IssueStatus, IssuePriority } from "@prisma/client";
+import type { IssueType, IssueStatus, IssuePriority, Prisma } from "@prisma/client";
 import { getCache, setCache, delCache } from "./redis";
 
 export async function canUserChangeStatus(issueId: string, userId: string): Promise<boolean> {
@@ -154,6 +154,8 @@ export async function updateIssue(
     startDate?: Date | null;
     dueDate?: Date | null;
     labels?: string[];
+    /** Validated ProseMirror doc — caller must run it through validateRichDoc() first. */
+    descriptionJson?: Prisma.InputJsonValue | null;
   }
 ) {
   const current = await prisma.issue.findUnique({ where: { id: issueId } });
@@ -170,6 +172,11 @@ export async function updateIssue(
   const historyEntries: { field: string; oldValue?: string; newValue?: string }[] = [];
 
   for (const [key, value] of Object.entries(data)) {
+    // The doc rides alongside `description` (its plaintext mirror) in the same
+    // call; diffing it here with String(oldVal ?? "") would stringify a whole
+    // JSON tree into an unreadable IssueHistory row on every edit. `description`
+    // already produces the meaningful, human-readable history entry.
+    if (key === "descriptionJson") continue;
     const oldVal = (current as any)[key];
     if (value !== undefined && String(oldVal ?? "") !== String(value ?? "")) {
       historyEntries.push({
@@ -306,12 +313,19 @@ export async function getIssueByKey(siteId: string, key: string) {
   return issue;
 }
 
-export async function addComment(input: { issueId: string; authorId: string; body: string }) {
+export async function addComment(input: {
+  issueId: string;
+  authorId: string;
+  body: string;
+  /** Validated ProseMirror doc — caller must run it through validateRichDoc() first. */
+  bodyJson?: Prisma.InputJsonValue;
+}) {
   const comment = await prisma.comment.create({
     data: {
       issueId: input.issueId,
       authorId: input.authorId,
       body: input.body,
+      ...(input.bodyJson !== undefined ? { bodyJson: input.bodyJson } : {}),
     },
     include: { issue: { select: { key: true, projectId: true } } },
   });

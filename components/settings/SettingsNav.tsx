@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, ShieldCheck, Layers, Sliders, ShieldAlert, GitBranch, Bell, Workflow, Zap, Activity, Palette, Download } from "lucide-react";
+import { Users, ShieldCheck, Layers, Sliders, ShieldAlert, GitBranch, Bell, Workflow, Zap, Activity, Palette, Download, Upload, KeyRound, Webhook } from "lucide-react";
 
 export function SettingsNav() {
   const pathname = usePathname();
@@ -20,6 +20,9 @@ export function SettingsNav() {
     { label: "Security Audit Stream", href: "/settings/audit-logs", icon: Activity },
     { label: "Branding & Themes", href: "/settings/branding", icon: Palette },
     { label: "Data Backup & Export", href: "/settings/export", icon: Download },
+    { label: "Import from Jira", href: "/settings/import", icon: Upload },
+    { label: "API Keys", href: "/settings/api-keys", icon: KeyRound },
+    { label: "Webhooks", href: "/settings/webhooks", icon: Webhook },
   ];
 
   return (

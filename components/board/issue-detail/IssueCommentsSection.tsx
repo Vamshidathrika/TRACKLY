@@ -5,11 +5,11 @@ import { Send } from "lucide-react";
 import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
 import { RichRenderer } from "@/components/editor/RichRenderer";
 import type { RichEditorHandle } from "@/components/editor/RichEditor";
-import type { MentionMember, RichValue } from "@/components/editor/types";
+import type { MentionMember, RichValue, RichDoc } from "@/components/editor/types";
 
 interface IssueCommentsSectionProps {
   commentsList: any[];
-  onPostComment: (text: string) => void;
+  onPostComment: (text: string, doc?: RichDoc) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
   onPasteImage?: (e: any) => void;
   /** Needed for the comment composer's image paste/upload. */
@@ -39,7 +39,7 @@ export function IssueCommentsSection({
   const submitCommentValue = (value: RichValue) => {
     const text = value.text.trim();
     if (!text) return;
-    onPostComment(text);
+    onPostComment(text, value.doc);
     commentEditorRef.current?.clear();
     commentValueRef.current = null;
   };

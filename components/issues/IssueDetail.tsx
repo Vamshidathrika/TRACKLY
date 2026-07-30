@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { DevelopmentPanel } from "@/components/issues/DevelopmentPanel";
 import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
 import { RichRenderer } from "@/components/editor/RichRenderer";
-import type { RichValue } from "@/components/editor/types";
+import type { RichValue, RichDoc } from "@/components/editor/types";
 import {
   Eye,
   Share2,
@@ -49,6 +49,7 @@ import {
 import { TimeLogModal } from "@/components/issues/TimeLogModal";
 import {
   updateIssueFieldAction,
+  updateIssueDescriptionAction,
   postCommentAction,
   deleteCommentAction,
   deleteIssueAction,
@@ -192,17 +193,19 @@ export function IssueDetail({
   };
 
   const handleSaveDesc = async () => {
-    // `updateIssueFieldAction`'s `description` field only accepts a plain
-    // string today (see app/(app)/projects/[key]/issues/actions.ts — that
-    // file is owned by another agent right now). The rich doc round-trips
-    // in this session via `descriptionValueRef`; only its plaintext mirror
-    // is persisted until a `descriptionJson` write path lands. See
-    // .plan/editor-deps.md, "Server-side wiring still required".
-    const nextText = (descriptionValueRef.current?.text ?? description).trim();
-    setDescription(nextText);
+    const value = descriptionValueRef.current;
     setIsEditingDesc(false);
     showToast("Description updated!");
-    await updateIssueFieldAction(issue.id, "description", nextText);
+    if (value) {
+      setDescription(value.text.trim());
+      await updateIssueDescriptionAction(issue.id, value.doc);
+    } else {
+      // Editor never mounted a change (e.g. saved without touching it) —
+      // nothing new to persist beyond the plaintext already in state.
+      const nextText = description.trim();
+      setDescription(nextText);
+      await updateIssueFieldAction(issue.id, "description", nextText);
+    }
   };
 
   const handleStatusChange = (newStatus: IssueStatus) => {
@@ -321,9 +324,9 @@ export function IssueDetail({
     persistField("labels", next.join(","), `Removed label “${label}”`);
   };
 
-  const handleAddComment = (text: string) => {
+  const handleAddComment = (text: string, doc?: RichDoc) => {
     startTransition(async () => {
-      await postCommentAction(issue.id, text);
+      await postCommentAction(issue.id, text, doc);
       showToast("Comment posted!");
     });
   };

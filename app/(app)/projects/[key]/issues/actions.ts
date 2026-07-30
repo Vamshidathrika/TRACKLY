@@ -9,7 +9,9 @@ import { evaluateAutomationTriggers } from "@/lib/automation";
 import { prisma } from "@/lib/prisma";
 import { getBoardIssues } from "@/lib/dal";
 import { checkProjectAccess } from "@/lib/tenant";
-import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
+import type { IssueStatus, IssuePriority, IssueType, LinkRelation, Prisma } from "@prisma/client";
+import { validateRichDoc } from "@/components/editor/validate";
+import { richDocToPlainText, extractMentionUserIds } from "@/components/editor/text";
 
 export async function updateIssueFieldAction(
   issueId: string,
@@ -131,6 +133,42 @@ export async function updateIssueFieldAction(
 }
 
 /**
+ * Rich-text counterpart to `updateIssueFieldAction(issueId, "description", text)`.
+ * Separate from the generic field setter (rather than adding "descriptionJson"
+ * to its `field` union) so a multi-KB document never runs through that
+ * function's `String(oldVal ?? "")` history-diff loop — history keeps logging
+ * the plaintext mirror, exactly as it did before rich text existed.
+ */
+export async function updateIssueDescriptionAction(issueId: string, doc: unknown) {
+  const user = await getAuthUser();
+
+  try {
+    const target = await prisma.issue.findUnique({
+      where: { id: issueId },
+      select: { projectId: true },
+    });
+    if (!target) return { error: "Issue not found" };
+
+    const access = await checkProjectAccess(user.id, target.projectId);
+    if (!access) return { error: "You do not have access to this issue" };
+
+    const result = validateRichDoc(doc);
+    if (!result.ok) return { error: result.error };
+
+    await updateIssue(issueId, user.id, {
+      description: richDocToPlainText(result.doc),
+      descriptionJson: result.doc as unknown as Prisma.InputJsonValue,
+    });
+
+    revalidatePath("/projects");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+
+/**
  * Confirms the caller can reach the board that owns `issueId`.
  *
  * Server actions are addressed by global action id, not by route, so every one
@@ -150,15 +188,22 @@ async function resolveAccessibleIssue(userId: string, issueId: string) {
   return { issue };
 }
 
-export async function postCommentAction(issueId: string, body: string) {
+export async function postCommentAction(issueId: string, body: string, doc?: unknown) {
   const user = await getAuthUser();
   if (!body.trim()) return { error: "Comment cannot be empty" };
+
+  let bodyJson: Prisma.InputJsonValue | undefined;
+  if (doc !== undefined) {
+    const result = validateRichDoc(doc);
+    if (!result.ok) return { error: result.error };
+    bodyJson = result.doc as unknown as Prisma.InputJsonValue;
+  }
 
   try {
     const guard = await resolveAccessibleIssue(user.id, issueId);
     if ("error" in guard) return { error: guard.error };
 
-    await addComment({ issueId, authorId: user.id, body });
+    await addComment({ issueId, authorId: user.id, body, bodyJson });
 
     revalidatePath("/projects");
 
@@ -187,29 +232,58 @@ export async function postCommentAction(issueId: string, body: string) {
           })
         );
 
-        // Check for @mentions
-        const mentionNames = extractMentions(body);
-        for (const name of mentionNames) {
-          // Exact + site-scoped match: `contains` with no site filter let a
-          // mention resolve to a same-named user in a different workspace and
-          // notify them with an excerpt of a comment they have no access to.
-          const mentionedUser = await prisma.user.findFirst({
-            where: {
-              name: { equals: name, mode: "insensitive" },
-              memberships: { some: { siteId: issue.project.siteId } },
-            },
-          });
-          if (mentionedUser && mentionedUser.id !== user.id) {
-            notificationPromises.push(
-              createNotification({
-                userId: mentionedUser.id,
-                actorId: user.id,
-                type: "MENTION",
-                title: `Mentioned on ${issue.key}`,
-                message: `${user.name} mentioned you: "${body.slice(0, 50)}..."`,
-                link: `/projects/${issue.project.key}/issues/${issue.key}`,
-              })
-            );
+        // Rich comments carry exact user ids from the doc (fixes the pre-existing
+        // bug where the name-regex below can't match a display name containing a
+        // space). Plain-text comments (no doc, e.g. via the public API) keep the
+        // legacy name-match path — both are site-scoped so a mention can never
+        // resolve to a same-named user in a different workspace.
+        if (bodyJson) {
+          const mentionedIds = extractMentionUserIds(bodyJson);
+          if (mentionedIds.length > 0) {
+            const mentionedUsers = await prisma.user.findMany({
+              where: {
+                id: { in: mentionedIds },
+                memberships: { some: { siteId: issue.project.siteId } },
+              },
+            });
+            for (const mentionedUser of mentionedUsers) {
+              if (mentionedUser.id === user.id) continue;
+              notificationPromises.push(
+                createNotification({
+                  userId: mentionedUser.id,
+                  actorId: user.id,
+                  type: "MENTION",
+                  title: `Mentioned on ${issue.key}`,
+                  message: `${user.name} mentioned you: "${body.slice(0, 50)}..."`,
+                  link: `/projects/${issue.project.key}/issues/${issue.key}`,
+                })
+              );
+            }
+          }
+        } else {
+          const mentionNames = extractMentions(body);
+          for (const name of mentionNames) {
+            // Exact + site-scoped match: `contains` with no site filter let a
+            // mention resolve to a same-named user in a different workspace and
+            // notify them with an excerpt of a comment they have no access to.
+            const mentionedUser = await prisma.user.findFirst({
+              where: {
+                name: { equals: name, mode: "insensitive" },
+                memberships: { some: { siteId: issue.project.siteId } },
+              },
+            });
+            if (mentionedUser && mentionedUser.id !== user.id) {
+              notificationPromises.push(
+                createNotification({
+                  userId: mentionedUser.id,
+                  actorId: user.id,
+                  type: "MENTION",
+                  title: `Mentioned on ${issue.key}`,
+                  message: `${user.name} mentioned you: "${body.slice(0, 50)}..."`,
+                  link: `/projects/${issue.project.key}/issues/${issue.key}`,
+                })
+              );
+            }
           }
         }
 

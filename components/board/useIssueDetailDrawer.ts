@@ -18,6 +18,7 @@ import { getIssueDetailAction } from "@/app/(app)/projects/[key]/issues/detail-a
 import { getReleasesAction } from "@/app/(app)/projects/[key]/releases/actions";
 import type { BoardIssue, BoardUserOption } from "./IssueCard";
 import type { IssueStatus, IssuePriority, IssueType, LinkRelation } from "@prisma/client";
+import type { RichDoc } from "@/components/editor/types";
 import { ISSUE_TYPES as issueTypes, PRIORITY_CONFIG as priorityIcons, ISSUE_STATUSES as statuses } from "@/lib/issues-config";
 
 // Include mapLinks helper
@@ -85,6 +86,12 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
   // Issue Fields
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
+  // Synced from the detail-fetch effect below once it resolves — the initial
+  // `issue` prop comes from getBoardIssues' lightweight card projection, which
+  // never carries descriptionJson. Until the fetch lands this stays undefined
+  // and callers fall back to issue.descriptionJson (itself usually null on a
+  // fresh board load, same as before this field existed).
+  const [descriptionJson, setDescriptionJson] = useState<RichDoc | null | undefined>(undefined);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
 
@@ -191,6 +198,9 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
 
       setSummary(issue.summary);
       setDescription(issue.description || "");
+      // Reset on issue switch so a previous card's doc doesn't flash for the
+      // new one before its own detail-fetch (below) resolves.
+      if (isNewIssue) setDescriptionJson(issue.descriptionJson ?? undefined);
       setPoints(typeof issue.storyPoints === "number" && issue.storyPoints > 0 ? issue.storyPoints : (issue.storyPoints === 0 ? 0 : ""));
       // The Prisma field is `originalEstimate`; the detail payload also maps it.
       // Check all possible field names to be resilient across card vs detail payload shapes.
@@ -270,6 +280,11 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
         setAttachments(detail.attachments);
         setLinkedIssues(mapLinks(detail.linksOut, detail.linksIn));
         setCommentsList(detail.comments);
+        // The board card projection (getBoardIssues) never carries description
+        // at all; this detail fetch is the first point the drawer sees the real
+        // rich doc (or confirms there isn't one yet).
+        if ((detail as any).description !== undefined) setDescription((detail as any).description || "");
+        setDescriptionJson((detail as any).descriptionJson ?? null);
         setHistoryList(detail.history);
         setWorkLogsList(detail.workLogs);
         setLoggedHours(detail.loggedHours);
@@ -706,11 +721,12 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
     }
   };
 
-  const handlePostComment = (text: string) => {
+  const handlePostComment = (text: string, doc?: unknown) => {
     if (!text.trim()) return;
     const newComm = {
       id: `c-${Date.now()}`,
       body: text,
+      bodyJson: doc,
       createdAt: new Date().toISOString(),
       author: { name: "You", avatarUrl: null },
       reactions: {},
@@ -719,7 +735,7 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
     setCommentInput("");
 
     startTransition(async () => {
-      await postCommentAction(issue.id, text);
+      await postCommentAction(issue.id, text, doc);
     });
   };
 
@@ -757,6 +773,7 @@ export function useIssueDetailDrawer({ issue, onClose, onUpdateIssue, onDeleteIs
     isWideMode, setIsWideMode,
     summary, setSummary,
     description, setDescription,
+    descriptionJson, setDescriptionJson,
     isEditingSummary, setIsEditingSummary,
     isEditingDescription, setIsEditingDescription,
     points, setPoints,

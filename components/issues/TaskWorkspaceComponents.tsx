@@ -15,7 +15,7 @@ import {
 import { RichEditorLoader } from "@/components/editor/RichEditorLoader";
 import { RichRenderer } from "@/components/editor/RichRenderer";
 import type { RichEditorHandle } from "@/components/editor/RichEditor";
-import type { MentionMember, RichValue } from "@/components/editor/types";
+import type { MentionMember, RichValue, RichDoc } from "@/components/editor/types";
 import {
   CheckCircle2,
   Circle,
@@ -548,7 +548,7 @@ export function ActivitySection({
   issueId?: string;
   /** @-mention suggestion source, forwarded to RichEditor. */
   members?: MentionMember[];
-  onAddComment: (text: string) => void;
+  onAddComment: (text: string, doc?: RichDoc) => void;
   onDeleteComment?: (commentId: string) => void;
   onLogWork?: () => void;
   onDeleteWorkLog?: (workLogId: string) => void;
@@ -576,7 +576,7 @@ export function ActivitySection({
       author: { name: "Current User", avatarUrl: null },
     };
     setCommentsList((prev) => [newComm, ...prev]);
-    onAddComment(text);
+    onAddComment(text, value.doc);
     commentEditorRef.current?.clear();
     commentValueRef.current = null;
   };

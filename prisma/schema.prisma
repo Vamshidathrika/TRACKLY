@@ -121,6 +121,9 @@ model Site {
   gitBranches      GitBranch[]
   gitWebhookLogs   GitWebhookLog[]
   integrations     SiteIntegration[]
+  importJobs       ImportJob[]
+  apiKeys          ApiKey[]
+  webhookEndpoints WebhookEndpoint[]
 }
 
 model Membership {
@@ -251,6 +254,9 @@ model Issue {
   key              String
   summary          String
   description      String?
+  descriptionJson  Json?          // ProseMirror/TipTap doc. NULL => `description` is legacy plain text.
+                                  // When set, `description` is the derived plaintext mirror.
+  externalKey      String?        // Origin key from an external tracker, e.g. "jira:ACME-42". Set only by the importer.
   type             IssueType      @default(STORY)
   status           IssueStatus    @default(TO_DO)
   priority         IssuePriority  @default(MEDIUM)
@@ -286,6 +292,7 @@ model Issue {
 
   @@unique([projectId, number])
   @@unique([projectId, key])
+  @@unique([projectId, externalKey])
   @@index([projectId, status, rank])
   @@index([projectId, sprintId, rank])
   @@index([projectId, releaseId])
@@ -299,6 +306,8 @@ model Comment {
   issueId   String
   authorId  String
   body      String
+  bodyJson  Json?    // ProseMirror/TipTap doc. NULL => `body` is legacy plain text.
+                     // When set, `body` is the derived plaintext mirror.
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
@@ -677,4 +686,177 @@ model RetroVote {
 
   @@unique([cardId, userId])
   @@index([cardId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Jira importer (see lib/import/**, .plan/import-schema.prisma for rationale)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One import run. Written at the start of a run and updated when it finishes,
+/// so an interrupted import is visible as status = RUNNING rather than
+/// silently vanishing. `report` holds the full serialized ImportReport
+/// (lib/import/types.ts) — summary counts, unmapped values, per-row errors.
+model ImportJob {
+  id           String       @id @default(cuid())
+  siteId       String
+  /// User who started the run. Also the fallback reporter for Jira issues
+  /// whose reporter could not be resolved.
+  startedById  String
+  /// "JIRA_JSON" | "JIRA_CSV" — which parser produced the rows.
+  source       String
+  /// Original upload filename, for the run history UI.
+  filename     String?
+  /// true when the run was a dry run; dry runs are recorded so a reviewer can
+  /// compare "what it said it would do" against "what it did".
+  dryRun       Boolean      @default(false)
+  /// PENDING | RUNNING | SUCCEEDED | PARTIAL | FAILED.
+  status       String       @default("PENDING")
+  totalRows    Int          @default(0)
+  createdCount Int          @default(0)
+  updatedCount Int          @default(0)
+  skippedCount Int          @default(0)
+  errorCount   Int          @default(0)
+  /// Serialized ImportReport. Json (not String) so the run-history UI can
+  /// query into unmapped statuses without parsing every blob.
+  report       Json?
+  startedAt    DateTime     @default(now())
+  finishedAt   DateTime?
+  site         Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  rows         ImportRow[]
+
+  @@index([siteId, startedAt])
+}
+
+/// One source row of one run. This is the per-row error report made durable,
+/// and — via (externalKey -> issueId) — the true external-ID map.
+model ImportRow {
+  id          String    @id @default(cuid())
+  jobId       String
+  /// 1-based index of the row in the source file.
+  rowNumber   Int
+  /// The Jira issue key, e.g. "ACME-42". Unique per job.
+  externalKey String
+  /// Trackly Issue.id once the row lands. Null for skipped/errored rows.
+  issueId     String?
+  /// CREATED | UPDATED | SKIPPED | ERROR
+  outcome     String
+  /// Human-readable failure reason. Null on success.
+  message     String?
+  createdAt   DateTime  @default(now())
+  job         ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, externalKey])
+  @@index([jobId, outcome])
+  @@index([issueId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API (/api/v1), API-key auth, outbound webhooks
+// (see lib/api/**, .plan/api-schema.prisma for rationale)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One issued bearer token for `/api/v1`. Modeled as a "personal access
+/// token": any workspace member can mint their own (scoped to their own
+/// live Role/ProjectRole, re-checked per request — see lib/api/auth.ts), and
+/// a workspace ADMIN can list/revoke every key in the workspace.
+///
+/// The plaintext token is NEVER stored. Only its SHA-256 (`tokenHash`,
+/// unique-indexed) and a short display prefix (`tokenPrefix`).
+model ApiKey {
+  id                 String    @id @default(cuid())
+  siteId             String
+  /// The user this token acts as. Re-joined against a live `Membership` row
+  /// on every request — removing the user from the workspace kills the
+  /// token immediately, without a revocation step.
+  userId             String
+  /// Caller-chosen label ("CI pipeline", "Zapier").
+  name               String
+  tokenHash          String    @unique
+  /// First 8 chars of the token body in cleartext, purely for display.
+  tokenPrefix        String
+  /// Subset of lib/api/scopes.ts::API_SCOPES. A ceiling, never a grant.
+  scopes             String[]  @default([])
+  /// 0 means "use the default" (lib/api/rate-limit.ts::DEFAULT_TOKEN_LIMIT_PER_MINUTE).
+  rateLimitPerMinute Int       @default(0)
+  /// Updated at most once a minute (see lib/api/auth.ts).
+  lastUsedAt         DateTime?
+  expiresAt          DateTime?
+  /// Soft-revocation. Kept (not deleted) so a reused/leaked tokenHash cannot
+  /// silently start working again if the row were ever re-created.
+  revokedAt          DateTime?
+  revokedById        String?
+  createdById        String
+  createdAt          DateTime  @default(now())
+  site               Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@index([userId])
+  @@index([siteId, revokedAt])
+}
+
+/// An outbound webhook subscription. One row = one URL + one set of
+/// subscribed events for one workspace. Workspace-ADMIN-only to create,
+/// update or delete.
+model WebhookEndpoint {
+  id                  String    @id @default(cuid())
+  siteId              String
+  /// Validated at registration time AND re-validated on every delivery
+  /// attempt by lib/api/webhooks/ssrf-guard.ts.
+  url                 String
+  description         String?
+  /// Subset of lib/api/schemas.ts::WEBHOOK_EVENTS ("issue.created",
+  /// "issue.updated", "issue.commented").
+  events              String[]  @default([])
+  /// AES-256-GCM ciphertext (lib/integrations/crypto.ts), NEVER the
+  /// plaintext HMAC secret.
+  secretCiphertext    String
+  enabled             Boolean   @default(true)
+  /// Consecutive FAILED/EXHAUSTED deliveries. Reset to 0 on any DELIVERED
+  /// delivery. Past a threshold the endpoint is auto-disabled.
+  consecutiveFailures Int       @default(0)
+  disabledReason      String?
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  createdById         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  site                Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  deliveries          WebhookDelivery[]
+
+  @@index([siteId])
+  @@index([siteId, enabled])
+}
+
+/// One delivery attempt record for one event to one endpoint. Durable, not
+/// fire-and-forget, so a delivery can be retried with backoff after the HTTP
+/// response has already completed.
+model WebhookDelivery {
+  id             String    @id @default(cuid())
+  siteId         String
+  endpointId     String
+  /// One of lib/api/schemas.ts::WEBHOOK_EVENTS.
+  event          String
+  /// The exact JSON body that was (or will be) sent, so a retry resends
+  /// byte-identical content.
+  payload        Json
+  /// PENDING | DELIVERED | FAILED | EXHAUSTED
+  status         String    @default("PENDING")
+  attempt        Int       @default(0)
+  maxAttempts    Int       @default(6)
+  responseStatus Int?
+  /// Safe, non-internal reason string ("timeout", "unsafe_redirect",
+  /// "dns_resolves_private", "http_4xx", "http_5xx") — never a raw
+  /// exception message.
+  errorCode      String?
+  nextAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@index([endpointId, status])
+  /// Drives the retry sweep: `WHERE status IN (PENDING, FAILED) AND
+  /// nextAttemptAt <= now()`.
+  @@index([status, nextAttemptAt])
 }

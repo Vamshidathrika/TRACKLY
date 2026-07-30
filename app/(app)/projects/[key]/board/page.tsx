@@ -6,6 +6,7 @@ import { getSprintsByProject } from "@/lib/sprints";
 import { getUsersForSite } from "@/lib/users";
 import { KanbanBoard } from "@/components/board/KanbanBoard";
 import { BoardNotFound } from "@/components/projects/BoardNotFound";
+import type { RichDoc } from "@/components/editor/types";
 
 import { resolveProjectByKey, getDeletedBoardLog } from "@/lib/projects";
 import { getAdminContactForSite } from "@/lib/tenant";
@@ -68,7 +69,14 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
         issues={issues.map((i) => ({ ...i, projectKey: project.key }))}
         sprints={sprints.map((s) => ({
           ...s,
-          issues: s.issues.map((i) => ({ ...i, projectKey: project.key })),
+          // `descriptionJson` comes back as Prisma's generic JsonValue; it is
+          // only ever written by updateIssueDescriptionAction's validateRichDoc()
+          // gate, so it is a RichDoc or null at rest, never anything else.
+          issues: s.issues.map((i) => ({
+            ...i,
+            projectKey: project.key,
+            descriptionJson: i.descriptionJson as RichDoc | null,
+          })),
         }))}
         availableUsers={availableUsers}
         currentUserId={userId}

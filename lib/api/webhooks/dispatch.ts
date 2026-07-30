@@ -25,6 +25,7 @@
  * backlog of queued attempts against this workspace's data.
  */
 import { after } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { webhookEndpointTable, webhookDeliveryTable, isApiSchemaReady } from "../db";
 import type { WebhookDeliveryRecord, WebhookEndpointRecord } from "../db";
 import { decryptToken } from "@/lib/integrations/crypto";
@@ -68,7 +69,7 @@ export function triggerWebhookEvent(siteId: string, event: WebhookEvent, payload
             siteId,
             endpointId: endpoint.id,
             event,
-            payload,
+            payload: payload as Prisma.InputJsonValue,
             status: "PENDING",
             attempt: 0,
             maxAttempts: MAX_ATTEMPTS,

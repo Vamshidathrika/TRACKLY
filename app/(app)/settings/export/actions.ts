@@ -1,6 +1,6 @@
 "use server";
 
-import { requireMembership, requireAdmin } from "@/lib/tenant";
+import { requireMembership } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 
 export async function exportWorkspaceDataAction() {
@@ -60,23 +60,3 @@ export async function exportWorkspaceDataAction() {
   }
 }
 
-export async function importWorkspaceDataAction(jsonData: any) {
-  try {
-    const { siteId } = await requireAdmin();
-
-    if (!jsonData || typeof jsonData !== "object") {
-      return { success: false, error: "Invalid backup JSON format" };
-    }
-
-    // Return summary of validated import
-    const summary = {
-      projectsImported: jsonData.projects?.length || jsonData.entityCounts?.projects || 0,
-      issuesImported: jsonData.issues?.length || jsonData.entityCounts?.issues || 0,
-      membersImported: jsonData.members?.length || jsonData.entityCounts?.members || 0,
-    };
-
-    return { success: true, summary };
-  } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Import failed" };
-  }
-}
