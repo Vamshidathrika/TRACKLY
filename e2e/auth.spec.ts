@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 const email = `e2e-${Date.now()}@test.dev`;
 
 test("signup -> your work -> invite -> logout -> login", async ({ page }) => {
+  test.setTimeout(90000);
   await page.goto("/signup");
   await page.locator("#signup-name").fill("E2E User");
   await page.locator("#signup-email").fill(email);

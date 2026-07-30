@@ -96,6 +96,23 @@ export async function fetchWorkspaceMembersAction() {
   return members.map((m) => m.user);
 }
 
+export async function fetchProjectMembersAction(projectId: string) {
+  if (!projectId) return [];
+  const { userId } = await requireMembership();
+  const access = await checkProjectAccess(userId, projectId);
+  if (!access) return [];
+
+  const projectMembers = await prisma.projectMember.findMany({
+    where: { projectId },
+    select: {
+      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+    },
+    orderBy: { user: { name: "asc" } },
+  });
+  return projectMembers.map((m) => m.user);
+}
+
+
 export async function createSubtaskAction(input: {
   parentIssueId: string;
   projectId: string;

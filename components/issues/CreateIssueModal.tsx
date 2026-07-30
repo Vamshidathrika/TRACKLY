@@ -4,7 +4,7 @@ import { useState, useActionState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, AlertCircle, BookOpen, Bug, Layers, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { createIssueAction, fetchUserProjectsAction, fetchWorkspaceMembersAction } from "@/app/(app)/issues/actions";
+import { createIssueAction, fetchUserProjectsAction, fetchWorkspaceMembersAction, fetchProjectMembersAction } from "@/app/(app)/issues/actions";
 
 type IssueTypeMeta = {
   value: string;
@@ -75,11 +75,9 @@ const selectClass =
 
 import { useRouter } from "next/navigation";
 
-// Cache to avoid re-fetching on every modal open
+// Cache to avoid re-fetching projects on every modal open
 let cachedProjects: { id: string; name: string; key: string }[] | null = null;
-let cachedMembers: { id: string; name: string; email: string }[] | null = null;
 let projectsFetchPromise: Promise<any> | null = null;
-let membersFetchPromise: Promise<any> | null = null;
 
 export function CreateIssueModal({
   trigger,
@@ -130,18 +128,25 @@ export function CreateIssueModal({
           }
         });
       }
-      
-      if (cachedMembers) {
-        setMembers(cachedMembers);
-      } else {
-        membersFetchPromise = membersFetchPromise || fetchWorkspaceMembersAction();
-        membersFetchPromise.then((m) => {
-          cachedMembers = m;
-          setMembers(m);
-        });
-      }
     }
   }, [open, defaultType, defaultProjectId]);
+
+  // Fetch board-wise project members whenever selectedProjectId changes
+  useEffect(() => {
+    if (open && selectedProjectId) {
+      fetchProjectMembersAction(selectedProjectId).then((m) => {
+        if (m && m.length > 0) {
+          setMembers(m as { id: string; name: string; email: string }[]);
+        } else {
+          // Fallback to workspace members if project has no explicit ProjectMember records yet
+          fetchWorkspaceMembersAction().then((wm) => {
+            setMembers(wm as { id: string; name: string; email: string }[]);
+          });
+        }
+      });
+    }
+  }, [open, selectedProjectId]);
+
 
   useEffect(() => {
     if (state.success) {
