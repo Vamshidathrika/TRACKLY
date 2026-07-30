@@ -183,13 +183,13 @@ ${inviteUrl}
 
     if (error) {
       console.error("Resend email error:", error);
-      return { sent: false, reason: "SEND_FAILED" as const };
+      return { sent: false, reason: "SEND_FAILED" as const, errorDetails: error.message };
     }
 
     return { sent: true };
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error sending invite email:", err);
-    return { sent: false, reason: "SEND_FAILED" as const };
+    return { sent: false, reason: "SEND_FAILED" as const, errorDetails: err?.message || String(err) };
   }
 }
 
