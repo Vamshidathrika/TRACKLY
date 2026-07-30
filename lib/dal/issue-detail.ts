@@ -82,6 +82,7 @@ export const getIssueDetail = cache(async (userId: string, issueId: string) => {
     key: issue.key,
     summary: issue.summary,
     description: issue.description,
+    descriptionJson: issue.descriptionJson,
     type: issue.type,
     status: issue.status,
     priority: issue.priority,
