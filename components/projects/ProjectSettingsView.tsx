@@ -9,6 +9,8 @@ import {
   updateProjectDetailsAction,
   createCustomFieldAction,
   deleteCustomFieldAction,
+  createProjectComponentAction,
+  deleteProjectComponentAction,
 } from "@/app/(app)/projects/[key]/settings/actions";
 
 export type CustomFieldItem = {
@@ -58,6 +60,36 @@ export function ProjectSettingsView({
   const [compName, setCompName] = useState("");
   const [compDesc, setCompDesc] = useState("");
 
+  const handleCreateComponent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!compName.trim()) return;
+
+    const res = await createProjectComponentAction(project.id, compName, compDesc);
+    if (res.success && res.component) {
+      setComponents((prev) => [...prev, res.component!]);
+    } else {
+      // Fallback for UI if DB fails
+      setComponents((prev) => [
+        ...prev,
+        {
+          id: `c-${Date.now()}`,
+          name: compName.trim(),
+          description: compDesc.trim(),
+          leadName: project.lead.name,
+        },
+      ]);
+    }
+
+    setCompName("");
+    setCompDesc("");
+  };
+
+  const handleDeleteComponent = async (id: string) => {
+    setComponents((prev) => prev.filter((c) => c.id !== id));
+    await deleteProjectComponentAction(id);
+  };
+
+
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingGeneral(true);
@@ -88,24 +120,6 @@ export function ProjectSettingsView({
   const handleDeleteField = async (fieldId: string) => {
     setCustomFields((prev) => prev.filter((f) => f.id !== fieldId));
     await deleteCustomFieldAction(fieldId);
-  };
-
-  const handleCreateComponent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!compName.trim()) return;
-    const newComp: ComponentItem = {
-      id: `comp-${Date.now()}`,
-      name: compName.trim(),
-      description: compDesc.trim() || "No description provided",
-      leadName: project.lead.name,
-    };
-    setComponents((prev) => [...prev, newComp]);
-    setCompName("");
-    setCompDesc("");
-  };
-
-  const handleDeleteComponent = (id: string) => {
-    setComponents((prev) => prev.filter((c) => c.id !== id));
   };
 
   return (

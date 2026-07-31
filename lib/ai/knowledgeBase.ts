@@ -1,9 +1,30 @@
 import { prisma } from "../prisma";
 
-export async function getPlatformKnowledgeBase(siteId: string) {
+export async function getPlatformKnowledgeBase(siteId: string, userId?: string) {
+  let projectFilter: Record<string, any> = { siteId };
+  if (userId) {
+    const membership = await prisma.membership.findFirst({
+      where: { userId, siteId, role: "ADMIN" },
+    });
+    if (!membership) {
+      const userProjects = await prisma.projectMember.findMany({
+        where: { userId },
+        select: { projectId: true },
+      });
+      const leadProjects = await prisma.project.findMany({
+        where: { siteId, leadId: userId },
+        select: { id: true },
+      });
+      const allowedIds = Array.from(
+        new Set([...userProjects.map((p) => p.projectId), ...leadProjects.map((p) => p.id)])
+      );
+      projectFilter = { siteId, id: { in: allowedIds } };
+    }
+  }
+
   const [projects, members, sprints, issues] = await Promise.all([
     prisma.project.findMany({
-      where: { siteId },
+      where: projectFilter,
       select: { id: true, name: true, key: true, type: true },
     }),
     prisma.membership.findMany({
@@ -11,11 +32,11 @@ export async function getPlatformKnowledgeBase(siteId: string) {
       include: { user: { select: { id: true, name: true, email: true } } },
     }),
     prisma.sprint.findMany({
-      where: { project: { siteId } },
+      where: { project: projectFilter },
       select: { id: true, name: true, status: true, projectId: true },
     }),
     prisma.issue.findMany({
-      where: { project: { siteId } },
+      where: { project: projectFilter },
       select: { id: true, key: true, summary: true, status: true, assigneeId: true, projectId: true },
       orderBy: { number: "desc" },
       take: 20,

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getIssuesByProject } from "@/lib/issues";
-import { getUsersForSite } from "@/lib/users";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { BacklogView } from "@/components/backlog/BacklogView";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";
@@ -11,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 
 import { BoardNotFound } from "@/components/projects/BoardNotFound";
 
-import { resolveProjectByKey } from "@/lib/projects";
+import { resolveProjectByKey, getProjectMembers } from "@/lib/projects";
 
 export default async function BacklogPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
@@ -28,13 +27,14 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
   const access = await checkProjectAccess(userId, project.id, project.siteId);
   if (!access) redirect("/your-work");
 
-  const [sprints, allIssues, siteUsers] = await Promise.all([
+  const [sprints, allIssues, projectMembers] = await Promise.all([
     getSprintsByProject(project.id),
     getIssuesByProject(project.id),
-    getUsersForSite(project.siteId),
+    getProjectMembers(project.id),
   ]);
 
   const backlogIssues = allIssues.filter((i) => !i.sprintId);
+  const availableUsers = projectMembers.map((m) => m.user);
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">
@@ -55,8 +55,9 @@ export default async function BacklogPage({ params }: { params: Promise<{ key: s
           issues: s.issues.map((i) => ({ ...i, projectKey: project.key })),
         }))}
         backlogIssues={backlogIssues.map((i) => ({ ...i, projectKey: project.key }))}
-        availableUsers={siteUsers}
+        availableUsers={availableUsers}
       />
     </main>
   );
 }
+

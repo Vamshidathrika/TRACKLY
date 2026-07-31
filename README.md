@@ -16,7 +16,7 @@ Requires **Node 20+** and **Docker** (or a local PostgreSQL).
 git clone <your-repo-url> trackly
 cd trackly
 
-docker compose up -d          # PostgreSQL 16 on :5432
+docker compose up -d db       # CockroachDB on :26257 (console :8080)
 cp .env.example .env          # then fill in AUTH_SECRET (see below)
 
 npm install                   # runs `prisma generate` automatically

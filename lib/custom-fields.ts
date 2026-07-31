@@ -229,3 +229,53 @@ export function buildDefaultFieldValue(
     value: definition.defaultValue ?? null,
   };
 }
+
+// ─── Prisma Column Mapping ─────────────────────────────────────────────────
+
+export type CustomFieldValueColumn =
+  | "valueText"
+  | "valueNumber"
+  | "valueDate"
+  | "valueBoolean"
+  | "valueTextArray";
+
+/** Which CustomFieldValue column a given field type is stored in. */
+export function columnForType(type: CustomFieldType): CustomFieldValueColumn {
+  switch (type) {
+    case "NUMBER":
+      return "valueNumber";
+    case "DATE":
+      return "valueDate";
+    case "CHECKBOX":
+      return "valueBoolean";
+    case "MULTI_SELECT":
+      return "valueTextArray";
+    case "TEXT":
+    case "TEXTAREA":
+    case "URL":
+    case "SELECT":
+    case "USER":
+    case "LABEL":
+      return "valueText";
+  }
+}
+
+/**
+ * Builds the Prisma `data` fragment for one field's value — exactly one
+ * column populated, matching `columnForType`. `null` clears the mapped
+ * column (writes null, doesn't touch the others).
+ */
+export function toPrismaValue(
+  definition: CustomFieldDefinition,
+  value: CustomFieldValue["value"]
+): Record<string, unknown> {
+  const column = columnForType(definition.type);
+
+  if (column === "valueDate") {
+    return { valueDate: value === null || value === undefined ? null : new Date(value as string) };
+  }
+  if (column === "valueTextArray") {
+    return { valueTextArray: value === null || value === undefined ? null : (Array.isArray(value) ? value : []) };
+  }
+  return { [column]: value ?? null };
+}

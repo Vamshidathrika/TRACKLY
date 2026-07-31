@@ -16,6 +16,7 @@ import {
   assertParentInProject,
   assertSprintInProject,
   assertWorkspaceUser,
+  assertProjectMember,
   issueWhere,
   resolveProjectByKeyOrId,
   resolveProjectScope,
@@ -87,7 +88,7 @@ export const POST = withApi(async ({ req, ctx }) => {
     throw apiError.forbidden("Your role on this project is read-only.");
   }
 
-  if (body.assigneeId) await assertWorkspaceUser(ctx, body.assigneeId, "assigneeId");
+  if (body.assigneeId) await assertProjectMember(ctx, projectId, body.assigneeId, "assigneeId");
   if (body.parentId) await assertParentInProject(body.parentId, projectId, "parentId");
   if (body.sprintId) await assertSprintInProject(body.sprintId, projectId, "sprintId");
 

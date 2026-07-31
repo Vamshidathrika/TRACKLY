@@ -61,3 +61,30 @@ export async function toggleAutomationRuleAction(ruleId: string) {
     throw e;
   }
 }
+
+export async function deleteAutomationRuleAction(ruleId: string) {
+  try {
+    const user = await getAuthUser();
+    const rule = await prisma.automationRule.findUnique({
+      where: { id: ruleId },
+      select: { projectId: true },
+    });
+    if (!rule) return { error: "Automation rule not found" };
+
+    const access = await checkProjectAccess(user.id, rule.projectId);
+    if (!access || (access.projectRole !== "ADMIN" && access.projectRole !== "WORKSPACE_ADMIN")) {
+      return { error: "Only board admins can configure automation rules" };
+    }
+
+    await prisma.automationRule.delete({
+      where: { id: ruleId },
+    });
+
+    revalidatePath("/settings/automation");
+    return { success: true };
+  } catch (e) {
+    if (e instanceof Error) return { error: e.message };
+    throw e;
+  }
+}
+

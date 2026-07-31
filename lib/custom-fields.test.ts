@@ -6,6 +6,8 @@ import {
   getFieldTypeIcon,
   SYSTEM_FIELD_TEMPLATES,
   CustomFieldDefinition,
+  columnForType,
+  toPrismaValue,
 } from "./custom-fields";
 
 const baseField = (
@@ -141,5 +143,62 @@ describe("Custom Fields Engine", () => {
       expect(template.name).toBeTruthy();
       expect(template.type).toBeTruthy();
     }
+  });
+});
+
+describe("column mapping", () => {
+  test("columnForType maps every field type to exactly one column", () => {
+    expect(columnForType("TEXT")).toBe("valueText");
+    expect(columnForType("TEXTAREA")).toBe("valueText");
+    expect(columnForType("URL")).toBe("valueText");
+    expect(columnForType("SELECT")).toBe("valueText");
+    expect(columnForType("USER")).toBe("valueText");
+    expect(columnForType("LABEL")).toBe("valueText");
+    expect(columnForType("NUMBER")).toBe("valueNumber");
+    expect(columnForType("DATE")).toBe("valueDate");
+    expect(columnForType("CHECKBOX")).toBe("valueBoolean");
+    expect(columnForType("MULTI_SELECT")).toBe("valueTextArray");
+  });
+
+  test("toPrismaValue writes a NUMBER field to valueNumber only", () => {
+    const field = baseField({ type: "NUMBER" });
+    const data = toPrismaValue(field, 5);
+    expect(data).toEqual({ valueNumber: 5 });
+  });
+
+  test("toPrismaValue writes a TEXT field to valueText only", () => {
+    const field = baseField({ type: "TEXT" });
+    const data = toPrismaValue(field, "hello");
+    expect(data).toEqual({ valueText: "hello" });
+  });
+
+  test("toPrismaValue writes a DATE field as a Date instance", () => {
+    const field = baseField({ type: "DATE" });
+    const data = toPrismaValue(field, "2026-08-01");
+    expect(data.valueDate).toBeInstanceOf(Date);
+  });
+
+  test("toPrismaValue writes a CHECKBOX field to valueBoolean only", () => {
+    const field = baseField({ type: "CHECKBOX" });
+    const data = toPrismaValue(field, true);
+    expect(data).toEqual({ valueBoolean: true });
+  });
+
+  test("toPrismaValue writes a MULTI_SELECT field to valueTextArray only", () => {
+    const field = baseField({ type: "MULTI_SELECT" });
+    const data = toPrismaValue(field, ["Production", "Staging"]);
+    expect(data).toEqual({ valueTextArray: ["Production", "Staging"] });
+  });
+
+  test("toPrismaValue clears a MULTI_SELECT field when passed null", () => {
+    const field = baseField({ type: "MULTI_SELECT" });
+    const data = toPrismaValue(field, null);
+    expect(data).toEqual({ valueTextArray: null });
+  });
+
+  test("toPrismaValue on a null value clears the mapped column", () => {
+    const field = baseField({ type: "TEXT" });
+    const data = toPrismaValue(field, null);
+    expect(data).toEqual({ valueText: null });
   });
 });

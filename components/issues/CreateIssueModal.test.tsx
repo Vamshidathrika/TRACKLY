@@ -17,6 +17,9 @@ vi.mock("@/app/(app)/issues/actions", () => ({
   fetchWorkspaceMembersAction: vi.fn().mockResolvedValue([
     { id: "user-1", name: "Alice", email: "alice@test.com" },
   ]),
+  fetchProjectMembersAction: vi.fn().mockResolvedValue([
+    { id: "user-1", name: "Alice", email: "alice@test.com" },
+  ]),
 }));
 
 import { CreateIssueModal } from "./CreateIssueModal";

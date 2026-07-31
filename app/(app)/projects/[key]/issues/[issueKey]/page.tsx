@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getIssueByKey } from "@/lib/issues";
-import { getUsersForSite } from "@/lib/users";
+import { getProjectMembers } from "@/lib/projects";
 import { IssueDetail } from "@/components/issues/IssueDetail";
 
 export default async function IssuePage({ params }: { params: Promise<{ key: string; issueKey: string }> }) {
@@ -17,8 +17,8 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
 
   const isAdmin = role === "ADMIN" || access.projectRole === "WORKSPACE_ADMIN";
 
-  const [members, sprints, automationRules] = await Promise.all([
-    getUsersForSite(siteId),
+  const [projectMembers, sprints, automationRules] = await Promise.all([
+    getProjectMembers(issue.projectId),
     prisma.sprint.findMany({
       where: { projectId: issue.projectId },
       select: { id: true, name: true, status: true },
@@ -30,6 +30,8 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
       take: 5,
     }),
   ]);
+
+  const members = projectMembers.map((m) => m.user);
 
   return (
     <main className="flex-1 px-8 py-6 overflow-y-auto">
@@ -44,3 +46,4 @@ export default async function IssuePage({ params }: { params: Promise<{ key: str
     </main>
   );
 }
+

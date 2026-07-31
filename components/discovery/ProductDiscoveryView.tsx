@@ -68,22 +68,18 @@ const INITIAL_IDEAS: DiscoveryIdea[] = [
   },
 ];
 
-/**
- * The idea backlog and votes below save to this browser only — no
- * DiscoveryIdea model exists yet, so teammates on another device see none of
- * it. "Convert to Task" is real: it calls createIssueAction and creates an
- * actual issue on the board.
- */
+import {
+  fetchIdeasAction,
+  createIdeaAction,
+  voteIdeaAction,
+  convertIdeaToTaskAction,
+  type IdeaItem,
+} from "@/app/(app)/projects/[key]/discovery/actions";
+import { useEffect } from "react";
+
 export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
-  const [ideas, setIdeas] = useState<DiscoveryIdea[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("trackly_discovery_ideas");
-      if (saved) {
-        try { return JSON.parse(saved); } catch {}
-      }
-    }
-    return INITIAL_IDEAS;
-  });
+  const [ideas, setIdeas] = useState<DiscoveryIdea[]>(INITIAL_IDEAS);
+  const [loading, setLoading] = useState(true);
 
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [showNewModal, setShowNewModal] = useState(false);
@@ -92,69 +88,80 @@ export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
   const [newImpact, setNewImpact] = useState<"HIGH" | "LOW">("HIGH");
   const [newEffort, setNewEffort] = useState<"HIGH" | "LOW">("LOW");
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [, startTransition] = useTransition();
 
-  const saveIdeas = (next: DiscoveryIdea[]) => {
-    setIdeas(next);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("trackly_discovery_ideas", JSON.stringify(next));
-    }
-  };
+  useEffect(() => {
+    let mounted = true;
+    fetchIdeasAction(projectKey).then((fetched) => {
+      if (mounted) {
+        if (fetched.length > 0) {
+          setIdeas(fetched);
+        }
+        setLoading(false);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [projectKey]);
 
   const filteredIdeas = ideas.filter(
     (item) => activeCategory === "All" || item.category === activeCategory
   );
 
   const handleVote = (id: string) => {
-    const next = ideas.map((i) => (i.id === id ? { ...i, votes: i.votes + 1 } : i));
-    saveIdeas(next);
+    // Optimistic UI update
+    setIdeas((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, votes: i.votes + 1 } : i))
+    );
+    startTransition(async () => {
+      const res = await voteIdeaAction(id);
+      if (res.success && typeof res.votes === "number") {
+        setIdeas((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, votes: res.votes! } : i))
+        );
+      }
+    });
   };
 
   const handleConvertToTask = (id: string, idea: DiscoveryIdea) => {
     setConvertingId(id);
     startTransition(async () => {
-      const projects = await fetchUserProjectsAction();
-      const currentProj = projects.find((p) => p.key === projectKey) || projects[0];
-
-      if (currentProj) {
-        const formData = new FormData();
-        formData.append("projectId", currentProj.id);
-        formData.append("summary", idea.title);
-        formData.append("description", idea.description);
-        formData.append("type", "STORY");
-        formData.append("priority", idea.impact === "HIGH" ? "HIGH" : "MEDIUM");
-
-        await createIssueAction({}, formData);
+      const res = await convertIdeaToTaskAction(id, projectKey);
+      if (res.success && res.taskKey) {
+        setIdeas((prev) =>
+          prev.map((i) =>
+            i.id === id ? { ...i, convertedToTask: true, taskKey: res.taskKey } : i
+          )
+        );
       }
-
-      const generatedKey = `${projectKey}-${Math.floor(Math.random() * 90) + 100}`;
-      const next = ideas.map((i) =>
-        i.id === id ? { ...i, convertedToTask: true, taskKey: generatedKey } : i
-      );
-      saveIdeas(next);
       setConvertingId(null);
     });
   };
 
   const handleCreateIdea = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || isSubmitting) return;
 
-    const newIdea: DiscoveryIdea = {
-      id: `idea-${Date.now()}`,
-      title: newTitle.trim(),
-      description: newDesc.trim() || "Customer feature request collected via Discovery Hub",
-      impact: newImpact,
-      effort: newEffort,
-      votes: 1,
-      category: "Feature",
-    };
+    setIsSubmitting(true);
+    startTransition(async () => {
+      const res = await createIdeaAction(projectKey, {
+        title: newTitle.trim(),
+        description: newDesc.trim() || "Customer feature request collected via Discovery Hub",
+        impact: newImpact,
+        effort: newEffort,
+        category: "Feature",
+      });
 
-    const next = [newIdea, ...ideas];
-    saveIdeas(next);
-    setShowNewModal(false);
-    setNewTitle("");
-    setNewDesc("");
+      if (res.success && res.idea) {
+        setIdeas((prev) => [res.idea!, ...prev]);
+      }
+      setIsSubmitting(false);
+      setShowNewModal(false);
+      setNewTitle("");
+      setNewDesc("");
+    });
   };
 
   // Matrix Quadrant Groupings
@@ -174,7 +181,7 @@ export function ProductDiscoveryView({ projectKey }: { projectKey: string }) {
           </h1>
           <p className="text-xs text-text-subtle mt-0.5">
             Prioritize feature ideas by Impact vs Effort and convert top voted requests directly into Backlog tasks.
-            The idea list and votes save to this browser only; converting to a task is real.
+            All ideas and votes are persisted directly to the workspace database.
           </p>
         </div>
 

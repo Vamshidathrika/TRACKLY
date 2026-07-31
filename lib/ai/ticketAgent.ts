@@ -16,7 +16,7 @@ export async function executeAgentCommand(
   siteId: string,
   command: string
 ): Promise<AgentActionResult> {
-  const kb = await getPlatformKnowledgeBase(siteId);
+  const kb = await getPlatformKnowledgeBase(siteId, userId);
   const cmd = command.toLowerCase().trim();
 
   // 1. INTENT: Create Issue

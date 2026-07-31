@@ -220,6 +220,32 @@ export async function assertWorkspaceUser(
   }
 }
 
+/**
+ * Validates that a user id supplied by the caller is a member of the project/board
+ * or is a Workspace Admin.
+ */
+export async function assertProjectMember(
+  ctx: ApiContext,
+  projectId: string,
+  userId: string,
+  field: string
+): Promise<void> {
+  await assertWorkspaceUser(ctx, userId, field);
+
+  if (ctx.role === "ADMIN") return;
+
+  const projectMember = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId } },
+    select: { id: true },
+  });
+
+  if (!projectMember) {
+    throw apiError.invalidRequest("That user is not a member of this project.", [
+      { field, message: "User is not a member of this project." },
+    ]);
+  }
+}
+
 /** Validates that a sprint belongs to the project the issue is in. */
 export async function assertSprintInProject(
   sprintId: string,

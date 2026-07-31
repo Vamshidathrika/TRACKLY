@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess, getBoardIssues } from "@/lib/dal";
 import { getSprintsByProject } from "@/lib/sprints";
-import { getUsersForSite } from "@/lib/users";
 import { KanbanBoard } from "@/components/board/KanbanBoard";
 import { BoardNotFound } from "@/components/projects/BoardNotFound";
 import type { RichDoc } from "@/components/editor/types";
@@ -49,18 +48,17 @@ export default async function BoardPage({ params }: { params: Promise<{ key: str
     );
   }
 
-  const [issues, sprints, projectMembers, siteUsers, star] = await Promise.all([
+  const [issues, sprints, projectMembers, star] = await Promise.all([
     getBoardIssues(project.id),
     getSprintsByProject(project.id),
     import("@/lib/projects").then((m) => m.getProjectMembers(project.id)),
-    getUsersForSite(project.siteId),
     prisma.star.findUnique({
       where: { userId_projectId: { userId, projectId: project.id } },
     }),
   ]);
 
-  const activeUsers = projectMembers.map((m) => m.user);
-  const availableUsers = activeUsers.length > 0 ? activeUsers : siteUsers;
+  // Board members only - no fallback to site users
+  const availableUsers = projectMembers.map((m) => m.user);
   const isOwnerOrAdmin = role === "ADMIN" || project.leadId === userId || access.projectRole === "WORKSPACE_ADMIN" || access.projectRole === "ADMIN";
 
   return (

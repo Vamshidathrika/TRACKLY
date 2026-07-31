@@ -9,10 +9,12 @@ import { exportWorkspaceDataAction } from "@/app/(app)/settings/export/actions";
 export function WorkspaceExportView({ siteName }: { siteName: string }) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleDownloadBackup = async () => {
     setIsExporting(true);
     setExportComplete(false);
+    setExportError(null);
 
     const res = await exportWorkspaceDataAction();
     setIsExporting(false);
@@ -31,7 +33,7 @@ export function WorkspaceExportView({ siteName }: { siteName: string }) {
       setExportComplete(true);
       setTimeout(() => setExportComplete(false), 4000);
     } else {
-      alert(`Export failed: ${res.error}`);
+      setExportError(res.error || "Export failed");
     }
   };
 

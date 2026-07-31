@@ -61,22 +61,38 @@ export const getUsersForSite = cache(async (siteId: string): Promise<UserOption[
 });
 
 /**
- * Fetch team members belonging strictly to the Site / Tenant that owns a given Project.
+ * Fetch team members belonging strictly to a specific Project / Board.
  */
 export const getUsersForProject = cache(async (projectId: string): Promise<UserOption[]> => {
   if (!projectId) return [];
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { siteId: true },
+    const projectMembers = await prisma.projectMember.findMany({
+      where: { projectId },
+      select: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { user: { name: "asc" } },
     });
-    if (!project?.siteId) return [];
-    return getUsersForSite(project.siteId);
+
+    return projectMembers.map((m) => ({
+      id: m.user.id,
+      name: m.user.name || m.user.email || "Teammate",
+      avatarUrl: m.user.avatarUrl,
+      email: m.user.email,
+    }));
   } catch (e) {
     console.error("Failed to fetch project team members:", e);
     return [];
   }
 });
+
 
 /**
  * Fetch team members belonging to all Sites / Tenants where the logged-in user is a member.

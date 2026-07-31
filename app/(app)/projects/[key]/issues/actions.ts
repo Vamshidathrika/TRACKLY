@@ -56,7 +56,26 @@ export async function updateIssueFieldAction(
     if (field === "description") data.description = strVal;
     if (field === "storyPoints") data.storyPoints = value !== null && value !== "" ? Number(value) : null;
     if (field === "originalEstimate") data.originalEstimate = value !== null && value !== "" ? Number(value) : null;
-    if (field === "assigneeId") data.assigneeId = strVal || null;
+    if (field === "assigneeId") {
+      if (strVal) {
+        const isMember = await prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId: target.projectId, userId: strVal } },
+        });
+        const proj = await prisma.project.findUnique({
+          where: { id: target.projectId },
+          select: { siteId: true },
+        });
+        const isWorkspaceAdmin = proj
+          ? await prisma.membership.findFirst({
+              where: { userId: strVal, siteId: proj.siteId, role: "ADMIN" },
+            })
+          : null;
+        if (!isMember && !isWorkspaceAdmin) {
+          return { error: "Assigned user is not a member of this board" };
+        }
+      }
+      data.assigneeId = strVal || null;
+    }
     if (field === "reporterId") data.reporterId = strVal || null;
     if (field === "sprintId") data.sprintId = strVal || null;
     if (field === "releaseId") data.releaseId = strVal || null;
@@ -248,6 +267,8 @@ export async function postCommentAction(issueId: string, body: string, doc?: unk
             });
             for (const mentionedUser of mentionedUsers) {
               if (mentionedUser.id === user.id) continue;
+              const hasAccess = await checkProjectAccess(mentionedUser.id, issue.projectId);
+              if (!hasAccess) continue;
               notificationPromises.push(
                 createNotification({
                   userId: mentionedUser.id,
@@ -263,9 +284,6 @@ export async function postCommentAction(issueId: string, body: string, doc?: unk
         } else {
           const mentionNames = extractMentions(body);
           for (const name of mentionNames) {
-            // Exact + site-scoped match: `contains` with no site filter let a
-            // mention resolve to a same-named user in a different workspace and
-            // notify them with an excerpt of a comment they have no access to.
             const mentionedUser = await prisma.user.findFirst({
               where: {
                 name: { equals: name, mode: "insensitive" },
@@ -273,6 +291,8 @@ export async function postCommentAction(issueId: string, body: string, doc?: unk
               },
             });
             if (mentionedUser && mentionedUser.id !== user.id) {
+              const hasAccess = await checkProjectAccess(mentionedUser.id, issue.projectId);
+              if (!hasAccess) continue;
               notificationPromises.push(
                 createNotification({
                   userId: mentionedUser.id,
@@ -348,23 +368,29 @@ export async function logWorkAction(
     });
 
     revalidatePath(`/projects/${issue.project.key}/issues/${issue.key}`);
-    revalidatePath("/projects");
+    // Tag-based revalidation is faster than full path revalidation
+    const { revalidateTag } = await import("next/cache");
+    revalidateTag(`project:${issue.project.id}`);
 
-    // Fire-and-forget: watcher notifications run in background
-    void Promise.all(
-      issue.watchers
-        .filter((w) => w.userId !== user.id)
-        .map((w) =>
-          createNotification({
-            userId: w.userId,
-            actorId: user.id,
-            type: "STATUS_CHANGE",
-            title: `Work logged on ${issue.key}`,
-            message: `${user.name} logged ${hours}h on ${issue.key}`,
-            link: `/projects/${issue.project.key}/issues/${issue.key}`,
-          })
-        )
-    ).catch(() => {});
+    // Fire-and-forget: run notifications async (don't block response)
+    if (typeof setImmediate !== 'undefined') {
+      setImmediate(() =>
+        void Promise.all(
+          issue.watchers
+            .filter((w) => w.userId !== user.id)
+            .map((w) =>
+              createNotification({
+                userId: w.userId,
+                actorId: user.id,
+                type: "STATUS_CHANGE",
+                title: `Work logged on ${issue.key}`,
+                message: `${user.name} logged ${hours}h on ${issue.key}`,
+                link: `/projects/${issue.project.key}/issues/${issue.key}`,
+              })
+            )
+        ).catch(() => {})
+      );
+    }
 
     return { success: true, log };
   } catch (e) {
@@ -824,6 +850,26 @@ export async function bulkUpdateIssuesAction(
     for (const projectId of projectIds) {
       const access = await checkProjectAccess(user.id, projectId);
       if (!access) return { error: "You do not have access to one or more selected issues" };
+    }
+
+    if (data.assigneeId) {
+      for (const projectId of projectIds) {
+        const isMember = await prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId: data.assigneeId } },
+        });
+        const proj = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: { siteId: true },
+        });
+        const isWorkspaceAdmin = proj
+          ? await prisma.membership.findFirst({
+              where: { userId: data.assigneeId, siteId: proj.siteId, role: "ADMIN" },
+            })
+          : null;
+        if (!isMember && !isWorkspaceAdmin) {
+          return { error: "Assigned user is not a member of the target board" };
+        }
+      }
     }
 
     const updatePayload: any = {};

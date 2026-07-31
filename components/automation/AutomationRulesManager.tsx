@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Zap, Plus, Play, CheckCircle2, AlertTriangle, ShieldCheck, Terminal } from "lucide-react";
+import { Zap, Plus, Play, CheckCircle2, AlertTriangle, ShieldCheck, Terminal, Trash2 } from "lucide-react";
+import {
+  createAutomationRuleAction,
+  toggleAutomationRuleAction,
+  deleteAutomationRuleAction,
+} from "@/app/(app)/settings/automation/actions";
 
 interface Rule {
   id: string;
@@ -47,18 +52,8 @@ export function AutomationRulesManager({
       enabled: true,
     },
   ],
-  initialLogs = [
-    {
-      id: "log-1",
-      ruleName: "Auto-assign Code Reviewer on Status Change",
-      trigger: "STATUS_CHANGED",
-      action: "ASSIGN_USER",
-      status: "SUCCESS",
-      latencyMs: 14,
-      timestamp: "10 mins ago",
-    },
-  ],
-  projectId = "demo-project",
+  initialLogs = [],
+  projectId = "default-project",
 }: AutomationRulesManagerProps) {
   const [rules, setRules] = useState<Rule[]>(initialRules);
   const [logs, setLogs] = useState<LogItem[]>(initialLogs);
@@ -69,17 +64,25 @@ export function AutomationRulesManager({
   const [trigger, setTrigger] = useState("STATUS_CHANGED");
   const [action, setAction] = useState("ADD_COMMENT");
   const [targetValue, setTargetValue] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleToggleRule = (id: string) => {
+  const handleToggleRule = async (id: string) => {
     setRules((prev) =>
       prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r))
     );
+    await toggleAutomationRuleAction(id);
   };
 
-  const handleCreateRule = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ruleName || !targetValue) return;
+  const handleDeleteRule = async (id: string) => {
+    setRules((prev) => prev.filter((r) => r.id !== id));
+    await deleteAutomationRuleAction(id);
+  };
 
+  const handleCreateRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ruleName || !targetValue || isSubmitting) return;
+
+    setIsSubmitting(true);
     const newRule: Rule = {
       id: `rule-${Date.now()}`,
       name: ruleName,
@@ -89,7 +92,17 @@ export function AutomationRulesManager({
       enabled: true,
     };
 
-    setRules([newRule, ...rules]);
+    setRules((prev) => [newRule, ...prev]);
+
+    await createAutomationRuleAction(
+      projectId,
+      ruleName,
+      trigger as any,
+      action as any,
+      targetValue
+    );
+
+    setIsSubmitting(false);
     setRuleName("");
     setTargetValue("");
     setShowCreateModal(false);

@@ -23,6 +23,8 @@ import {
   getCachedProjectAccess,
   setCachedProjectAccess,
   invalidateUserAccess,
+  getAccessVersion,
+  bumpAccessVersion,
 } from "./access-cache";
 
 beforeEach(() => {
@@ -72,5 +74,27 @@ describe("access-cache", () => {
     expect(await getCachedProjectAccess("u1", "p1")).toBeNull();
     expect(await getCachedProjectAccess("u1", "p2")).toBeNull();
     expect(await getCachedMembership("u2")).not.toBeNull();
+  });
+});
+
+describe("access version counter", () => {
+  it("starts at 0 for an unseen user", async () => {
+    expect(await getAccessVersion("u1")).toBe(0);
+  });
+
+  it("increments on bump", async () => {
+    expect(await bumpAccessVersion("u1")).toBe(1);
+    expect(await bumpAccessVersion("u1")).toBe(2);
+    expect(await getAccessVersion("u1")).toBe(2);
+  });
+
+  it("invalidateUserAccess bumps the version so stale tokens are rejected", async () => {
+    await invalidateUserAccess("u1");
+    expect(await getAccessVersion("u1")).toBe(1);
+  });
+
+  it("tracks versions independently per user", async () => {
+    await bumpAccessVersion("u1");
+    expect(await getAccessVersion("u2")).toBe(0);
   });
 });

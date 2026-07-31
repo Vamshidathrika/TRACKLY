@@ -4,7 +4,7 @@ import { useState, useActionState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, AlertCircle, BookOpen, Bug, Layers, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { createIssueAction, fetchUserProjectsAction, fetchWorkspaceMembersAction } from "@/app/(app)/issues/actions";
+import { createIssueAction, fetchUserProjectsAction, fetchWorkspaceMembersAction, fetchProjectMembersAction } from "@/app/(app)/issues/actions";
 
 type IssueTypeMeta = {
   value: string;
@@ -75,6 +75,10 @@ const selectClass =
 
 import { useRouter } from "next/navigation";
 
+// Cache to avoid re-fetching projects on every modal open
+let cachedProjects: { id: string; name: string; key: string }[] | null = null;
+let projectsFetchPromise: Promise<any> | null = null;
+
 export function CreateIssueModal({
   trigger,
   defaultProjectId,
@@ -103,17 +107,39 @@ export function CreateIssueModal({
   useEffect(() => {
     if (open) {
       setSelectedType(defaultType || "STORY");
-      fetchUserProjectsAction().then((projs) => {
-        setProjects(projs);
+      
+      // Use cached results or fetch once and cache
+      if (cachedProjects) {
+        setProjects(cachedProjects);
         if (defaultProjectId) {
           setSelectedProjectId(defaultProjectId);
-        } else if (projs.length > 0) {
-          setSelectedProjectId((prev) => prev || projs[0].id);
+        } else if (cachedProjects.length > 0) {
+          setSelectedProjectId((prev) => prev || cachedProjects![0].id);
         }
-      });
-      fetchWorkspaceMembersAction().then(setMembers);
+      } else {
+        projectsFetchPromise = projectsFetchPromise || fetchUserProjectsAction();
+        projectsFetchPromise.then((projs) => {
+          cachedProjects = projs;
+          setProjects(projs);
+          if (defaultProjectId) {
+            setSelectedProjectId(defaultProjectId);
+          } else if (projs.length > 0) {
+            setSelectedProjectId((prev) => prev || projs[0].id);
+          }
+        });
+      }
     }
   }, [open, defaultType, defaultProjectId]);
+
+  // Fetch board-wise project members whenever selectedProjectId changes
+  useEffect(() => {
+    if (open && selectedProjectId) {
+      fetchProjectMembersAction(selectedProjectId).then((m) => {
+        setMembers((m || []) as { id: string; name: string; email: string }[]);
+      });
+    }
+  }, [open, selectedProjectId]);
+
 
   useEffect(() => {
     if (state.success) {

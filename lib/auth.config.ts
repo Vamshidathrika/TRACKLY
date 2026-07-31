@@ -1,4 +1,27 @@
 import type { NextAuthConfig } from "next-auth";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- required so TS resolves the module for augmentation below
+import type { JWT } from "next-auth/jwt";
+import type { Role } from "@prisma/client";
+
+// Workspace identity carried on the session token so the common navigation
+// path (lib/tenant.ts requireMembership) can trust it instead of hitting
+// Redis or the database, guarded by membershipVersion (see access-cache.ts).
+declare module "next-auth/jwt" {
+  interface JWT {
+    userId?: string;
+    siteId?: string;
+    role?: Role;
+    membershipVersion?: number;
+  }
+}
+
+declare module "next-auth" {
+  interface Session {
+    siteId?: string;
+    role?: Role;
+    membershipVersion?: number;
+  }
+}
 
 // AUTH_SECRET signs session tokens. It must never have a hardcoded fallback:
 // anyone who can read the source could then forge a session for any user,

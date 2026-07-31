@@ -7,11 +7,12 @@ import { InviteForm } from "./InviteForm";
 import { MembersList } from "@/components/settings/MembersList";
 import { PendingInvitesList } from "@/components/settings/PendingInvitesList";
 import { DomainSettingsCard } from "@/components/settings/DomainSettingsCard";
+import { BoardWiseMembers } from "@/components/teams/BoardWiseMembers";
 
 export default async function MembersPage() {
-  const { siteId, siteName } = await requireMembership();
+  const { siteId, siteName, userId, role } = await requireMembership();
 
-  const [members, pendingInvites, projects, site] = await Promise.all([
+  const [members, pendingInvites, projects, site, boardProjects] = await Promise.all([
     prisma.membership.findMany({
       where: { siteId },
       include: {
@@ -29,7 +30,37 @@ export default async function MembersPage() {
       where: { id: siteId },
       select: { allowedDomain: true, restrictedDomain: true },
     }),
+    prisma.project.findMany({
+      where: { siteId },
+      include: {
+        lead: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        members: {
+          include: {
+            user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
+
+  const workspaceUsers = members.map((m) => ({
+    id: m.user.id,
+    name: m.user.name,
+    email: m.user.email,
+    avatarUrl: m.user.avatarUrl,
+  }));
+
+  const boards = boardProjects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    key: p.key,
+    type: p.type,
+    leadId: p.leadId,
+    lead: p.lead,
+    members: p.members,
+  }));
 
   return (
     <main className="flex-1 px-10 py-6 overflow-y-auto">
@@ -47,10 +78,19 @@ export default async function MembersPage() {
       />
       <InviteForm projects={projects} />
       <PendingInvitesList invites={pendingInvites} />
-      <MembersList members={members} />
+
+      <div className="mt-8 border-t border-border pt-6">
+        <MembersList members={members} />
+      </div>
+
+      <div className="mt-8 border-t border-border pt-6">
+        <BoardWiseMembers
+          boards={boards}
+          workspaceUsers={workspaceUsers}
+          currentUserId={userId}
+          isWorkspaceAdmin={role === "ADMIN"}
+        />
+      </div>
     </main>
   );
 }
-
-
-
