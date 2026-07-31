@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireMembership, checkProjectAccess } from "@/lib/tenant";
 import { getSprintsByProject } from "@/lib/sprints";
 import { getIssuesByProject } from "@/lib/issues";
-import { getUsersForSite } from "@/lib/users";
 import { Breadcrumbs } from "@/components/nav/Breadcrumbs";
 import { BacklogView } from "@/components/backlog/BacklogView";
 import { CreateIssueModal } from "@/components/issues/CreateIssueModal";

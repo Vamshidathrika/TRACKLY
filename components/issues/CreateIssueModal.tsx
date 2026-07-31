@@ -135,14 +135,7 @@ export function CreateIssueModal({
   useEffect(() => {
     if (open && selectedProjectId) {
       fetchProjectMembersAction(selectedProjectId).then((m) => {
-        if (m && m.length > 0) {
-          setMembers(m as { id: string; name: string; email: string }[]);
-        } else {
-          // Fallback to workspace members if project has no explicit ProjectMember records yet
-          fetchWorkspaceMembersAction().then((wm) => {
-            setMembers(wm as { id: string; name: string; email: string }[]);
-          });
-        }
+        setMembers((m || []) as { id: string; name: string; email: string }[]);
       });
     }
   }, [open, selectedProjectId]);
