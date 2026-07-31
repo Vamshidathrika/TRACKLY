@@ -102,6 +102,8 @@ model User {
   retroCards             RetroCard[]        @relation("RetroCardAuthor")
   retroCardAssignments   RetroCard[]        @relation("RetroCardAssignee")
   retroVotes             RetroVote[]
+  ledTeams               Team[]             @relation("TeamLead")
+  teamMemberships        TeamMember[]
 }
 
 model Site {
@@ -124,6 +126,7 @@ model Site {
   importJobs       ImportJob[]
   apiKeys          ApiKey[]
   webhookEndpoints WebhookEndpoint[]
+  teams            Team[]
 }
 
 model Membership {
@@ -188,6 +191,7 @@ model Project {
   slaPolicies     SlaPolicy[]
   ideas           Idea[]
   retroCards      RetroCard[]
+  projectTeams    ProjectTeam[]
 
   @@unique([siteId, key])
   @@index([leadId])
@@ -204,6 +208,49 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+model Team {
+  id           String        @id @default(cuid())
+  siteId       String
+  name         String
+  description  String?
+  leadId       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  site         Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  lead         User?         @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
+  members      TeamMember[]
+  projectTeams ProjectTeam[]
+
+  @@unique([siteId, name])
+  @@index([siteId])
+  @@index([leadId])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  role      String   @default("MEMBER") // LEAD | MEMBER
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model ProjectTeam {
+  id        String   @id @default(cuid())
+  projectId String
+  teamId    String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, teamId])
+  @@index([teamId])
 }
 
 model Sprint {

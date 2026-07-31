@@ -21,7 +21,7 @@ import {
   updateMemberRoleByUserIdAction,
   removeMemberAction,
 } from "@/app/(app)/settings/members/actions";
-import { BoardWiseMembers, type BoardItem, type WorkspaceUserItem } from "./BoardWiseMembers";
+import { BoardWiseMembers, type BoardItem, type WorkspaceUserItem, type TeamData } from "./BoardWiseMembers";
 
 export type MemberItem = {
   id: string;
@@ -38,6 +38,7 @@ interface TeamHubProps {
   initialMembers: MemberItem[];
   boards?: BoardItem[];
   workspaceUsers?: WorkspaceUserItem[];
+  workspaceTeams?: TeamData[];
   currentUserId?: string;
   isWorkspaceAdmin?: boolean;
 }
@@ -46,6 +47,7 @@ export function TeamHub({
   initialMembers,
   boards = [],
   workspaceUsers = [],
+  workspaceTeams = [],
   currentUserId,
   isWorkspaceAdmin = false,
 }: TeamHubProps) {
@@ -153,7 +155,7 @@ export function TeamHub({
               : "border-transparent text-text-subtle hover:text-text hover:bg-neutral/40"
           }`}
         >
-          <FolderKanban size={16} /> Board Wise Members ({boards.length})
+          <FolderKanban size={16} /> Board Wise Teams & Members ({boards.length})
         </button>
       </div>
 
@@ -334,11 +336,12 @@ export function TeamHub({
         </>
       )}
 
-      {/* Tab 2: Board Wise Members Section */}
+      {/* Tab 2: Board Wise Members & Teams Section */}
       {activeTab === "boards" && (
         <BoardWiseMembers
           boards={boards}
           workspaceUsers={workspaceUsers}
+          workspaceTeams={workspaceTeams}
           currentUserId={currentUserId}
           isWorkspaceAdmin={isWorkspaceAdmin}
         />
@@ -346,3 +349,4 @@ export function TeamHub({
     </div>
   );
 }
+
