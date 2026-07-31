@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthUser } from "@/lib/auth";
-import { checkProjectAccess } from "@/lib/tenant";
+import { checkProjectAccess, checkProjectAdmin } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import {
   createRelease,
@@ -14,17 +14,17 @@ import {
 } from "@/lib/releases";
 import type { ReleaseStatus } from "@prisma/client";
 
-async function requireProjectWrite(projectId: string) {
+async function requireProjectAdminWrite(projectId: string) {
   const user = await getAuthUser();
-  const access = await checkProjectAccess(user.id, projectId);
-  if (!access) throw new Error("You do not have access to this board");
-  return { user, access };
+  const isAdmin = await checkProjectAdmin(user.id, projectId);
+  if (!isAdmin) throw new Error("Only board owners and workspace admins can manage release versions");
+  return { user };
 }
 
 async function requireReleaseWrite(releaseId: string) {
   const release = await prisma.release.findUnique({ where: { id: releaseId }, select: { projectId: true } });
   if (!release) throw new Error("Release not found");
-  return requireProjectWrite(release.projectId);
+  return requireProjectAdminWrite(release.projectId);
 }
 
 export async function getReleasesAction(projectId: string) {
@@ -42,7 +42,7 @@ export async function createReleaseAction(
 ) {
   try {
     if (!name.trim()) return { error: "Version name is required" };
-    await requireProjectWrite(projectId);
+    await requireProjectAdminWrite(projectId);
     await createRelease({
       projectId,
       name: name.trim(),

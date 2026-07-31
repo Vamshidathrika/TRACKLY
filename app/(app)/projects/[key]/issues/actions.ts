@@ -852,6 +852,26 @@ export async function bulkUpdateIssuesAction(
       if (!access) return { error: "You do not have access to one or more selected issues" };
     }
 
+    if (data.assigneeId) {
+      for (const projectId of projectIds) {
+        const isMember = await prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId: data.assigneeId } },
+        });
+        const proj = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: { siteId: true },
+        });
+        const isWorkspaceAdmin = proj
+          ? await prisma.membership.findFirst({
+              where: { userId: data.assigneeId, siteId: proj.siteId, role: "ADMIN" },
+            })
+          : null;
+        if (!isMember && !isWorkspaceAdmin) {
+          return { error: "Assigned user is not a member of the target board" };
+        }
+      }
+    }
+
     const updatePayload: any = {};
     if (data.status) updatePayload.status = data.status;
     if (data.priority) updatePayload.priority = data.priority;

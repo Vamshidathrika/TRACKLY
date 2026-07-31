@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSprint, updateSprint, startSprint, completeSprint, moveIssueToSprint } from "@/lib/sprints";
 import { createIssue, updateIssue } from "@/lib/issues";
 import { getAuthUser } from "@/lib/auth";
-import { checkProjectAccess } from "@/lib/tenant";
+import { checkProjectAccess, checkProjectAdmin } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import type { IssueStatus, IssuePriority, IssueType } from "@prisma/client";
 
@@ -17,10 +17,8 @@ export async function createSprintAction(
 ) {
   try {
     const user = await getAuthUser();
-    // Never trust a client-supplied projectId — resolve it and verify the caller
-    // actually belongs to that project before creating anything under it.
-    const access = await checkProjectAccess(user.id, projectId);
-    if (!access) return { error: "You don't have access to this project" };
+    const isAdmin = await checkProjectAdmin(user.id, projectId);
+    if (!isAdmin) return { error: "Only board owners and workspace admins can create sprints" };
 
     const sprint = await createSprint({
       projectId,
@@ -43,9 +41,6 @@ export async function updateSprintAction(
 ) {
   try {
     const user = await getAuthUser();
-    // sprintId is client-supplied and server actions are reachable by global
-    // action id regardless of route — resolve the sprint's project ourselves,
-    // never trust that the caller is actually looking at this project's board.
     const existingSprint = await prisma.sprint.findUnique({
       where: { id: sprintId },
       select: { projectId: true },
@@ -78,8 +73,8 @@ export async function startSprintAction(sprintId: string, goal?: string) {
     });
     if (!existingSprint) return { error: "Sprint not found" };
 
-    const access = await checkProjectAccess(user.id, existingSprint.projectId);
-    if (!access) return { error: "You don't have access to this project" };
+    const isAdmin = await checkProjectAdmin(user.id, existingSprint.projectId);
+    if (!isAdmin) return { error: "Only board owners and workspace admins can start sprints" };
 
     await startSprint(sprintId, { goal });
     revalidatePath("/projects");
@@ -106,8 +101,8 @@ export async function completeSprintAction(
     });
     if (!existingSprint) return { error: "Sprint not found" };
 
-    const access = await checkProjectAccess(user.id, existingSprint.projectId);
-    if (!access) return { error: "You don't have access to this project" };
+    const isAdmin = await checkProjectAdmin(user.id, existingSprint.projectId);
+    if (!isAdmin) return { error: "Only board owners and workspace admins can complete sprints" };
 
     const result = await completeSprint(sprintId, options);
     revalidatePath("/projects");
@@ -207,9 +202,30 @@ export async function bulkUpdateIssuesAction(
       where: { id: { in: issueIds } },
       select: { projectId: true },
     });
+    const projectIds = Array.from(new Set(issues.map((i) => i.projectId)));
     for (const issue of issues) {
       const access = await checkProjectAccess(user.id, issue.projectId);
       if (!access) return { error: "You don't have access to one or more selected issues" };
+    }
+
+    if (data.assigneeId) {
+      for (const projectId of projectIds) {
+        const isMember = await prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId: data.assigneeId } },
+        });
+        const proj = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: { siteId: true },
+        });
+        const isWorkspaceAdmin = proj
+          ? await prisma.membership.findFirst({
+              where: { userId: data.assigneeId, siteId: proj.siteId, role: "ADMIN" },
+            })
+          : null;
+        if (!isMember && !isWorkspaceAdmin) {
+          return { error: "Assigned user is not a member of the target board" };
+        }
+      }
     }
 
     await prisma.issue.updateMany({

@@ -54,11 +54,18 @@ export const getBoardIssues = cache(async (projectId: string, sprintId?: string)
  * Core Issue Metadata Query
  * Optimized view query that fetches issue details without monolithic child list joins.
  */
-export const getIssueCoreDetail = cache(async (siteId: string, key: string) => {
+export const getIssueCoreDetail = cache(async (siteId: string, key: string, userId?: string) => {
   const upperKey = key.toUpperCase();
   const cacheKey = `issue:core:${siteId}:${upperKey}`;
   const cached = await getCache<any>(cacheKey);
-  if (cached && cached.project?.siteId === siteId) return cached;
+  if (cached && cached.project?.siteId === siteId) {
+    if (userId) {
+      const { checkProjectAccess } = await import("../tenant");
+      const access = await checkProjectAccess(userId, cached.project.id);
+      if (!access) return null;
+    }
+    return cached;
+  }
 
   const issue = await prisma.issue.findFirst({
     where: {
@@ -100,6 +107,11 @@ export const getIssueCoreDetail = cache(async (siteId: string, key: string) => {
 
   if (issue) {
     await setCache(cacheKey, issue, 180);
+    if (userId) {
+      const { checkProjectAccess } = await import("../tenant");
+      const access = await checkProjectAccess(userId, issue.project.id);
+      if (!access) return null;
+    }
   }
 
   return issue;

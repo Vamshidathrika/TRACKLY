@@ -8,17 +8,31 @@ import { requireMembership } from "@/lib/tenant";
 
 export async function executeJQLQueryAction(jql: string) {
   try {
-    const { siteId } = await requireMembership();
+    const { userId, siteId, role } = await requireMembership();
     if (!siteId) return [];
+
+    let projectFilter: Record<string, any> = { project: { siteId } };
+    if (role !== "ADMIN") {
+      const userProjects = await prisma.projectMember.findMany({
+        where: { userId },
+        select: { projectId: true },
+      });
+      const leadProjects = await prisma.project.findMany({
+        where: { siteId, leadId: userId },
+        select: { id: true },
+      });
+      const allowedIds = Array.from(
+        new Set([...userProjects.map((p) => p.projectId), ...leadProjects.map((p) => p.id)])
+      );
+      if (allowedIds.length === 0) return [];
+      projectFilter = { projectId: { in: allowedIds }, project: { siteId } };
+    }
 
     const whereClause = parseJQLToPrisma(jql);
 
-    // AND, not spread: a JQL "project = X" clause also produces a `project` key,
-    // and `{ project: { siteId }, ...whereClause }` would let it silently
-    // overwrite the siteId scope — searching every workspace for that key.
     return await prisma.issue.findMany({
       where: {
-        AND: [{ project: { siteId } }, whereClause],
+        AND: [projectFilter, whereClause],
       },
       include: {
         project: { select: { key: true, name: true } },
