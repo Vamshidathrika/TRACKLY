@@ -10,6 +10,9 @@ jobs:
   verify:
     name: Typecheck, Test & Build
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      AUTH_SECRET: "ci-secret-key-32-characters-minimum-length-test"
 
     steps:
       - name: Checkout code
@@ -35,6 +38,4 @@ jobs:
 
       - name: Production Build Check
         run: npm run build
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
-          AUTH_SECRET: "ci-secret-key-32-characters-minimum-length-test"
+

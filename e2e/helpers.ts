@@ -1,21 +1,18 @@
+import { expect } from "@playwright/test";
+
 export async function loginDemo(page: import("@playwright/test").Page) {
-  if (page.url() === "about:blank" || !page.url().includes("localhost")) {
-    await page.goto("/your-work");
-  }
-  if (page.url().includes("/login")) {
-    await page.locator("#login-email").fill("demo@trackly.dev");
-    await page.locator("#login-password").fill("password123");
-    await page.getByRole("button", { name: /Sign In|Sign in/i }).click();
-    await page.waitForURL(/\/your-work|\/projects/);
-  }
+  await page.goto("/signup");
+  const uniqueEmail = `demo-${Date.now()}-${Math.floor(Math.random() * 10000)}@trackly.dev`;
+  // Target the form fields by name, not by placeholder: placeholders are
+  // presentational copy and drifted out from under this helper once already,
+  // silently breaking every spec that logs in.
+  await page.locator('input[name="name"]').fill("Demo User");
+  await page.locator('input[name="email"]').fill(uniqueEmail);
+  await page.locator('input[name="password"]').fill("password123");
+  await page.locator('input[name="siteName"]').fill("Demo Workspace");
+  await page.getByRole("button", { name: /create workspace/i }).click();
+  // Signup writes user + site + membership and hashes a password, each a
+  // database round trip — comfortably past Playwright's 5s expect default.
+  await expect(page).toHaveURL(/\/your-work/, { timeout: 30_000 });
 }
 
-export async function navigateToFirstProject(page: import("@playwright/test").Page) {
-  await loginDemo(page);
-  await page.goto("/projects");
-  const projectLink = page.locator("table tbody tr td a").first();
-  if (await projectLink.isVisible()) {
-    await projectLink.click();
-    await page.waitForURL(/\/projects/);
-  }
-}
